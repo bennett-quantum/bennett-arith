@@ -1,0 +1,11 @@
+Manifest.toml
+*.jl.cov
+*.jl.mem
+
+# editors / OS
+*.swp
+.DS_Store
+.vscode/
+.idea/
+
+# NOTE: .beads/ is intentionally NOT ignored.
