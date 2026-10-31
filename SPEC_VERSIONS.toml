@@ -1,5 +1,11 @@
-# Spec versions this repo targets (published contracts only).
-status = "skeleton"
+status = "softfloat-m1-staged"
 
-[specs]
-"bennett-dialect-spec" = "0.3"
+[specs.bennett-dialect-spec]
+version = "0.2.10"
+commit = "023f5a7"
+path = "spec/Bennett-Dialect-Spec.md"
+
+[specs.bennett-isa-spec]
+version = "0.8"
+commit = "f88b32fd3e3a9eb3f400aba68bd6fd4cec6e8202"
+path = "spec/Bennett-ISA-Spec.md"

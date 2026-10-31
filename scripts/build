@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+export TMPDIR="$root/.tmp"
+mkdir -p "$TMPDIR"
+major="${1:?usage: scripts/build 18|23}"
+case "$major" in 18|23) ;; *) echo 'only LLVM 18 and 23 are pinned' >&2; exit 1;; esac
+llvm="/usr/lib/llvm-$major/bin"
+build="$TMPDIR/llvm$major"
+dist="$root/dist/llvm$major"
+mkdir -p "$build" "$dist"
+python3 -I "$root/softfloat/generate.py" "$build"
+"$llvm/clang" -std=c2x -O1 -ffreestanding -fno-builtin -fno-vectorize -fno-slp-vectorize -fno-ident -emit-llvm -c "$root/softfloat/core.c" -o "$build/core.bc"
+"$llvm/llvm-as" "$build/wrappers.ll" -o "$build/wrappers.bc"
+"$llvm/llvm-link" "$build/core.bc" "$build/wrappers.bc" -o "$build/linked.bc"
+"$llvm/opt" -passes=internalize,globaldce -internalize-public-api-file="$build/exports.txt" "$build/linked.bc" -o "$dist/bennett-arith.bc"
+"$llvm/opt" -passes=verify -disable-output "$dist/bennett-arith.bc"
+cp -f "$build/manifest.json" "$dist/manifest.json"
+"$llvm/llvm-dis" "$dist/bennett-arith.bc" -o "$build/published.ll"
+# A test-only C ABI bridge invokes every exact LLVM carrier signature.
+"$llvm/clang" -shared -fPIC "$dist/bennett-arith.bc" "$build/bridge.ll" -o "$build/oracle.so"
+sha256sum "$dist/bennett-arith.bc" > "$dist/SHA256SUMS"
+echo "built LLVM $major: $dist/bennett-arith.bc"

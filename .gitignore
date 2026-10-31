@@ -16,3 +16,6 @@ Manifest.toml
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Local build, oracle runners and detached gate worktrees
+.tmp/
