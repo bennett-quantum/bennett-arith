@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+export TMPDIR="$root/.tmp"
+mkdir -p "$TMPDIR"
+# Fail if checked-in publications differ from a fresh build (including the path).
+for major in 18 23; do
+  dir="$root/dist/llvm$major"
+  saved="$TMPDIR/expected-llvm$major"
+  mkdir -p "$saved"
+  for name in bennett-arith.bc manifest.json SHA256SUMS; do
+    test -f "$dir/$name"
+    cp -f "$dir/$name" "$saved/$name"
+  done
+  env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
+    TMPDIR="$TMPDIR" "$root/scripts/build" "$major"
+  for name in bennett-arith.bc manifest.json SHA256SUMS; do
+    cmp "$saved/$name" "$dir/$name"
+  done
+done
+env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
+  TMPDIR="$TMPDIR" python3 -I "$root/tests/test_contract.py"
+env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
+  TMPDIR="$TMPDIR" python3 -I "$root/tests/test_edge.py"
+echo 'gate: both published bitcode edges reproduced and passed'

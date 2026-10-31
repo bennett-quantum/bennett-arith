@@ -205,7 +205,7 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
         r=(V){sign ? (U)0-x:x,0,sign,FINITE,0};
         out[0]=pack(r,f,rm,&flags); out[2]=flags; return;
     } else if(op==FPTOSI || op==FPTOUI || (op>=LROUND && op<=LLRINT)) {
-        int mode=op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:0;
+        int mode=op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm;
         out[0]=toint(a,extra,op!=FPTOUI,mode,&flags); out[2]=flags; return;
     } else if(op==CMP) {
         int u=a.kind==NANV || b.kind==NANV;
@@ -279,7 +279,7 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
             r=(V){root|(rem!=0),(a.exp-shift)/2,0,FINITE,0};
         }
     } else if(op>=FLOOR && op<=NEARBYINT) {
-        int mode=op==FLOOR ? 1:op==CEIL ? 2:op==TRUNC ? 3:op==ROUND ? 4:0;
+        int mode=op==FLOOR ? 1:op==CEIL ? 2:op==TRUNC ? 3:op==ROUND ? 4:op==ROUNDEVEN ? 0:rm;
         r=integral(a,mode,&flags);
         if(op==NEARBYINT) flags&=~16;
     } else if(op==LDEXP) {
@@ -317,6 +317,6 @@ void bennett_sf_wide(U *out,int fi,int op,void *slot,int bits,const U *in,int rm
     int flags=0; out[0]=out[1]=out[2]=0;
     if(op==SITOFP || op==UITOFP) out[0]=pack(fromwide(slot,bits,op==SITOFP),formats[fi],rm,&flags);
     else towide(slot,unpack(in[0],formats[fi]),bits,op!=FPTOUI,
-                op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:0,&flags);
+                op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm,&flags);
     out[2]=flags;
 }

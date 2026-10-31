@@ -243,7 +243,13 @@ def run(major):
                     n,flags=roundedq(abs(v),s,mode)
                     result=encode(-Q(n) if s else Q(n),f,zero_sign=s)[0]
                 edge.check(op+'_'+suffix,[a],result,0)
-                edge.check(op+'_'+suffix+'_rm',[a,3],result,(flags if op!='nearbyint' else flags&~16)|int(snan))
+                for rounding in range(5):
+                    chosen=rounding if op in ('rint','nearbyint') else mode
+                    if isinstance(v,str): result=nan(f) if v=='nan' else a; flags=int(snan)
+                    else:
+                        n,flags=roundedq(abs(v),s,chosen)
+                        result=encode(-Q(n) if s else Q(n),f,zero_sign=s)[0]
+                    edge.check(op+'_'+suffix+'_rm',[a,rounding],result,(flags if op!='nearbyint' else flags&~16)|int(snan))
             for op,mode,signed in [('fptosi',3,True),('fptoui',3,False),('lround',4,True),('llround',4,True),('lrint',0,True),('llrint',0,True)]:
                 for width in (1,8,64,128):
                     lo=-(1<<(width-1)) if signed else 0
@@ -256,7 +262,15 @@ def run(major):
                         if n<lo or n>hi: flags|=1
                         n=max(lo,min(hi,n))
                     edge.check(op+'_'+suffix,[a,width],n&MASK128,0)
-                    edge.check(op+'_'+suffix+'_rm',[a,width,0],n&MASK128,flags)
+                    for rounding in range(5):
+                        chosen=rounding if op in ('lrint','llrint') else mode
+                        if v=='nan': n=0; flags=1
+                        elif v=='inf': n=lo if s else hi; flags=1
+                        else:
+                            n,flags=roundedq(abs(v),s,chosen); n=-n if s else n
+                            if n<lo or n>hi: flags|=1
+                            n=max(lo,min(hi,n))
+                        edge.check(op+'_'+suffix+'_rm',[a,width,rounding],n&MASK128,flags)
             # frexp and modf use literal aggregate ABI and field order.
             if isinstance(v,str): fract,whole=nan(f) if v=='nan' else s<<(bits-1),nan(f) if v=='nan' else a
             else:
@@ -273,7 +287,12 @@ def run(major):
                 elif exp > 40000: result,flags=encode(-power(50000) if s else power(50000),f)
                 else: result,flags=encode(v*power(exp),f)
                 edge.check('ldexp_'+suffix,[a,exp],result,0)
-                edge.check('ldexp_'+suffix+'_rm',[a,exp,0],result,flags)
+                for mode in range(5):
+                    if isinstance(v,str) or not v: result=nan(f) if v=='nan' else a; flags=int(snan)
+                    else:
+                        scaled=(-power(-50000) if s else power(-50000)) if exp < -40000 else (-power(50000) if s else power(50000)) if exp > 40000 else v*power(exp)
+                        result,flags=encode(scaled,f,mode)
+                    edge.check('ldexp_'+suffix+'_rm',[a,exp,mode],result,flags)
         for a,b in pairs[::4]:
             av,sa,_=decode(a,f); bv,sb,_=decode(b,f)
             unordered=av=='nan' or bv=='nan'
@@ -316,24 +335,43 @@ def run(major):
         # Wide slots test non-byte and non-limb widths, both integer directions.
         for width in (129,193,257,513,1025):
             slot=Aligned(8*((width+63)//64))
-            for n in (0,1,(1<<(width-1)),(1<<width)-1,(1<<(width-1))+12345):
+            for n in (0,1,(1<<(width-1)),(1<<width)-1,(1<<(width-1))+12345,
+                      (1<<(width-1))+(1<<(width-1-p))-1,
+                      (1<<(width-1))+(1<<(width-1-p)),
+                      (1<<(width-1))+(1<<(width-1-p))+1):
                 slot.put(n.to_bytes(slot.size,'little'))
                 for op in ('sitofp','uitofp'):
                     v=n-(1<<width) if op=='sitofp' and n>>(width-1) else n
                     edge.check(op+'_'+suffix+'_wide',[slot.addr,width],encode(Q(v),f)[0],0)
+                    for mode in range(5):
+                        result,flags=encode(Q(v),f,mode)
+                        edge.check(op+'_'+suffix+'_wide_rm',[slot.addr,width,mode],result,flags)
             for a in specials:
                 v,s,_=decode(a,f)
                 for op in ('fptosi','fptoui','lround','llround','lrint','llrint'):
                     signed=op!='fptoui'; mode=3 if op.startswith('fpto') else 4 if op in ('lround','llround') else 0
                     lo=-(1<<(width-1)) if signed else 0; hi=(1<<(width-int(signed)))-1
-                    if v=='nan': n=0
-                    elif v=='inf': n=lo if s else hi
+                    if v=='nan': n=0; flags=1
+                    elif v=='inf': n=lo if s else hi; flags=1
                     else:
-                        n,_=roundedq(abs(v),s,mode); n=-n if s else n; n=max(lo,min(hi,n))
+                        n,flags=roundedq(abs(v),s,mode); n=-n if s else n
+                        if n<lo or n>hi: flags|=1
+                        n=max(lo,min(hi,n))
                     slot.put(bytes([0xaa])*slot.size)
                     edge.check(op+'_'+suffix+'_wide',[slot.addr,a,width],0,0)
                     assert int.from_bytes(slot.read(),'little')==n% (1<<width),(suffix,width,op,hex(a),'wide output')
                     edge.count+=1
+                    for rounding in range(5):
+                        chosen=rounding if op in ('lrint','llrint') else mode
+                        if v=='nan': n=0; flags=1
+                        elif v=='inf': n=lo if s else hi; flags=1
+                        else:
+                            n,flags=roundedq(abs(v),s,chosen); n=-n if s else n
+                            if n<lo or n>hi: flags|=1
+                            n=max(lo,min(hi,n))
+                        edge.check(op+'_'+suffix+'_wide_rm',[slot.addr,a,width,rounding],0,flags)
+                        assert int.from_bytes(slot.read(),'little')==n%(1<<width)
+                        edge.count+=1
         for exponent in (-2147483648,-7,-1,0,1,2,13,2147483647):
             # Own-format powi: independently compose rounded scalar operations.
             for a in (one,one|sign,0,sign,encode(Q(3,2),f)[0],nan(f)):

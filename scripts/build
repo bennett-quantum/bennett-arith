@@ -11,14 +11,29 @@ build="$TMPDIR/llvm$major"
 dist="$root/dist/llvm$major"
 mkdir -p "$build" "$dist"
 python3 -I "$root/softfloat/generate.py" "$build"
-"$llvm/clang" -std=c2x -O1 -ffreestanding -fno-builtin -fno-vectorize -fno-slp-vectorize -fno-ident -emit-llvm -c "$root/softfloat/core.c" -o "$build/core.bc"
+"$llvm/clang" -target x86_64-unknown-linux-gnu -std=c2x -O1 -ffreestanding -fno-builtin -fno-vectorize -fno-slp-vectorize -fno-ident -S -emit-llvm "$root/softfloat/core.c" -o "$build/core.ll"
+# Normalize the sole source path so a detached pushed-SHA build is byte-identical.
+python3 -I - "$build/core.ll" <<'PY'
+import pathlib, re, sys
+p=pathlib.Path(sys.argv[1])
+s=p.read_text()
+s=re.sub(r'^source_filename = .*', 'source_filename = "softfloat/core.c"', s, flags=re.M)
+p.write_text(s)
+PY
+"$llvm/llvm-as" "$build/core.ll" -o "$build/core.bc"
 "$llvm/llvm-as" "$build/wrappers.ll" -o "$build/wrappers.bc"
 "$llvm/llvm-link" "$build/core.bc" "$build/wrappers.bc" -o "$build/linked.bc"
-"$llvm/opt" -passes=internalize,globaldce -internalize-public-api-file="$build/exports.txt" "$build/linked.bc" -o "$dist/bennett-arith.bc"
-"$llvm/opt" -passes=verify -disable-output "$dist/bennett-arith.bc"
+"$llvm/opt" -passes=internalize,globaldce -internalize-public-api-file="$build/exports.txt" "$build/linked.bc" -o "$build/publish.bc"
+"$llvm/opt" -passes=verify -disable-output "$build/publish.bc"
+# Atomic replacement: a concurrent binary-edge consumer never reads half a file.
+mv -f "$build/publish.bc" "$dist/bennett-arith.bc"
 cp -f "$build/manifest.json" "$dist/manifest.json"
 "$llvm/llvm-dis" "$dist/bennett-arith.bc" -o "$build/published.ll"
 # A test-only C ABI bridge invokes every exact LLVM carrier signature.
-"$llvm/clang" -shared -fPIC "$dist/bennett-arith.bc" "$build/bridge.ll" -o "$build/oracle.so"
-sha256sum "$dist/bennett-arith.bc" > "$dist/SHA256SUMS"
+"$llvm/clang" -target x86_64-unknown-linux-gnu -shared -fPIC "$dist/bennett-arith.bc" "$build/bridge.ll" -o "$build/oracle.so"
+python3 -I - "$dist" <<'PY'
+import hashlib, pathlib, sys
+p=pathlib.Path(sys.argv[1])
+(p/'SHA256SUMS').write_text(''.join(hashlib.sha256((p/n).read_bytes()).hexdigest()+'  '+n+'\n' for n in ('bennett-arith.bc','manifest.json')))
+PY
 echo "built LLVM $major: $dist/bennett-arith.bc"

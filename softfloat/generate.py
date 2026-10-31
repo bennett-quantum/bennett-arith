@@ -15,8 +15,8 @@ OPS = ('add sub mul div rem cmp fptosi fptoui sitofp uitofp sqrt floor ceil trun
        'convert powi modf').split()
 
 
-def entries():
-    for fi, (suffix, bits, fmt) in enumerate(FORMATS):
+def entries(formats=FORMATS):
+    for fi, (suffix, bits, fmt) in enumerate(formats):
         C = f'i{bits}'
         for op in OPS:
             if op == 'convert':
@@ -44,14 +44,15 @@ def entries():
                        extra=0, wide=False, constrained=False)
             if op in ('fptosi', 'fptoui', 'lround', 'llround', 'lrint', 'llrint', 'sitofp', 'uitofp'):
                 tofp = op in ('sitofp', 'uitofp')
-                yield dict(name=name+'_wide', result=C if tofp else 'void',
-                           params=['ptr', 'i32'] if tofp else ['ptr', C, 'i32'],
-                           format=fmt, fi=fi, op=op, extra=0, wide=True, constrained=False)
+                for constrained in (False, True):
+                    yield dict(name=name+'_wide'+('_rm' if constrained else ''), result=C if tofp else 'void',
+                               params=(['ptr', 'i32'] if tofp else ['ptr', C, 'i32'])+(['i32'] if constrained else []),
+                               format=fmt, fi=fi, op=op, extra=0, wide=True, constrained=constrained)
             # The numeric core also supports explicit rounding and flag accumulation.
             if op not in ('cmp', 'isfpclass', 'canonicalize', 'frexp', 'modf', 'powi'):
                 yield dict(name=name+'_rm', result=ret, params=params+['i32'],
                            format=fmt, fi=fi, op=op, extra=0, wide=False, constrained=True)
-        for di, (dest, db, df) in enumerate(FORMATS):
+        for di, (dest, db, df) in enumerate(formats):
             if di == fi:
                 continue
             for op in ('fpext', 'fptrunc'):
@@ -158,6 +159,12 @@ def generate(dest):
     bridge += [f'    i32 {i}, label %case{i}' for i in range(len(rows))]
     bridge += ['  ]', 'bad:', '  call void @llvm.trap()', '  unreachable']+cases+['}', 'declare void @llvm.trap()',
                 '@__bennett_rt_fenv = global { i32, i32 } zeroinitializer']
+    layout='target datalayout = \"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128\"'
+    triple='target triple = \"x86_64-unknown-linux-gnu\"'
+    ir=[layout,triple]+ir
+    bridge=[layout,triple]+bridge
+    for e in rows:
+        e['section']='13.4' if e['op'] in ('powi','modf') else '13.5' if e['constrained'] else '13.1'
     (dest/'wrappers.ll').write_text('\n'.join(ir)+'\n')
     (dest/'bridge.ll').write_text('\n'.join(bridge)+'\n')
     (dest/'exports.txt').write_text('\n'.join(e['name'] for e in rows)+'\n__bennett_rt_fenv\n')
@@ -165,13 +172,30 @@ def generate(dest):
                     implementation='integer-core-v1', exports=rows,
                     external_globals=[dict(name='__bennett_rt_fenv', type='{ i32 round, i32 flags }',
                                            owner='bennett-runtimes', used_by='constrained _rm wrappers only')],
-                    staged=[dict(formats=['ppcf128'], operations='all §13.1 operations and conversions',
-                                 reason='PPCDoubleDouble must match each LLVM major; no binary128 substitution'),
-                            dict(formats=[f[0] for f in FORMATS]+['ppcf128'],
-                                 operations='sin cos tan asin acos atan atan2 sinh cosh tanh exp exp2 exp10 log log2 log10 pow sincos sincospi; powi_iK for K != 32',
-                                 reason='§13.4 own-format deterministic libm mechanics'),
-                            dict(formats=['metadata-named arbitrary formats'], operations='convert_to/from_<fmt>',
-                                 reason='§13.1 APFloat arbitrary-format semantics')])
+                    staged_exports=[], parametric_families=[
+                        dict(name='__bennett_sf_powi_B_i<K>', signature='C_B (C_B, iK)',
+                             formats='all seven', status='staged except K=32 on six IEEE formats',
+                             section='13.4', bead='bennett-arith-0he'),
+                        dict(name='__bennett_sf_convert_to_<fmt>_B', signature='C_fmt (C_B)',
+                             formats='metadata-named APFloat format from each of seven formats',
+                             section='13.1', status='staged', bead='bennett-arith-38c'),
+                        dict(name='__bennett_sf_convert_from_<fmt>_B', signature='C_B (C_fmt)',
+                             formats='each of seven formats from metadata-named APFloat format',
+                             section='13.1', status='staged', bead='bennett-arith-38c')])
+    implemented={e['name'] for e in rows}
+    for e in entries(FORMATS+[('ppcf128',128,'PPCDoubleDouble')]):
+        if e['name'] not in implemented:
+            e['signature']=f"{e['result']} ({', '.join(e['params'])})"
+            e.update(status='staged', bead='bennett-arith-r3d', section='13.1/13.3/13.5')
+            manifest['staged_exports'].append(e)
+    for suffix,bits,fmt in FORMATS+[('ppcf128',128,'PPCDoubleDouble')]:
+        C=f'i{bits}'
+        for op in 'sin cos tan asin acos atan atan2 sinh cosh tanh exp exp2 exp10 log log2 log10 pow sincos sincospi'.split():
+            result=f'{{ {C}, {C} }}' if op in ('sincos','sincospi') else C
+            params=[C,C] if op in ('atan2','pow') else [C]
+            manifest['staged_exports'].append(dict(name=f'__bennett_sf_{op}_{suffix}',
+                result=result, params=params, signature=f"{result} ({', '.join(params)})",
+                format=fmt, status='staged', section='13.4', bead='bennett-arith-0he'))
     (dest/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 
 if __name__ == '__main__':
