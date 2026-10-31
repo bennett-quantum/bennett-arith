@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "bennett_arith",
+  "project_id": "5dc7fe7e-289f-44f9-91ff-2aa4bacf6d5f"
+}
