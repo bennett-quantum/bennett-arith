@@ -49,7 +49,7 @@ def entries(formats=FORMATS):
                                params=(['ptr', 'i32'] if tofp else ['ptr', C, 'i32'])+(['i32'] if constrained else []),
                                format=fmt, fi=fi, op=op, extra=0, wide=True, constrained=constrained)
             # The numeric core also supports explicit rounding and flag accumulation.
-            if op not in ('cmp', 'isfpclass', 'canonicalize', 'frexp', 'modf', 'powi'):
+            if op not in ('isfpclass', 'canonicalize', 'frexp', 'modf', 'powi'):
                 yield dict(name=name+'_rm', result=ret, params=params+['i32'],
                            format=fmt, fi=fi, op=op, extra=0, wide=False, constrained=True)
         for di, (dest, db, df) in enumerate(formats):
@@ -174,6 +174,7 @@ def generate(dest):
                                            owner='bennett-runtimes', used_by='constrained _rm wrappers only')],
                     staged_exports=[], parametric_families=[
                         dict(name='__bennett_sf_powi_B_i<K>', signature='C_B (C_B, iK)',
+                             constrained_name='__bennett_sf_powi_B_i<K>_rm', constrained_signature='C_B (C_B, iK, i32 R)',
                              formats='all seven', status='staged except K=32 on six IEEE formats',
                              section='13.4', bead='bennett-arith-0he'),
                         dict(name='__bennett_sf_convert_to_<fmt>_B', signature='C_fmt (C_B)',
@@ -190,12 +191,20 @@ def generate(dest):
             manifest['staged_exports'].append(e)
     for suffix,bits,fmt in FORMATS+[('ppcf128',128,'PPCDoubleDouble')]:
         C=f'i{bits}'
+        manifest['staged_exports'].append(dict(name=f'__bennett_sf_powi_{suffix}_i32_rm',
+            result=C, params=[C,'i32','i32'], signature=f'{C} ({C}, i32, i32)',
+            format=fmt, status='staged', section='13.4/13.5', bead='bennett-arith-0he'))
         for op in 'sin cos tan asin acos atan atan2 sinh cosh tanh exp exp2 exp10 log log2 log10 pow sincos sincospi'.split():
             result=f'{{ {C}, {C} }}' if op in ('sincos','sincospi') else C
             params=[C,C] if op in ('atan2','pow') else [C]
-            manifest['staged_exports'].append(dict(name=f'__bennett_sf_{op}_{suffix}',
-                result=result, params=params, signature=f"{result} ({', '.join(params)})",
-                format=fmt, status='staged', section='13.4', bead='bennett-arith-0he'))
+            for constrained in (False,True):
+                pp=params+(['i32'] if constrained else [])
+                manifest['staged_exports'].append(dict(name=f'__bennett_sf_{op}_{suffix}'+('_rm' if constrained else ''),
+                    result=result, params=pp, signature=f"{result} ({', '.join(pp)})",
+                    format=fmt, status='staged', section='13.4/13.5', bead='bennett-arith-0he'))
+    manifest['contract_questions']=[dict(bead='bennett-arith-chn', section='13.1/13.5',
+        capability='constrained.fcmps signaling comparison',
+        required_change='Distinguish signaling comparison from quiet cmp_B_rm in the published ABI; see bead for exact proposed spelling.')]
     (dest/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 
 if __name__ == '__main__':

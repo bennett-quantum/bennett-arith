@@ -214,6 +214,7 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
         int p=extra&7;
         int v=p==0 ? 0:p==1 ? d==0:p==2 ? d>0:p==3 ? d>=0:p==4 ? d<0:p==5 ? d<=0:p==6 ? d!=0:1;
         out[0]=u ? (extra>=8):(extra==15 || v);
+        out[2]=a.snan || b.snan;
         return;
     } else if(op==ISFPCLASS) {
         int cls=a.kind==NANV ? (a.snan ? 0:1):a.kind==INF ? (a.sign?2:9):

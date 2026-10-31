@@ -29,7 +29,7 @@ for major in map(int,sys.argv[1:] or (18,23)):
         for op,(ret,params) in specs.items():
             name=f'__bennett_sf_{op}_{f}'+('_i32' if op=='powi' else '')
             expected[name]=f'{ret} ({", ".join(params)})'
-            if op not in ('cmp','isfpclass','canonicalize','frexp','modf','powi'):
+            if op not in ('isfpclass','canonicalize','frexp','modf'):
                 expected[name+'_rm']=f'{ret} ({", ".join(params+["i32"])})'
             if op in integer+['sitofp','uitofp']:
                 ret,params=(c,['ptr','i32']) if op in ('sitofp','uitofp') else ('void',['ptr',c,'i32'])
@@ -44,6 +44,7 @@ for major in map(int,sys.argv[1:] or (18,23)):
             ret=f'{{ {c}, {c} }}' if op in ('sincos','sincospi') else c
             params=[c,c] if op in ('atan2','pow') else [c]
             expected[f'__bennett_sf_{op}_{f}']=f'{ret} ({", ".join(params)})'
+            expected[f'__bennett_sf_{op}_{f}_rm']=f'{ret} ({", ".join(params+["i32"])})'
     assert set(expected)==set(allrows),(set(expected)-set(allrows),set(allrows)-set(expected))
     for name,signature in expected.items():
         row=allrows[name]
@@ -52,4 +53,5 @@ for major in map(int,sys.argv[1:] or (18,23)):
         if name in staged:
             assert row['bead'].startswith('bennett-arith-') and row['status']=='staged'
     assert len(data['parametric_families'])==3
+    assert data['contract_questions'][0]['bead']=='bennett-arith-chn'
     print(f'LLVM {major}: manifest accounts for {len(expected)} concrete signatures and 3 parametric families')

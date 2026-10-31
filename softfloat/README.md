@@ -36,7 +36,7 @@ For `B = f16, bf16, f32, f64, f80, f128`, `C = i16, i16, i32, i64, i80, i128`:
 | `{fptosi,fptoui,lround,llround,lrint,llrint}_B_wide` | `void (ptr, C, i32 M)` | exact saturated M-bit little-endian limb result |
 | `{sitofp,uitofp}_B_wide` | `C (ptr, i32 M)` | correctly rounded from all M bits |
 
-`_rm` variants of arithmetic, conversion (including `_wide`), sqrt, integer
+`_rm` variants of arithmetic, quiet comparison, conversion (including `_wide`), sqrt, integer
 rounding, min/max and ldexp append `i32 R`. Modes 0–4 are nearest/even, downward,
 upward, toward zero, nearest/away. They OR invalid=1, divbyzero=2, overflow=4,
 underflow=8, inexact=16 into `__bennett_rt_fenv.flags`; ordinary entry points do
@@ -77,11 +77,17 @@ it does not run or modify the sibling plugin.
   the other six formats, matching the LLVM major's APFloat semantics (§13.1/13.3).
 - `bennett-arith-0he`: own-format sin/cos/tan/asin/acos/atan/atan2,
   sinh/cosh/tanh, exp/exp2/exp10, log/log2/log10, pow, sincos/sincospi for **all
-  seven formats**, plus powi exponent widths other than 32 (§13.4). No correctly
-  rounded transcendental claim is required; deterministic own-format semantics
+  seven formats**, plus powi exponent widths other than 32 and the constrained
+  `_rm` libm/powi families (§13.4/13.5). No correctly rounded transcendental
+  claim is required; deterministic own-format semantics
   are required. modf and i32 powi are already implemented for the six IEEE formats.
 - `bennett-arith-38c`: metadata-named arbitrary APFloat format conversion families
   for all seven formats (§13.1).
+- `bennett-arith-chn`: §13.5 lacks a way to distinguish quiet constrained.fcmp
+  from signaling constrained.fcmps with the same `cmp_B(C,C,P)` call. Both majors
+  provide both intrinsics. Quiet `cmp_B_rm` is implemented. The bead requests an
+  exact ABI addition for signaling comparison; this capability is retained and
+  recorded in the manifest's `contract_questions`, not silently treated as quiet.
 
 Each bead quotes its determining sentence. No staged symbol has a placeholder
 body, a narrowing substitute, or an input-dependent unsupported trap. These are

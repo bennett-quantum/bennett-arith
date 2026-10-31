@@ -301,6 +301,8 @@ def run(major):
             for pred in range(16):
                 result=int(pred>=8) if unordered else [False,cmp==0,cmp>0,cmp>=0,cmp<0,cmp<=0,cmp!=0,True][pred&7]
                 edge.check('cmp_'+suffix,[a,b,pred],int(result),0)
+                for mode in range(5):
+                    edge.check('cmp_'+suffix+'_rm',[a,b,pred,mode],int(result),int(decode(a,f)[2] or decode(b,f)[2]))
             for op in ('minnum','maxnum','minimum','maximum','minimumnum','maximumnum'):
                 if unordered:
                     result=nan(f) if (av==bv=='nan' or op in ('minimum','maximum')) else (b if av=='nan' else a)
