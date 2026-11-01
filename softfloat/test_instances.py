@@ -159,29 +159,34 @@ for major in (18,23):
         bridge += [f'declare {ret} @{row["symbol"]}({", ".join(params)})',f'define void @call{i}(ptr %in, ptr %out) {{']
         args=[]
         for j,t in enumerate(params):
-            bridge += [f'%p{j} = getelementptr i128, ptr %in, i32 {j}',f'%v{j} = load {t}, ptr %p{j}, align 1']
+            bridge += [f'%p{j} = getelementptr i256, ptr %in, i32 {j}',f'%v{j} = load {t}, ptr %p{j}, align 1']
             args.append(f'{t} %v{j}')
         bridge += [f'%r = call {ret} @{row["symbol"]}({", ".join(args)})',f'store {ret} %r, ptr %out, align 1','ret void','}']
     bridgepath=out/'test.ll';bridgepath.write_text('\n'.join(bridge))
     so=out/'test.so'
     subprocess.run([str(llvm/'clang'),'-shared','-fPIC',str(bc),str(bridgepath),'-o',str(so)],check=True)
     lib=ctypes.CDLL(str(so));env=(ctypes.c_int*2).in_dll(lib,'__bennett_rt_fenv')
-    def check(i,args,want):
+    def check(i,args,want,flags=0):
         global count
         fn=getattr(lib,f'call{i}');fn.argtypes=[ctypes.c_void_p,ctypes.c_void_p]
-        src=ctypes.create_string_buffer(b''.join(x.to_bytes(16,'little') for x in args))
-        dst=ctypes.create_string_buffer(16);env[1]=32
+        src=ctypes.create_string_buffer(b''.join(x.to_bytes(32,'little') for x in args))
+        dst=ctypes.create_string_buffer(16);env[0]=4;env[1]=32
         fn(src,dst);actual=int.from_bytes(dst.raw,'little')
         assert actual==want,(m['exports'][i]['symbol'],args,hex(actual),hex(want))
-        assert env[1]==32
+        assert env[0]==4 and env[1]==32|flags,(m['exports'][i]['symbol'],list(env),flags)
         count+=1
     for i,row in enumerate(m['exports']):
         name=row['symbol'];b=next(b for b in bases if f'_{b}_i' in name or name.endswith('_'+b))
         f=bases[b]
         if 'powi' in name:
             one=edge.encode(Q(1),edge.FORMATS['f64'] if b=='ppcf128' else f)[0]
-            k=int(re.search(r'_i(\d+)',name)[1]);exponent=(1<<k)-1 if k<=128 else 1
+            k=int(re.search(r'_i(\d+)',name)[1]);exponent=(1<<k)-1
             check(i,[one,exponent]+([0] if name.endswith('_rm') else []),one)
+            if k==193 and b=='f64':
+                constrained=name.endswith('_rm');rm=[0] if constrained else []
+                two=edge.encode(Q(2),f)[0]
+                for exponent,want in [(1<<180,edge.infinity(f)),((1<<k)-(1<<180),0)]:
+                    check(i,[two,exponent]+rm,want,20 if constrained else 0)
             continue
         fmt=next(fmt for fmt in FORMATS if f'_{fmt}_' in name);nf=FORMATS[fmt]
         if 'convert_from' in name:
