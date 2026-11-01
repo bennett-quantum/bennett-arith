@@ -223,9 +223,13 @@ class Xoshiro:
         return v & ((1 << width) - 1)
 
 
+def _component(n, w):
+    return {"hi": _meta((1 << w) - 1), "lo": 0, "name": n, "width": w}
+
+
 def _domain(c):
-    return {"borrowed": [], "bundles": [{"hi": _meta((1 << w) - 1), "lo": 0, "name": n, "width": w}
-                                        for n, w in c.mut + c.ins], "regions": []}
+    return {"borrowed": [_component(n, w) for n, w in c.dirty],
+            "bundles": [_component(n, w) for n, w in c.mut + c.ins], "regions": []}
 
 
 def _meta(n):
@@ -234,16 +238,18 @@ def _meta(n):
 
 
 def _row(c, vector):
-    names = [n for n, _ in c.mut + c.ins]
+    names = [n for n, _ in c.mut + c.ins + c.dirty]
     values = dict(zip(names, vector))
     out = c.spec(values)
     after = [str(out[n]) for n, _ in c.mut] + [str(values[n]) for n, _ in c.ins]
-    return {"after": {"borrowed": [], "bundles": after, "regions": []},
-            "before": {"borrowed": [], "bundles": [str(v) for v in vector], "regions": []}}
+    split = len(c.mut) + len(c.ins)
+    dirty = [str(v) for v in vector[split:]]    # Borrowed bundles are restored, on every row.
+    return {"after": {"borrowed": dirty, "bundles": after, "regions": []},
+            "before": {"borrowed": dirty, "bundles": [str(v) for v in vector[:split]], "regions": []}}
 
 
 def _vectors(c):
-    widths = [w for _, w in c.mut + c.ins]
+    widths = [w for _, w in c.mut + c.ins + c.dirty]
     bits = sum(widths)
     if bits <= TABLE_BITS:
         out = []
@@ -373,7 +379,9 @@ class Object:
                 "resources": {"peak_qubits": str(wires), "qubit_second": str(wires * len(c.gates)),
                               "t": str(t), "time": str(len(c.gates))},
                 "signature": c.signature(),
-                "verification": {"borrow_frames": [0] if c.dirty else [], "channel": [], "fault_rate": {
+                # A borrow frame needs a proof over D_F (5.6); a sampled claim is evidence and is not listed.
+                "verification": {"borrow_frames": [0] if c.dirty and claims[0]["kind"] == "exhaustive" else [],
+                                 "channel": [], "fault_rate": {
                     "domain": {"borrowed": [], "bundles": [], "regions": []}, "faults_by_code": {},
                     "layout_dependent_excluded": 0, "undefined_excluded": 0},
                     "inverse_pairs": [], "oracle": None, "unitary": []}}
@@ -402,6 +410,22 @@ class Object:
             base = self._base()
             self._text = f"{base}\nsection certificate\n{jcs(self.certificate(sha256(base)))}\n"
         return self._text
+
+
+def census(c):
+    """Gate counts, Toffoli depth and workspace of one flat circuit, as the manifest publishes them."""
+    gates = {}
+    total, tof = {}, {}
+    depth = tdepth = t = 0
+    for g in c.gates:
+        gates[g[0]] = gates.get(g[0], 0) + 1
+        t += {"ccx": 7, "t": 1, "tdg": 1}.get(g[0], 0)
+        layer = max(total.get(w, 0) for w in g[1:]) + 1
+        tlayer = max(tof.get(w, 0) for w in g[1:]) + (g[0] == "ccx")
+        for w in g[1:]:
+            total[w], tof[w] = layer, tlayer
+        depth, tdepth = max(depth, layer), max(tdepth, tlayer)
+    return {"ancilla": c.top, "depth": depth, "gates": gates, "t": t, "toffoli_depth": tdepth}
 
 
 def interpreter_view(obj):

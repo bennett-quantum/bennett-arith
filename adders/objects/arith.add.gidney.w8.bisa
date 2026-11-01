@@ -1,0 +1,66 @@
+bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width=32
+
+section symbols
+{"0":{"interface_hash":"52d8ed9843def45942873539606efe14ef27987171bada9f36ff98b7290b8177","kind":"perm_action","name":"arith.add.gidney.w8","signature":{"abi":"0.9","args":[],"bounds":[],"in":[],"kind":"perm_action","mem":[],"mut":[8,8],"tier":"q"}}}
+
+section functions
+perm_action @arith.add.gidney.w8 (a:wire[8] mut, b:wire[8] mut) () () () ()
+^entry():
+anc = qalloc any 7
+ccx a[0] b[0] anc[0]
+cx anc[0] a[1]
+cx anc[0] b[1]
+ccx a[1] b[1] anc[1]
+cx anc[0] anc[1]
+cx anc[1] a[2]
+cx anc[1] b[2]
+ccx a[2] b[2] anc[2]
+cx anc[1] anc[2]
+cx anc[2] a[3]
+cx anc[2] b[3]
+ccx a[3] b[3] anc[3]
+cx anc[2] anc[3]
+cx anc[3] a[4]
+cx anc[3] b[4]
+ccx a[4] b[4] anc[4]
+cx anc[3] anc[4]
+cx anc[4] a[5]
+cx anc[4] b[5]
+ccx a[5] b[5] anc[5]
+cx anc[4] anc[5]
+cx anc[5] a[6]
+cx anc[5] b[6]
+ccx a[6] b[6] anc[6]
+cx anc[5] anc[6]
+cx anc[6] b[7]
+cx a[7] b[7]
+cx anc[5] anc[6]
+ccx a[6] b[6] anc[6]
+cx anc[5] a[6]
+cx a[6] b[6]
+cx anc[4] anc[5]
+ccx a[5] b[5] anc[5]
+cx anc[4] a[5]
+cx a[5] b[5]
+cx anc[3] anc[4]
+ccx a[4] b[4] anc[4]
+cx anc[3] a[4]
+cx a[4] b[4]
+cx anc[2] anc[3]
+ccx a[3] b[3] anc[3]
+cx anc[2] a[3]
+cx a[3] b[3]
+cx anc[1] anc[2]
+ccx a[2] b[2] anc[2]
+cx anc[1] a[2]
+cx a[2] b[2]
+cx anc[0] anc[1]
+ccx a[1] b[1] anc[1]
+cx anc[0] a[1]
+cx a[1] b[1]
+ccx a[0] b[0] anc[0]
+cx a[0] b[0]
+qfree anc
+
+section certificate
+{"bindings":{"closure_hash":"52d8ed9843def45942873539606efe14ef27987171bada9f36ff98b7290b8177","dialect_mapping_version":"none","interface_hash":"52d8ed9843def45942873539606efe14ef27987171bada9f36ff98b7290b8177","invocation":{"args":[],"budget":["0","0","0","0"]},"object_hash":"e3b5f1f2e2636440e7adf12cb9363e5011715116e4a690e0d16636ab8323a6d9","reference_program_hash":"52d8ed9843def45942873539606efe14ef27987171bada9f36ff98b7290b8177","target_hash":"f038b8c8ff46c42c551829c02e3ef6f0fc94481b74a2ac76338c83d1fb21ccf3"},"composition":{"epsilon_total":{"diamond":0},"method":"sum_over_multiplicities","multiplicities":{}},"producer":{"materialisation":{"llvm_version":"none","normaliser_version":"none","pipeline":"bennett-arith-generator"},"name":"bennett-arith","version":"circuits-1"},"regions":{"52d8ed9843def45942873539606efe14ef27987171bada9f36ff98b7290b8177":{"bounds":[],"claims":[{"domain":{"borrowed":[],"bundles":[{"hi":255,"lo":0,"name":"a","width":8},{"hi":255,"lo":0,"name":"b","width":8}],"regions":[]},"expected":{"table":[{"after":{"borrowed":[],"bundles":["3","113"],"regions":[]},"before":{"borrowed":[],"bundles":["3","110"],"regions":[]}},{"after":{"borrowed":[],"bundles":["8","14"],"regions":[]},"before":{"borrowed":[],"bundles":["8","6"],"regions":[]}},{"after":{"borrowed":[],"bundles":["9","221"],"regions":[]},"before":{"borrowed":[],"bundles":["9","212"],"regions":[]}},{"after":{"borrowed":[],"bundles":["19","159"],"regions":[]},"before":{"borrowed":[],"bundles":["19","140"],"regions":[]}},{"after":{"borrowed":[],"bundles":["22","98"],"regions":[]},"before":{"borrowed":[],"bundles":["22","76"],"regions":[]}},{"after":{"borrowed":[],"bundles":["22","169"],"regions":[]},"before":{"borrowed":[],"bundles":["22","147"],"regions":[]}},{"after":{"borrowed":[],"bundles":["26","71"],"regions":[]},"before":{"borrowed":[],"bundles":["26","45"],"regions":[]}},{"after":{"borrowed":[],"bundles":["26","82"],"regions":[]},"before":{"borrowed":[],"bundles":["26","56"],"regions":[]}},{"after":{"borrowed":[],"bundles":["26","217"],"regions":[]},"before":{"borrowed":[],"bundles":["26","191"],"regions":[]}},{"after":{"borrowed":[],"bundles":["35","74"],"regions":[]},"before":{"borrowed":[],"bundles":["35","39"],"regions":[]}},{"after":{"borrowed":[],"bundles":["37","191"],"regions":[]},"before":{"borrowed":[],"bundles":["37","154"],"regions":[]}},{"after":{"borrowed":[],"bundles":["40","206"],"regions":[]},"before":{"borrowed":[],"bundles":["40","166"],"regions":[]}},{"after":{"borrowed":[],"bundles":["51","5"],"regions":[]},"before":{"borrowed":[],"bundles":["51","210"],"regions":[]}},{"after":{"borrowed":[],"bundles":["60","25"],"regions":[]},"before":{"borrowed":[],"bundles":["60","221"],"regions":[]}},{"after":{"borrowed":[],"bundles":["65","68"],"regions":[]},"before":{"borrowed":[],"bundles":["65","3"],"regions":[]}},{"after":{"borrowed":[],"bundles":["68","204"],"regions":[]},"before":{"borrowed":[],"bundles":["68","136"],"regions":[]}},{"after":{"borrowed":[],"bundles":["72","240"],"regions":[]},"before":{"borrowed":[],"bundles":["72","168"],"regions":[]}},{"after":{"borrowed":[],"bundles":["76","95"],"regions":[]},"before":{"borrowed":[],"bundles":["76","19"],"regions":[]}},{"after":{"borrowed":[],"bundles":["106","68"],"regions":[]},"before":{"borrowed":[],"bundles":["106","218"],"regions":[]}},{"after":{"borrowed":[],"bundles":["109","17"],"regions":[]},"before":{"borrowed":[],"bundles":["109","164"],"regions":[]}},{"after":{"borrowed":[],"bundles":["119","23"],"regions":[]},"before":{"borrowed":[],"bundles":["119","160"],"regions":[]}},{"after":{"borrowed":[],"bundles":["133","44"],"regions":[]},"before":{"borrowed":[],"bundles":["133","167"],"regions":[]}},{"after":{"borrowed":[],"bundles":["174","30"],"regions":[]},"before":{"borrowed":[],"bundles":["174","112"],"regions":[]}},{"after":{"borrowed":[],"bundles":["183","194"],"regions":[]},"before":{"borrowed":[],"bundles":["183","11"],"regions":[]}},{"after":{"borrowed":[],"bundles":["185","2"],"regions":[]},"before":{"borrowed":[],"bundles":["185","73"],"regions":[]}},{"after":{"borrowed":[],"bundles":["189","252"],"regions":[]},"before":{"borrowed":[],"bundles":["189","63"],"regions":[]}},{"after":{"borrowed":[],"bundles":["196","129"],"regions":[]},"before":{"borrowed":[],"bundles":["196","189"],"regions":[]}},{"after":{"borrowed":[],"bundles":["203","71"],"regions":[]},"before":{"borrowed":[],"bundles":["203","124"],"regions":[]}},{"after":{"borrowed":[],"bundles":["204","244"],"regions":[]},"before":{"borrowed":[],"bundles":["204","40"],"regions":[]}},{"after":{"borrowed":[],"bundles":["218","41"],"regions":[]},"before":{"borrowed":[],"bundles":["218","79"],"regions":[]}},{"after":{"borrowed":[],"bundles":["231","125"],"regions":[]},"before":{"borrowed":[],"bundles":["231","150"],"regions":[]}},{"after":{"borrowed":[],"bundles":["244","143"],"regions":[]},"before":{"borrowed":[],"bundles":["244","155"],"regions":[]}}]},"invocation":{"args":[],"budget":["0","0","0","0"]},"kind":"sampled","label":"evidence","sampler":{"algorithm":"xoshiro256**","count":32,"seed":["11400714819323198485","14029467366897019727","1609587929392839161","9650029242287828579"]},"subject":{"closure_hash":"52d8ed9843def45942873539606efe14ef27987171bada9f36ff98b7290b8177","inherited_controls":0,"variant":"forward"}}],"cleanup":{},"definedness_assumptions":[],"error":{},"frame":{"ancillae":[],"borrow":[],"history":[],"scratch":[{"class":"fast","id":"anc","state":"clean","width":7}],"slots":[{"class":"fast","id":"mut:0","role":"mut","width":8},{"class":"fast","id":"mut:1","role":"mut","width":8}]},"gates_used":{"ccx":{"count":14},"cx":{"count":39}},"kind":"perm_action","resources":{"peak_qubits":"23","qubit_second":"1219","t":"98","time":"53"},"signature":{"abi":"0.9","args":[],"bounds":[],"in":[],"kind":"perm_action","mem":[],"mut":[8,8],"tier":"q"},"verification":{"borrow_frames":[],"channel":[],"fault_rate":{"domain":{"borrowed":[],"bundles":[],"regions":[]},"faults_by_code":{},"layout_dependent_excluded":0,"undefined_excluded":0},"inverse_pairs":[],"oracle":null,"unitary":[]}}},"versions":{"cert":"0.9","coverage":"0.9","isa":"0.9","launch":"0.9","object":"0.9","sched":"0.9","target":"0.9"}}

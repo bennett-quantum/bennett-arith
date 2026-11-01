@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# The tests/circuits gate. Needs the reference interpreter binary (BENNETT_ISA_REF, or the sibling
+# bennett-isa-spec debug build) and numpy.
+set -euo pipefail
+unset DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+here="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+root="$(dirname "$(dirname "$here")")"
+export TMPDIR="$root/.tmp/opus-arith-circuits/tmp"
+export PYTHONDONTWRITEBYTECODE=1
+mkdir -p "$TMPDIR"
+cd "$here"
+for t in test_adders test_multipliers test_qrom test_objects; do
+  python3 -I "$t.py"
+done
+echo 'circuits: adders, multipliers, QROM and published certificates passed'

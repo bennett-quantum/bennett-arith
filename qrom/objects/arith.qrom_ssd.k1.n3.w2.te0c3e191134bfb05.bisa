@@ -1,0 +1,83 @@
+bennett-object isa=0.9 object=0.9 launch=0.9 sched=0.9 cert=0.9 coverage=0.9 target=0.9 ptr_width=32
+
+section symbols
+{"0":{"interface_hash":"10a865dfbe3224d9c97fcb0e511b74be3f363f1661dd2e7bc447399534666c09","kind":"perm_action","name":"arith.qrom_ssd.k1.n3.w2.te0c3e191134bfb05","signature":{"abi":"0.9","args":[],"bounds":[],"in":[3],"kind":"perm_action","mem":[],"mut":[2],"tier":"q"}}}
+
+section functions
+perm_action @arith.qrom_ssd.k1.n3.w2.te0c3e191134bfb05 (t:wire[2] mut) (idx:wire[3] in) () () ()
+^entry():
+y = qborrow any 4
+anc = qalloc any 2
+cx y[2] y[0]
+ccx idx[0] y[0] y[2]
+cx y[2] y[0]
+cx y[3] y[1]
+ccx idx[0] y[1] y[3]
+cx y[3] y[1]
+cx y[0] t[0]
+cx y[1] t[1]
+cx y[3] y[1]
+ccx idx[0] y[1] y[3]
+cx y[3] y[1]
+cx y[2] y[0]
+ccx idx[0] y[0] y[2]
+cx y[2] y[0]
+cx idx[2] anc[0]
+x anc[0]
+ccx anc[0] idx[1] anc[1]
+cx anc[0] anc[1]
+cx anc[1] y[1]
+cx anc[0] anc[1]
+cx anc[1] y[0]
+cx anc[1] y[1]
+cx anc[1] y[2]
+ccx anc[0] idx[1] anc[1]
+x anc[0]
+ccx anc[0] idx[1] anc[1]
+cx anc[0] anc[1]
+cx anc[1] y[0]
+cx anc[1] y[2]
+cx anc[1] y[3]
+cx anc[0] anc[1]
+cx anc[1] y[3]
+ccx anc[0] idx[1] anc[1]
+cx idx[2] anc[0]
+cx y[2] y[0]
+ccx idx[0] y[0] y[2]
+cx y[2] y[0]
+cx y[3] y[1]
+ccx idx[0] y[1] y[3]
+cx y[3] y[1]
+cx y[0] t[0]
+cx y[1] t[1]
+cx y[3] y[1]
+ccx idx[0] y[1] y[3]
+cx y[3] y[1]
+cx y[2] y[0]
+ccx idx[0] y[0] y[2]
+cx y[2] y[0]
+cx idx[2] anc[0]
+x anc[0]
+ccx anc[0] idx[1] anc[1]
+cx anc[0] anc[1]
+cx anc[1] y[1]
+cx anc[0] anc[1]
+cx anc[1] y[0]
+cx anc[1] y[1]
+cx anc[1] y[2]
+ccx anc[0] idx[1] anc[1]
+x anc[0]
+ccx anc[0] idx[1] anc[1]
+cx anc[0] anc[1]
+cx anc[1] y[0]
+cx anc[1] y[2]
+cx anc[1] y[3]
+cx anc[0] anc[1]
+cx anc[1] y[3]
+ccx anc[0] idx[1] anc[1]
+cx idx[2] anc[0]
+qfree anc
+qreturn y
+
+section certificate
+{"bindings":{"closure_hash":"10a865dfbe3224d9c97fcb0e511b74be3f363f1661dd2e7bc447399534666c09","dialect_mapping_version":"none","interface_hash":"10a865dfbe3224d9c97fcb0e511b74be3f363f1661dd2e7bc447399534666c09","invocation":{"args":[],"budget":["0","0","0","0"]},"object_hash":"fbe8d5677b8c99f1ac5faedf2bba3c4e1db72733126e1a81848d599c54322b9d","reference_program_hash":"10a865dfbe3224d9c97fcb0e511b74be3f363f1661dd2e7bc447399534666c09","target_hash":"f038b8c8ff46c42c551829c02e3ef6f0fc94481b74a2ac76338c83d1fb21ccf3"},"composition":{"epsilon_total":{"diamond":0},"method":"sum_over_multiplicities","multiplicities":{}},"producer":{"materialisation":{"llvm_version":"none","normaliser_version":"none","pipeline":"bennett-arith-generator"},"name":"bennett-arith","version":"circuits-1"},"regions":{"10a865dfbe3224d9c97fcb0e511b74be3f363f1661dd2e7bc447399534666c09":{"bounds":[],"claims":[{"domain":{"borrowed":[{"hi":15,"lo":0,"name":"y","width":4}],"bundles":[{"hi":3,"lo":0,"name":"t","width":2},{"hi":7,"lo":0,"name":"idx","width":3}],"regions":[]},"expected":{"table":[{"after":{"borrowed":["9"],"bundles":["2","0"],"regions":[]},"before":{"borrowed":["9"],"bundles":["0","0"],"regions":[]}},{"after":{"borrowed":["11"],"bundles":["0","1"],"regions":[]},"before":{"borrowed":["11"],"bundles":["0","1"],"regions":[]}},{"after":{"borrowed":["10"],"bundles":["3","2"],"regions":[]},"before":{"borrowed":["10"],"bundles":["0","2"],"regions":[]}},{"after":{"borrowed":["7"],"bundles":["1","3"],"regions":[]},"before":{"borrowed":["7"],"bundles":["0","3"],"regions":[]}},{"after":{"borrowed":["4"],"bundles":["1","4"],"regions":[]},"before":{"borrowed":["4"],"bundles":["0","4"],"regions":[]}},{"after":{"borrowed":["4"],"bundles":["3","5"],"regions":[]},"before":{"borrowed":["4"],"bundles":["0","5"],"regions":[]}},{"after":{"borrowed":["10"],"bundles":["3","5"],"regions":[]},"before":{"borrowed":["10"],"bundles":["0","5"],"regions":[]}},{"after":{"borrowed":["8"],"bundles":["0","6"],"regions":[]},"before":{"borrowed":["8"],"bundles":["0","6"],"regions":[]}},{"after":{"borrowed":["10"],"bundles":["0","6"],"regions":[]},"before":{"borrowed":["10"],"bundles":["0","6"],"regions":[]}},{"after":{"borrowed":["12"],"bundles":["0","6"],"regions":[]},"before":{"borrowed":["12"],"bundles":["0","6"],"regions":[]}},{"after":{"borrowed":["14"],"bundles":["0","6"],"regions":[]},"before":{"borrowed":["14"],"bundles":["0","6"],"regions":[]}},{"after":{"borrowed":["6"],"bundles":["2","7"],"regions":[]},"before":{"borrowed":["6"],"bundles":["0","7"],"regions":[]}},{"after":{"borrowed":["3"],"bundles":["0","4"],"regions":[]},"before":{"borrowed":["3"],"bundles":["1","4"],"regions":[]}},{"after":{"borrowed":["13"],"bundles":["0","4"],"regions":[]},"before":{"borrowed":["13"],"bundles":["1","4"],"regions":[]}},{"after":{"borrowed":["3"],"bundles":["3","7"],"regions":[]},"before":{"borrowed":["3"],"bundles":["1","7"],"regions":[]}},{"after":{"borrowed":["4"],"bundles":["3","7"],"regions":[]},"before":{"borrowed":["4"],"bundles":["1","7"],"regions":[]}},{"after":{"borrowed":["5"],"bundles":["3","7"],"regions":[]},"before":{"borrowed":["5"],"bundles":["1","7"],"regions":[]}},{"after":{"borrowed":["9"],"bundles":["0","0"],"regions":[]},"before":{"borrowed":["9"],"bundles":["2","0"],"regions":[]}},{"after":{"borrowed":["11"],"bundles":["0","0"],"regions":[]},"before":{"borrowed":["11"],"bundles":["2","0"],"regions":[]}},{"after":{"borrowed":["12"],"bundles":["0","0"],"regions":[]},"before":{"borrowed":["12"],"bundles":["2","0"],"regions":[]}},{"after":{"borrowed":["12"],"bundles":["1","2"],"regions":[]},"before":{"borrowed":["12"],"bundles":["2","2"],"regions":[]}},{"after":{"borrowed":["13"],"bundles":["1","2"],"regions":[]},"before":{"borrowed":["13"],"bundles":["2","2"],"regions":[]}},{"after":{"borrowed":["9"],"bundles":["3","3"],"regions":[]},"before":{"borrowed":["9"],"bundles":["2","3"],"regions":[]}},{"after":{"borrowed":["11"],"bundles":["3","3"],"regions":[]},"before":{"borrowed":["11"],"bundles":["2","3"],"regions":[]}},{"after":{"borrowed":["13"],"bundles":["3","4"],"regions":[]},"before":{"borrowed":["13"],"bundles":["2","4"],"regions":[]}},{"after":{"borrowed":["6"],"bundles":["1","5"],"regions":[]},"before":{"borrowed":["6"],"bundles":["2","5"],"regions":[]}},{"after":{"borrowed":["13"],"bundles":["0","2"],"regions":[]},"before":{"borrowed":["13"],"bundles":["3","2"],"regions":[]}},{"after":{"borrowed":["15"],"bundles":["0","2"],"regions":[]},"before":{"borrowed":["15"],"bundles":["3","2"],"regions":[]}},{"after":{"borrowed":["1"],"bundles":["2","4"],"regions":[]},"before":{"borrowed":["1"],"bundles":["3","4"],"regions":[]}},{"after":{"borrowed":["0"],"bundles":["1","7"],"regions":[]},"before":{"borrowed":["0"],"bundles":["3","7"],"regions":[]}},{"after":{"borrowed":["6"],"bundles":["1","7"],"regions":[]},"before":{"borrowed":["6"],"bundles":["3","7"],"regions":[]}}]},"invocation":{"args":[],"budget":["0","0","0","0"]},"kind":"sampled","label":"evidence","sampler":{"algorithm":"xoshiro256**","count":32,"seed":["11400714819323198485","14029467366897019727","1609587929392839161","9650029242287828579"]},"subject":{"closure_hash":"10a865dfbe3224d9c97fcb0e511b74be3f363f1661dd2e7bc447399534666c09","inherited_controls":0,"variant":"forward"}}],"cleanup":{},"definedness_assumptions":[],"error":{},"frame":{"ancillae":[],"borrow":[{"class":"fast","id":"y","width":4}],"history":[],"scratch":[{"class":"fast","id":"anc","state":"clean","width":2}],"slots":[{"class":"fast","id":"mut:0","role":"mut","width":2},{"class":"fast","id":"in:0","role":"in","width":3}]},"gates_used":{"ccx":{"count":16},"cx":{"count":48},"x":{"count":4}},"kind":"perm_action","resources":{"peak_qubits":"11","qubit_second":"748","t":"112","time":"68"},"signature":{"abi":"0.9","args":[],"bounds":[],"in":[3],"kind":"perm_action","mem":[],"mut":[2],"tier":"q"},"verification":{"borrow_frames":[],"channel":[],"fault_rate":{"domain":{"borrowed":[],"bundles":[],"regions":[]},"faults_by_code":{},"layout_dependent_excluded":0,"undefined_excluded":0},"inverse_pairs":[],"oracle":null,"unitary":[]}}},"versions":{"cert":"0.9","coverage":"0.9","isa":"0.9","launch":"0.9","object":"0.9","sched":"0.9","target":"0.9"}}

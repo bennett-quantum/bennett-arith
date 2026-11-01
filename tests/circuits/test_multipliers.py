@@ -69,6 +69,8 @@ class Schoolbook(unittest.TestCase):
                 self.assertEqual(got.get("ccx", 0), want, (W, R))
                 self.assertEqual(got["t_total"], 7 * want, (W, R))
                 self.assertEqual(sizes(M.mul_school(W, R)).get("ccx", 0), 2 * want, (W, R))
+                self.assertEqual(got["ancilla"], R + (1 if R >= 2 else 0), (W, R))
+                self.assertEqual(sizes(M.mul_school(W, R))["ancilla"], 2 * R + (1 if R >= 2 else 0), (W, R))
 
 
 def check_pairs(case, fn, W, R, xor):
@@ -128,6 +130,8 @@ class Karatsuba(unittest.TestCase):
                 got = sizes(M.muladd_karatsuba(W, R))
                 self.assertEqual(got.get("ccx", 0), M.karatsuba_toffoli(W, R), (W, R))
                 self.assertEqual(got["ancilla"], M.karatsuba_ancilla(W, R), (W, R))
+                forms = sizes(M.mul_karatsuba(W, R))
+                self.assertEqual(forms.get("ccx", 0), 2 * M.karatsuba_forward_toffoli(W), (W, R))
 
     def test_subquadratic_growth(self):
         """F(2W)/F(W) tends to 3 (Karatsuba), not 4 (schoolbook); and it overtakes schoolbook."""
@@ -163,11 +167,14 @@ class QclaTree(unittest.TestCase):
             self.assertEqual(got["ancilla"], M.tree_ancilla(W), W)
             total, tof = depths(fn)
             self.assertLessEqual(tof, M.tree_toffoli_depth_bound(W), W)
-        # Polylog: one fixed constant against log^2 W across the widths, and far below schoolbook.
+        # O(log^2 W): depth / log^2 W may not grow with W; and far below schoolbook.
         measured = {}
+        ratio = float("inf")
         for W in (8, 16, 32, 64, 128):
             measured[W] = depths(parse(M.mul_tree(W).text())[0][M.mul_tree(W).root])[1]
-            self.assertLessEqual(measured[W], 6 * math.log2(W) ** 2, W)
+            now = measured[W] / math.log2(W) ** 2
+            self.assertLessEqual(now, ratio, measured)
+            ratio = now
         school = depths(parse(M.mul_school(64, 128).text())[0][M.mul_school(64, 128).root])[1]
         self.assertLess(measured[64] * 10, school)
 

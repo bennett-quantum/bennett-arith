@@ -35,6 +35,7 @@ for sha in "${shas[@]}"; do
   env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
     -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
     TMPDIR="$wt/.tmp" "$wt/scripts/gate"
+  "$wt/tests/circuits/run"
   cleanup
   trap - EXIT
 done

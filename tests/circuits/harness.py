@@ -62,6 +62,9 @@ class Function:
     def gates(self):
         return [op for op in self.ops if op[0] in GATES]
 
+    def borrowed(self):
+        return [(op[1], int(op[3])) for op in self.ops if op[0] == "qborrow"]
+
 
 def parse(text):
     """Return ({name: Function}, sections) from canonical object text."""

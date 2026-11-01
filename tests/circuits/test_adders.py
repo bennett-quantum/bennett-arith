@@ -22,7 +22,7 @@ def popcount(n):
 
 def verify(case, fn, spec, W_of, exhaustive=True, lanes=4096, controls=(False, True)):
     """Check every bundle after fn against spec on all inputs, with and without ctl."""
-    widths = dict(fn.mut + fn.ins)
+    widths = dict(fn.mut + fn.ins + fn.borrowed())
     if exhaustive and sum(widths.values()) > 24:
         exhaustive = False
     domain = Lanes(widths, exhaustive=exhaustive, count=lanes)
@@ -49,8 +49,8 @@ def verify(case, fn, spec, W_of, exhaustive=True, lanes=4096, controls=(False, T
             mask = Random(7).getrandbits(n)
         store = simulate(fn, values, n, control=mask)
         full = (1 << n) - 1
-        for name, w in fn.ins:
-            case.assertEqual(word(store, name, w), domain.bits[name], f"{fn.name}: in {name} changed")
+        for name, w in fn.ins + fn.borrowed():
+            case.assertEqual(word(store, name, w), domain.bits[name], f"{fn.name}: {name} changed")
         for name, w in fn.mut:
             want = expected[name]
             if mask is not None:
@@ -171,6 +171,8 @@ class Bijections(unittest.TestCase):
                               lambda v, k=k: {"x": (v["x"] - k) & mask})
         for W, k in ((32, 0xdeadbeef), (64, 0x123456789abcdef1), (128, (1 << 127) | 5)):
             mask = (1 << W) - 1
+            got = counts(parse(C.add_const(W, k).text())[0][C.add_const(W, k).root])
+            self.assertEqual((got["ccx"], got["ancilla"]), (2 * W - 3, W + 1), W)
             self.run_pair(C.add_const(W, k),
                           lambda v: {"x": (v["x"] + k) & mask},
                           lambda v: {"x": (v["x"] - k) & mask}, exhaustive=False)
@@ -203,12 +205,17 @@ class Bijections(unittest.TestCase):
             obj = C.negate(W)
             self.run_pair(obj, lambda v: {"x": -v["x"] & mask}, lambda v: {"x": -v["x"] & mask},
                           exhaustive=W <= 16)
+            got = counts(parse(obj.text())[0][obj.root])
+            self.assertEqual((got.get("ccx", 0), got["ancilla"]),
+                             ((2 * W - 3 if W >= 2 else 0), (W + 1 if W >= 2 else W)), W)
 
     def test_bswap(self):
         for W in (16, 32, 64, 128):
             def spec(v):
                 return {"x": int.from_bytes(v["x"].to_bytes(W // 8, "little"), "big")}
             self.run_pair(C.bswap(W), spec, spec, exhaustive=W <= 16)
+            got = counts(parse(C.bswap(W).text())[0][C.bswap(W).root])
+            self.assertEqual((got.get("ccx", 0), got["ancilla"]), (0, 0), W)
         with self.assertRaises(ValueError):
             C.bswap(12)
 
