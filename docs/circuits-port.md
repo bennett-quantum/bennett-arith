@@ -131,7 +131,8 @@ All tests read the emitted canonical text through an independent parser (`harnes
 - **Randomised.** 4096 or more lanes at W up to 256; 512 for wide Karatsuba.
 - **Cost.** Every formula above is asserted over ranges of W, from text.
 - **Differential.** `bennett-isa-ref` debug build: `check` for identities, schema and §6 (published objects
-  of at most 1500 gates; all objects out of band with a release build), `run-action` with exact +1 phase, adjoint
+  of at most 1500 gates; out of band with a release build, 127 of the 129 objects passed, the two `addmod`
+  in-form objects being unparsable until G4 lands), `run-action` with exact +1 phase, adjoint
   checks, `run-oracle` for wide modular pairs. Negative controls: a tampered hash, a dropped uncompute.
 - **Certificates.** `test_objects.py` re-derives census and frame, re-draws xoshiro independently and replays
   every table row bit-sliced; a subset through `run-action`.
