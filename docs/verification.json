@@ -1,7 +1,7 @@
 {
-  "date_utc": "2026-11-01T13:26:54Z",
+  "date_utc": "2026-11-01T13:45:50Z",
   "dialect": "0.2.10 @023f5a771a814270634db3be9cfde88ded69f975",
-  "gate": "scripts/gate; new subnormal sweep also run separately before commit, then included in clean pre-push gate",
+  "gate": "scripts/gate, including subnormal sweep, passed in clean detached pre-push checkout; focused inclusive-width test and final-source relocated reproduction passed separately",
   "correct_rounding_claim": false,
   "ordinary_libm_maximum_reported_ulp": 0.5,
   "engineering_tolerance_ulp": 4,
@@ -1103,5 +1103,25 @@
     }
   },
   "powi_inclusive_max_width": 8388608,
-  "maximum_width_verification": "tests/test_powi_limit.py; exact i8388608 wrapper assembled and verified by both majors; default bitcode SHA unchanged"
+  "maximum_width_verification": "tests/test_powi_limit.py; exact i8388608 wrapper assembled and verified by both majors; default bitcode SHA unchanged",
+  "clean_pre_push": {
+    "commit": "bb79deb44bea7f727717b3a9ddd59cd0ca3c75a8",
+    "exit_code": 0,
+    "log_sha256": "ff7df83035bbf2de48e407a3f2332d8fc0d760a9e1287200566927c67fa61ba4",
+    "numerical_bitcode_identical_to_final_source": true,
+    "worktree_removed": true
+  },
+  "relocated_reproduction": {
+    "source_commit": "7826a104ffa5d1899c415adc395fd99a193d043d",
+    "majors": [
+      18,
+      23
+    ],
+    "byte_identical": [
+      "bennett-arith.bc",
+      "manifest.json",
+      "SHA256SUMS"
+    ],
+    "manifest_audit_passed": true
+  }
 }
