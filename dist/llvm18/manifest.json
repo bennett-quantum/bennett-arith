@@ -20739,8 +20739,8 @@
       "git_blob_sha1": "f4e3a2da792e56128e15d55caf8e572495a51313"
     },
     "softfloat/generate.py": {
-      "sha256": "894cfd27b5339a2b192642eb97e146428ebe96479a1ad3e546b7d890bf0d6870",
-      "git_blob_sha1": "29f7d202417473005e218abb5303dd122b912c81"
+      "sha256": "ff281d48b2b7582f41ac70309ee19caa65fba36c2871b44078f10c0a92331e6b",
+      "git_blob_sha1": "b54be8be200c90e999e70f03ee7e7e0da14bd83c"
     },
     "softfloat/ppc.h": {
       "sha256": "700777078fb7c436d6c03d7945f0299421e1eee9ac9ddc905f63503ebe45ecdc",

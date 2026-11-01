@@ -113,7 +113,7 @@ and the missing quantitative contract are recorded in dialect
 The default bitcode publishes powi at K = 1, 8, 16, 32, 64, 128, 192, 256, 513,
 1025 on every format, with `_rm` variants. `scripts/build 18 7 193` (or major 23)
 adds exact i7/i193 signatures to that publication and its manifest. The generator
-accepts any LLVM integer width 1..8388607 and emits repeated-squaring IR with the
+accepts any LLVM integer width 1..8388608 and emits repeated-squaring IR with the
 original iK exponent throughout. A bitcode file has a finite export set; consumers
 requiring another K must obtain the generated matching-major artifact and pin
 its new SHA. The gate verifies the default publication; a custom artifact's

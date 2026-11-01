@@ -26,6 +26,7 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
 python3 -I "$root/tests/test_ppc.py"
 python3 -I "$root/tests/test_extended.py"
 python3 -I "$root/tests/test_powi.py"
+python3 -I "$root/tests/test_powi_limit.py"
 python3 -I "$root/tests/test_trans.py"
 python3 -I "$root/tests/test_trans_extra.py"
 python3 -I "$root/tests/test_trans_boundaries.py"

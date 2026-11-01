@@ -70,7 +70,7 @@ def powi_entries(widths):
     for fi,(suffix,bits,fmt) in enumerate(FORMATS):
         for k in widths:
             if k==32:continue
-            assert 1<=k<=8388607, 'LLVM integer exponent width out of range'
+            assert 1<=k<=8388608, 'LLVM integer exponent width out of range'
             for constrained in (False,True):
                 yield dict(name=f'__bennett_sf_powi_{suffix}_i{k}'+('_rm' if constrained else ''),
                     result=f'i{bits}',params=[f'i{bits}',f'i{k}']+(['i32'] if constrained else []),
