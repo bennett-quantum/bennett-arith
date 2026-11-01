@@ -13,13 +13,17 @@ FORMATS = [('f16', 16, 'binary16'), ('bf16', 16, 'bfloat16'),
 OPS = ('add sub mul div rem cmp fptosi fptoui sitofp uitofp sqrt floor ceil trunc '
        'round roundeven rint nearbyint canonicalize minnum maxnum minimum maximum '
        'minimumnum maximumnum fma isfpclass ldexp frexp lround llround lrint llrint '
-       'convert powi modf sin cos tan asin acos atan atan2 sinh cosh tanh exp exp2 exp10 log log2 log10 pow sincos sincospi').split()
+       'convert powi modf sin cos tan asin acos atan atan2 sinh cosh tanh exp exp2 exp10 log log2 log10 pow sincos sincospi cmps').split()
 
 
 def entries(formats=FORMATS):
     for fi, (suffix, bits, fmt) in enumerate(formats):
         C = f'i{bits}'
         for op in OPS:
+            if op == 'cmps':
+                yield dict(name=f'__bennett_sf_cmps_{suffix}_rm', result='i1', params=[C,C,'i32','i32'],
+                           format=fmt, fi=fi, op=op, extra=0, wide=False, constrained=True)
+                continue
             if op == 'convert':
                 continue
             ret, params = C, [C]
@@ -133,7 +137,7 @@ def generate(dest, widths=POWI_WIDTHS):
     for index, e in enumerate(rows):
         e['id'] = index
         e['signature'] = f"{e['result']} ({', '.join(e['params'])})"
-        e['status'] = 'deterministic-integer-libm-v1' if OPS.index(e['op'])>=OPS.index('sin') else 'exact' if e['op'] != 'powi' else 'deterministic-repeated-squaring'
+        e['status'] = 'deterministic-integer-libm-v1' if e['op']!='cmps' and OPS.index(e['op'])>=OPS.index('sin') else 'exact' if e['op'] != 'powi' else 'deterministic-repeated-squaring'
         ret, params, op = e['result'], e['params'], e['op']
         if 'exponent_bits' in e:
             ir += powi_wrapper(e)
@@ -149,7 +153,7 @@ def generate(dest, widths=POWI_WIDTHS):
                     continue
                 if t == 'ptr':
                     slot = f'%a{i}'
-                elif t == 'i32' and i == len(params)-1-int(e['constrained']) and (e['wide'] or op in ('cmp','isfpclass','fptosi','fptoui','lround','llround','lrint','llrint','ldexp','powi')):
+                elif t == 'i32' and i == len(params)-1-int(e['constrained']) and (e['wide'] or op in ('cmp','cmps','isfpclass','fptosi','fptoui','lround','llround','lrint','llrint','ldexp','powi')):
                     extra = f'%a{i}'
                 else:
                     n = len(fps); fps.append(i)
@@ -227,7 +231,7 @@ def generate(dest, widths=POWI_WIDTHS):
     ir=[layout,triple]+ir
     bridge=[layout,triple]+bridge
     for e in rows:
-        e['section']='13.4' if e['op'] in ('powi','modf') or OPS.index(e['op'])>=OPS.index('sin') else '13.5' if e['constrained'] else '13.1'
+        e['section']='13.4' if e['op'] in ('powi','modf') or (e['op']!='cmps' and OPS.index(e['op'])>=OPS.index('sin')) else '13.5' if e['constrained'] else '13.1'
     (dest/'wrappers.ll').write_text('\n'.join(ir)+'\n')
     (dest/'bridge.ll').write_text('\n'.join(bridge)+'\n')
     (dest/'exports.txt').write_text('\n'.join(e['name'] for e in rows)+'\n__bennett_rt_fenv\n')
@@ -263,9 +267,10 @@ def generate(dest, widths=POWI_WIDTHS):
         llvm18='component add/mul and legacy 106-bit fallbacks', llvm23='component integral rounding and integer conversion, otherwise same legacy fallbacks',
         pending_bead='bennett-arith-4yg',
         implementation_gaps='0.2.12 requires exact-sum conversions and canonical-pair sqrt/FMA/integral rounding; current default still uses high-only conversion and legacy 106-bit sqrt/FMA')
-    manifest['contract_questions']=[dict(bead='bennett-arith-chn', section='13.1/13.5',
-        capability='constrained.fcmps signaling comparison',
-        required_change='0.2.12 specifies cmps_B_rm; publish its distinct signaling implementation (bennett-arith-chn.1).')]
+    manifest['contract_questions']=[]
+    manifest['comparison_semantics']=dict(quiet='cmp_B_rm: invalid only on signaling NaN',
+        signaling='cmps_B_rm: invalid on any NaN, including false/true predicates',
+        predicate_range=[0,15],rounding_operand=0,flags='sticky invalid only; plain cmp_B has no fenv access')
     (dest/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 
 if __name__ == '__main__':

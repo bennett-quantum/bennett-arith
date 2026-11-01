@@ -17,7 +17,7 @@ enum { FINITE, INF, NANV };
 enum { ADD,SUB,MUL,DIV,REM,CMP,FPTOSI,FPTOUI,SITOFP,UITOFP,
        SQRT,FLOOR,CEIL,TRUNC,ROUND,ROUNDEVEN,RINT,NEARBYINT,CANONICALIZE,
        MINNUM,MAXNUM,MINIMUM,MAXIMUM,MINIMUMNUM,MAXIMUMNUM,FMA,ISFPCLASS,
-       LDEXP,FREXP,LROUND,LLROUND,LRINT,LLRINT,CONVERT,POWI,MODF,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,SINH,COSH,TANH,EXP,EXP2,EXP10,LOG,LOG2,LOG10,POW,SINCOS,SINCOSPI };
+       LDEXP,FREXP,LROUND,LLROUND,LRINT,LLRINT,CONVERT,POWI,MODF,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,SINH,COSH,TANH,EXP,EXP2,EXP10,LOG,LOG2,LOG10,POW,SINCOS,SINCOSPI,CMPS };
 static Big mask(int n) { return n == 512 ? ~(Big)0 : (((Big)1 << n)-1); }
 static int width(Big x) {
     if(!x)return 0;
@@ -211,7 +211,21 @@ static void ppc_towide23(unsigned char *,U,int,int,int,int *);
 static U ppc_fromwide23(const unsigned char *,int,int,int,int *);
 static void ppc_eval(U *,int,const U *,int,int);
 static void trans_eval(U *,int,int,const U *,int);
+static int comparison_nan(U x,int fi) {
+    V high=unpack(fi==6 ? (U)(unsigned long long)x:x,formats[fi==6 ? 3:fi]);
+    if(high.kind==NANV) return 1;
+    return fi==6 && unpack(x>>64,formats[3]).kind==NANV;
+}
 void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
+    if(op==CMPS) {
+        if(fi<0 || fi>6 || (unsigned)extra>15 || rm!=0) __builtin_trap();
+        /* The same predicate, with signalingness represented by its own
+         * operation, never an extra predicate bit. Classify NaNs even for
+         * false/true; only invalid may be raised. Input carriers are read-only. */
+        bennett_sf_eval(out,fi,CMP,in,extra,0);
+        out[2]|=comparison_nan(in[0],fi) || comparison_nan(in[1],fi);
+        return;
+    }
     if(op>=SIN) {trans_eval(out,fi,op,in,rm);return;}
     if(fi==6) { ppc_eval(out,op,in,extra,rm); return; }
     Format f=formats[fi]; V a=unpack(in[0],f), b=unpack(in[1],f), c=unpack(in[2],f), r=a;

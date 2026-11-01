@@ -24,6 +24,7 @@ PPC follows the major-specific APFloat rules described below:
 |---|---|---|
 | `{add,sub,mul,div,rem}_B` | `C (C, C)` | correctly rounded; rem is exact fmod |
 | `cmp_B` | `i1 (C, C, i32)` | all 16 LLVM predicates |
+| `cmps_B_rm` | `i1 (C, C, i32 P, i32 R)` | signaling comparison, P = 0..15 and R = 0 |
 | `{fptosi,fptoui,lround,llround,lrint,llrint}_B` | `i128 (C, i32 M)` | saturated, NaN → 0, signed/unsigned extension |
 | `{sitofp,uitofp}_B` | `C (i128)` | correct rounding of exact integer |
 | `{fpext,fptrunc}_S_D` | `C_D (C_S)` | exact extension; correctly rounded truncation |
@@ -41,7 +42,7 @@ PPC follows the major-specific APFloat rules described below:
 | `{fptosi,fptoui,lround,llround,lrint,llrint}_B_wide` | `void (ptr, C, i32 M)` | exact saturated M-bit little-endian limb result |
 | `{sitofp,uitofp}_B_wide` | `C (ptr, i32 M)` | correctly rounded from all M bits |
 
-`_rm` variants of arithmetic, quiet comparison, conversion (including `_wide`), sqrt, integer
+`_rm` variants of arithmetic, quiet/signaling comparison, conversion (including `_wide`), sqrt, integer
 rounding, min/max and ldexp append `i32 R`. Modes 0–4 are nearest/even, downward,
 upward, toward zero, nearest/away. They OR invalid=1, divbyzero=2, overflow=4,
 underflow=8, inexact=16 into `__bennett_rt_fenv.flags`; ordinary entry points do
@@ -51,6 +52,14 @@ For rounding-to-integral functions the operation's named rounding rule applies;
 `rint`/`nearbyint` and `lrint`/`llrint` use the supplied R in constrained
 wrappers (nearest/even in their ordinary §13.1 wrappers). LLVM `fptrunc.round` can also use
 `_rm`; flags may accumulate even when exceptions are ignored.
+
+Quiet `cmp_B_rm` raises invalid only for a signaling NaN. Distinct `cmps_B_rm`
+raises invalid for either quiet or signaling NaN, even for false/true predicates;
+both return the same truth value and raise no other flags. Comparisons use R = 0
+because their source constrained intrinsics have no rounding operand. Every
+`_rm` comparison ORs its flags into the runtime environment without a host trap.
+Exception-ignore lowering uses plain `cmp_B` for either source intrinsic and
+leaves the environment unchanged. Arguments are read-only integer carriers.
 
 `__bennett_rt_fenv` is an **external runtime global**, with the ABI
 `{ i32 round, i32 flags }`; the arith library does not define a competing copy.
@@ -122,18 +131,20 @@ manifest lists its widths. No exponent is narrowed to i32/i128.
 ## Remaining parametric contracts
 
 The offline generator below implements the 0.2.12 static request protocol.
-The default `dist/` manifest targets 0.2.12 and records the remaining comparison,
+The default `dist/` manifest targets 0.2.12 and records outstanding verification,
 PPC and libm obligations in `conformance_pending`.
 
 All 1,008 previously inventoried concrete signatures are published, plus 126
-additional powi signatures: **1,134 exports per major**, no staged concrete bodies.
+additional powi and seven signaling comparison signatures: **1,141 exports per
+major**, no staged concrete bodies.
 The remaining obligations are retained:
 
 - `bennett-arith-38c`: named-format conversions and arbitrary powi widths are
   available through the documented offline generator below.
-- `bennett-arith-chn`: signaling constrained comparison cannot share quiet
-  `cmp_B_rm` with identical operands/P/R. The 0.2.12 distinct `cmps_B_rm`
-  implementation remains in **bennett-arith-chn.1**.
+- `bennett-arith-chn`: the distinct 0.2.12 `cmps_B_rm` implementation is
+  published for all seven formats. Verification is tracked in
+  **bennett-arith-chn.1**; `softfloat/test_cmps.py` tests all predicates,
+  half/bfloat NaN payloads, sticky flags and scalar lane sequences.
 
 No placeholder numerical bodies or input-dependent unsupported traps implement
 these unresolved families. This publication alone is not full DF/runtime or
