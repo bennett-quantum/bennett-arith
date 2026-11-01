@@ -121,13 +121,16 @@ manifest lists its widths. No exponent is narrowed to i32/i128.
 
 ## Remaining parametric contracts
 
+The offline generator below implements the 0.2.12 static request protocol.
+The default `dist/` cache described in this section remains the older publication
+until the dual-major gate and the required consumer re-pin notice are complete.
+
 All 1,008 previously inventoried concrete signatures are published, plus 126
 additional powi signatures: **1,134 exports per major**, no staged concrete bodies.
 The remaining obligations are retained:
 
-- `bennett-arith-38c`: metadata-named arbitrary APFloat conversion families. The
-  accepted dialect gives no metadata/name/carrier schema or finite format list;
-  dialect **b-dialect-spec-z7u** requests that schema and instantiation protocol.
+- `bennett-arith-38c`: the 0.2.12 named-format conversion and offline
+  instantiation implementation is under verification in **bennett-arith-38c.1**.
 - `bennett-arith-chn`: signaling constrained comparison cannot share quiet
   `cmp_B_rm` with identical operands/P/R. Dialect **b-dialect-spec-21a** requests
   the exact signaling ABI.
@@ -136,6 +139,75 @@ No placeholder numerical bodies or input-dependent unsupported traps implement
 these unresolved families. This publication alone is not full DF/runtime or
 plugin bp-7ni conformance. The consumer must re-pin BENNETT_ARITH_BITCODE hashes
 and verify its own materialised L/CC closure. The plugin was read-only here.
+
+## Offline instances (dialect 0.2.12)
+
+Run `python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY` with
+`TMPDIR` set to an existing job-local build directory. The installed LLVM 18 or
+23 tools are used offline. The output is ordinary `bennett-arith.bc` and a JCS
+`manifest.json`. The generator does not replace the default distribution.
+
+A request has exactly these fields:
+
+```json
+{"schema":"bennett-arith-instantiations-1","llvm_major":23,"target_triple":"x86_64-unknown-linux-gnu","data_layout":"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128","entries":[{"op":"convert_to","format":"Float6E3M2FN","base":"f128"},{"op":"convert_from","format":"Float8E4M3FN","base":"f80"},{"op":"powi","base":"ppcf128","exponent_bits":193}]}
+```
+
+`base` is any of the seven suffixes in the table above. A conversion entry has
+exactly `op`, `format`, and `base`; a powi entry has exactly `op`, `base`, and
+`exponent_bits`, with an integer width from 1 through 8388608 inclusive. Duplicate
+entries request one instance. Requests reject unknown fields, duplicate JSON
+keys, invalid widths and format names absent on their LLVM major.
+
+LLVM 23 supports all eleven 0.2.12 interpretation names: `Float8E5M2`,
+`Float8E5M2FNUZ`, `Float8E4M3`, `Float8E4M3FN`, `Float8E4M3FNUZ`,
+`Float8E4M3B11FNUZ`, `Float8E3M4`, `Float8E8M0FNU`, `Float6E3M2FN`,
+`Float6E2M3FN`, and `Float4E2M1FN`. Their carriers are i8, i6, or i4 as named.
+LLVM 18 has no arbitrary-format intrinsic names; its requests can instantiate
+powi. A missing LLVM APFloat intrinsic helper does not restrict this name set.
+
+Conversion exports are exactly `iN @__bennett_sf_convert_to_<format>_<base>(C_B,
+i32 R, i1 Sat)` and `C_B @__bennett_sf_convert_from_<format>_<base>(iN)`.
+Conversions use integer arithmetic, canonical NaNs, zero bits for source poison
+outcomes, explicit rounding and saturation, and no fenv side effect. PPC inputs
+use both component values. Powi requests emit both plain and final-`_rm`
+spellings with the original iK exponent and format-rounded repeated squaring.
+The generated module contains the requested exported definitions and their
+reachable implementation; it imports no host numerical library.
+
+The C implementation first emits integer IR through the pinned x86 frontend,
+whose `_BitInt` support includes the working precisions. The generator removes
+CPU-specific attributes and assigns the request's triple and data layout to
+both modules before linking. Private C function conventions remain internal;
+public carrier wrappers are explicit LLVM IR. This also avoids LLVM 18's
+AArch64 frontend limit of 128 bits. The limits test verifies AArch64 output
+bitcode; numerical execution tests run on x86_64 Linux.
+Target fields are checked against the requested LLVM major's interpretation;
+LLVM 23 expands historical AArch64 layout spellings with its address-space and
+function alignment defaults. The manifest retains the original request string.
+
+Canonical request bytes use JCS with entries deduplicated and sorted by
+`(op, base, format-or-empty, exponent_bits-or-zero)`. The manifest has schema
+`bennett-arith-instances-1`, `request_sha256`, `bitcode_sha256`, the requested
+`llvm_major`, `target_triple`, and `data_layout`, and `exports` sorted by `symbol`.
+Each export records its exact LLVM `function_type`. Hashes cover the canonical
+request bytes and the actual output bitcode. JCS files have no trailing newline.
+Consumers link and pin this matching-major artifact before normalisation in
+both builds. No finite set of default widths limits offline generation.
+
+`python3 -I softfloat/test_instances.py` verifies the generated bitcode through
+an independent LLVM dispatcher. It checks all source encodings of every named
+format into all seven bases, conversion midpoints under all five modes and
+both saturation settings, malformed requests, request/bitcode hashes, exact
+exports, target fields, sticky flags, and the absence of hardware FP/imported
+numerical routines. It does not establish the separate PPC sqrt/FMA or
+full-domain transcendental obligations in `bennett-arith-4yg` and
+`bennett-arith-wvh`.
+
+`python3 -I softfloat/test_instance_limits.py --reproduce` verifies the inclusive
+i8388608 exponent on both majors and AArch64 request fields. Run the numerical
+test first: the reproduction check then regenerates its requests and compares
+bitcode and JCS manifests byte for byte in different temporary directories.
 
 ## Verification
 
