@@ -34,18 +34,40 @@ for major in map(int,sys.argv[1:] or [18,23]):
                     if op==4 and rm:continue # APFloat mod has no rounding operand
                     jobs.append((op,rm,a,b,vals[(i+5)%len(vals)]))
         for rm in range(5):jobs += [(6,rm,a,0,0),(7,rm,a,0,0)]
+    for i,a in enumerate(vals):
+        for b in vals:jobs.append((9,0,a,b,0))
+    for a in vals:jobs.append((14,0,a,0,0))
+    for _ in range(250):
+        a=rng.getrandbits(128)
+        for rm in range(5):jobs.append((8,rm,a,0,0))
     # All 65,536 half encodings exercise exact small/NaN PPC conversion routes.
     for a in range(65536):
         v,s,_=e.decode(a,e.FORMATS['f16']);q=e.encode(v,e.FORMATS['f128'],zero_sign=s)[0]
         jobs.append((8,0,q,0,0))
+    for _ in range(100):
+        a=rng.getrandbits(128)
+        for rm in range(5):jobs += [(10,rm,a,0,0),(11,rm,a,0,0)]
+    for a in vals:jobs += [(12,0,a,0,0),(13,0,a,0,0)]
     payload=''.join(f'{op} {rm} {a&((1<<64)-1):x} {a>>64:x} {b&((1<<64)-1):x} {b>>64:x} {c&((1<<64)-1):x} {c>>64:x}\n' for op,rm,a,b,c in jobs)
     proc=subprocess.run([str(exe)],input=payload,text=True,capture_output=True,check=True)
     answers=proc.stdout.splitlines();assert len(answers)==len(jobs)
-    ops=['add','sub','mul','div','rem','fma','rint','fpext_ppcf128_f128','fptrunc_f128_ppcf128']
+    ops=['add','sub','mul','div','rem','fma','rint','fpext_ppcf128_f128','fptrunc_f128_ppcf128',None,'sitofp','uitofp','fptosi','fptoui']
     for (op,rm,a,b,c),line in zip(jobs,answers):
         lo,hi=map(lambda s:int(s,16),line.split());expected=lo|(hi<<64)
-        name=ops[op]+('_ppcf128' if op<7 else '')
+        if op==14:
+            for cls in range(10):edge.check('isfpclass_ppcf128',[a,1<<cls],int(bool(lo&(1<<cls))))
+            continue
+        if op==9:
+            for pred in range(16):
+                p=pred&7;u=lo==3;d=-1 if lo==0 else 0 if lo==1 else 1
+                value=[False,d==0,d>0,d>=0,d<0,d<=0,d!=0,True][p]
+                want=int(pred>=8 if u else pred==15 or value)
+                edge.check('cmp_ppcf128',[a,b,pred],want)
+                edge.check('cmp_ppcf128_rm',[a,b,pred,pred%5],want)
+            continue
+        name=ops[op]+('_ppcf128' if op<7 or op>=10 else '')
         args=[a,b,c] if op==5 else [a,b] if op<5 else [a]
-        if op!=4:name+='_rm';args+=[rm]
+        if op in (12,13):args+=[128]
+        elif op!=4:name+='_rm';args+=[rm]
         edge.check(name,args,expected)
     print(f'LLVM {major}: {edge.count} PPCDoubleDouble/APFloat checks')

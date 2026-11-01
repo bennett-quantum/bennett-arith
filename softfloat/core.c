@@ -17,9 +17,15 @@ enum { FINITE, INF, NANV };
 enum { ADD,SUB,MUL,DIV,REM,CMP,FPTOSI,FPTOUI,SITOFP,UITOFP,
        SQRT,FLOOR,CEIL,TRUNC,ROUND,ROUNDEVEN,RINT,NEARBYINT,CANONICALIZE,
        MINNUM,MAXNUM,MINIMUM,MAXIMUM,MINIMUMNUM,MAXIMUMNUM,FMA,ISFPCLASS,
-       LDEXP,FREXP,LROUND,LLROUND,LRINT,LLRINT,CONVERT,POWI,MODF };
+       LDEXP,FREXP,LROUND,LLROUND,LRINT,LLRINT,CONVERT,POWI,MODF,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,SINH,COSH,TANH,EXP,EXP2,EXP10,LOG,LOG2,LOG10,POW,SINCOS,SINCOSPI };
 static Big mask(int n) { return n == 512 ? ~(Big)0 : (((Big)1 << n)-1); }
-static int width(Big x) { int n=0; while(x) { x>>=1; ++n; } return n; }
+static int width(Big x) {
+    if(!x)return 0;
+    int n=0;
+    if(x>>256){x>>=256;n+=256;}if(x>>128){x>>=128;n+=128;}
+    if(x>>64){x>>=64;n+=64;}
+    return n+64-__builtin_clzll((unsigned long long)x);
+}
 static Big jam(Big x, int n) {
     if(n<=0) return x << -n;
     if(n>=512) return x!=0;
@@ -201,8 +207,12 @@ static void towide(unsigned char *p,V a,int bits,int sign,int rm,int *flags) {
 }
 static U ppc_pack(V,int,int *);
 static V ppc_unpack(U);
+static void ppc_towide23(unsigned char *,U,int,int,int,int *);
+static U ppc_fromwide23(const unsigned char *,int,int,int,int *);
 static void ppc_eval(U *,int,const U *,int,int);
+static void trans_eval(U *,int,int,const U *,int);
 void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
+    if(op>=SIN) {trans_eval(out,fi,op,in,rm);return;}
     if(fi==6) { ppc_eval(out,op,in,extra,rm); return; }
     Format f=formats[fi]; V a=unpack(in[0],f), b=unpack(in[1],f), c=unpack(in[2],f), r=a;
     int flags=0; out[0]=out[1]=out[2]=0;
@@ -324,11 +334,22 @@ void bennett_sf_wide(U *out,int fi,int op,void *slot,int bits,const U *in,int rm
     int flags=0; out[0]=out[1]=out[2]=0;
     if(op==SITOFP || op==UITOFP) {
         V a=fromwide(slot,bits,op==SITOFP);
+#if BENNETT_LLVM_MAJOR >= 23
+        if(fi==6) out[0]=ppc_fromwide23(slot,bits,op==SITOFP,rm,&flags);
+        else
+#endif
         out[0]=fi==6 ? ppc_pack(a,rm,&flags):pack(a,formats[fi],rm,&flags);
     }
-    else towide(slot,fi==6 ? ppc_unpack(in[0]):unpack(in[0],formats[fi]),bits,op!=FPTOUI,
+    else
+#if BENNETT_LLVM_MAJOR >= 23
+    if(fi==6) ppc_towide23(slot,in[0],bits,op!=FPTOUI,op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm,&flags);
+    else
+#endif
+    towide(slot,fi==6 ? ppc_unpack(in[0]):unpack(in[0],formats[fi]),bits,op!=FPTOUI,
                 op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm,&flags);
     out[2]=flags;
 }
 
 #include "ppc.h"
+
+#include "trans.h"

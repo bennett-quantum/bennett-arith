@@ -10,8 +10,9 @@ llvm="/usr/lib/llvm-$major/bin"
 build="$TMPDIR/llvm$major"
 dist="$root/dist/llvm$major"
 mkdir -p "$build" "$dist"
-python3 -I "$root/softfloat/generate.py" "$build"
-"$llvm/clang" -target x86_64-unknown-linux-gnu -std=c2x -DBENNETT_LLVM_MAJOR="$major" -O1 -ffreestanding -fno-builtin -fno-vectorize -fno-slp-vectorize -fno-ident -S -emit-llvm "$root/softfloat/core.c" -o "$build/core.ll"
+python3 -I "$root/softfloat/generate.py" "$build" "${@:2}"
+python3 -I "$root/softfloat/constants.py" "$build"
+"$llvm/clang" -I "$build" -target x86_64-unknown-linux-gnu -std=c2x -DBENNETT_LLVM_MAJOR="$major" -O1 -ffreestanding -fno-builtin -fno-vectorize -fno-slp-vectorize -fno-ident -S -emit-llvm "$root/softfloat/core.c" -o "$build/core.ll"
 # Normalize the sole source path so a detached pushed-SHA build is byte-identical.
 python3 -I - "$build/core.ll" <<'PY'
 import pathlib, re, sys
@@ -30,7 +31,8 @@ mv -f "$build/publish.bc" "$dist/bennett-arith.bc"
 cp -f "$build/manifest.json" "$dist/manifest.json"
 "$llvm/llvm-dis" "$dist/bennett-arith.bc" -o "$build/published.ll"
 # A test-only C ABI bridge invokes every exact LLVM carrier signature.
-"$llvm/clang" -target x86_64-unknown-linux-gnu -shared -fPIC "$dist/bennett-arith.bc" "$build/bridge.ll" -o "$build/oracle.so"
+"$llvm/clang" -target x86_64-unknown-linux-gnu -shared -fPIC "$dist/bennett-arith.bc" "$build/bridge.ll" -o "$build/oracle-new.so"
+mv -f "$build/oracle-new.so" "$build/oracle.so"
 python3 -I "$root/scripts/provenance.py" "$major"
 python3 -I - "$dist" <<'PY'
 import hashlib, pathlib, sys

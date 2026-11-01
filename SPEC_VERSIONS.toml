@@ -1,4 +1,4 @@
-status = "softfloat-m1-staged"
+status = "softfloat-v2-concrete-published-parametric-contracts-open"
 
 [specs.bennett-dialect-spec]
 version = "0.2.10"

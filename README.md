@@ -1,7 +1,7 @@
 # bennett-arith
 
-Arithmetic bitcode and ISA libraries for Bennett. The soft-float M1 publishes
-integer-only bitcode for LLVM 18 and 23 against dialect **0.2.10 @023f5a7** and
+Arithmetic bitcode and ISA libraries for Bennett. The soft-float library publishes
+1,134 integer-only carrier definitions per major for LLVM 18 and 23 against dialect **0.2.10 @023f5a7** and
 ISA **0.8** (see `SPEC_VERSIONS.toml`).
 
 - [LLVM 18 bitcode](dist/llvm18/bennett-arith.bc) · [entry-point manifest](dist/llvm18/manifest.json)
@@ -10,7 +10,9 @@ ISA **0.8** (see `SPEC_VERSIONS.toml`).
 - [Current handoff](HANDOFF.md)
 
 Run `scripts/gate` to reproduce both checked-in publications and execute the
-independent integer/rational oracle suites. `scripts/pre-push` tests a detached,
+independent integer/rational, same-major APFloat, and MPFR oracle suites.
+PPCDoubleDouble and all seven own-format libm families are published; arbitrary
+metadata formats and signaling comparison still require contract clarification. `scripts/pre-push` tests a detached,
 clean checkout of every pushed commit. Install it with `scripts/install-hooks.sh`.
 Everything is local and headless, with temporary files under `.tmp/`.
 

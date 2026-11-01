@@ -408,7 +408,8 @@ def run(major):
     right=edge.call('add_f64',a,edge.call('add_f64',b,c)[0])[0]
     assert left==0x3ff0000000000000 and right==0
     edge.count+=2
-    legacy={n for n,r in edge.rows.items() if r['fi']<6 and (r['op']!='convert' or r['extra']<6)}
+    legacy={n for n,r in edge.rows.items() if 'exponent_bits' not in r and r['fi']<6 and r['status']!='deterministic-integer-libm-v1' and not (r['op']=='powi' and r['constrained']) and (r['op']!='convert' or r['extra']<6)}
+    assert len(legacy)==606
     assert edge.seen==legacy,sorted(legacy-edge.seen)
     print(f'LLVM {major}: {edge.count} numerical checks; {len(edge.seen)} exported signatures exercised',flush=True)
     return dict(major=major, numerical_checks=edge.count, exports_exercised=len(edge.seen))

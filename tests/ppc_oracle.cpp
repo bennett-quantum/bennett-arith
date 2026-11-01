@@ -1,6 +1,7 @@
 // Test-only reference to the contract's same-major LLVM implementation.
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include <iostream>
 #include <iomanip>
 using namespace llvm;
@@ -24,6 +25,13 @@ int main() {
       case 7:v.convert(APFloat::IEEEquad(),modes[rm],&lost);break;
       case 8:v=APFloat(APFloat::IEEEquad(),APInt(128,x));v.convert(APFloat::PPCDoubleDouble(),modes[rm],&lost);break;
       case 9:std::cout<<std::hex<<unsigned(v.compare(w))<<" 0\n";continue;
+      case 10:case 11:v.convertFromAPInt(APInt(128,x),op==10,modes[rm]);break;
+      case 12:case 13: {
+        APSInt n(128,op==13);bool exact;
+        v.convertToInteger(n,APFloat::rmTowardZero,&exact);
+        std::cout<<std::hex<<n.getRawData()[0]<<" "<<n.getRawData()[1]<<"\n";continue;
+      }
+      case 14:std::cout<<std::hex<<unsigned(v.classify())<<" 0\n";continue;
       default:return 2;
     }
     APInt bits=v.bitcastToAPInt();
