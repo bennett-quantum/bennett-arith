@@ -23,4 +23,5 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
   TMPDIR="$TMPDIR" python3 -I "$root/tests/test_contract.py"
 env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
   TMPDIR="$TMPDIR" python3 -I "$root/tests/test_edge.py"
+python3 -I "$root/tests/test_ppc.py"
 echo 'gate: both published bitcode edges reproduced and passed'

@@ -192,7 +192,7 @@ def run(major):
     ir=(edge.path/'published.ll').read_text()
     assert not re.search(r'\b(fadd|fsub|fmul|fdiv|frem|fcmp|fptosi|fptoui|sitofp|uitofp|fpext|fptrunc)\b',ir)
     all_defs=set(re.findall(r'^define [^@\n]+@([^ (]+)',ir,re.M))
-    called=set(re.findall(r'call[^\n]*@([\w.]+)',ir))
+    called=set(re.findall(r'\bcall[^\n]*?@([\w.]+)\(',ir))
     assert all(n in all_defs or n.startswith('llvm.') for n in called), called-all_defs
     definitions=set(re.findall(r'^define (?!internal)[^@\n]+@([^ (]+)',ir,re.M))
     assert definitions==set(edge.rows),(definitions-set(edge.rows),set(edge.rows)-definitions)
@@ -408,7 +408,8 @@ def run(major):
     right=edge.call('add_f64',a,edge.call('add_f64',b,c)[0])[0]
     assert left==0x3ff0000000000000 and right==0
     edge.count+=2
-    assert edge.seen==set(edge.rows),sorted(set(edge.rows)-edge.seen)
+    legacy={n for n,r in edge.rows.items() if r['fi']<6 and (r['op']!='convert' or r['extra']<6)}
+    assert edge.seen==legacy,sorted(legacy-edge.seen)
     print(f'LLVM {major}: {edge.count} numerical checks; {len(edge.seen)} exported signatures exercised',flush=True)
     return dict(major=major, numerical_checks=edge.count, exports_exercised=len(edge.seen))
 

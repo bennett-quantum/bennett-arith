@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Includes the PPCDoubleDouble same-major oracle through scripts/gate.
 # Read Git's ref-update stream; gate each non-deletion local commit in isolation.
 set -euo pipefail
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER

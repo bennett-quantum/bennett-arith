@@ -9,7 +9,8 @@ typedef unsigned _BitInt(512) Big;
 typedef struct { int bits, p, eb, bias, explicit_bit; } Format;
 static const Format formats[] = {
     {16,11,5,15,0}, {16,8,8,127,0}, {32,24,8,127,0},
-    {64,53,11,1023,0}, {80,64,15,16383,1}, {128,113,15,16383,0}
+    {64,53,11,1023,0}, {80,64,15,16383,1}, {128,113,15,16383,0},
+    {128,106,11,1023,0}, {128,106,11,1023,0}
 };
 typedef struct { Big mag; int exp, sign, kind, snan; } V;
 enum { FINITE, INF, NANV };
@@ -44,6 +45,7 @@ static V unpack(U a, Format f) {
     int e=(int)((a>>(f.p-1+f.explicit_bit)) & (U)mask(f.eb));
     Big m=a & (U)mask(f.p-1+f.explicit_bit);
     V x={m, (e ? e:1)-f.bias-(f.p-1), (int)(a>>(f.bits-1)),FINITE,0};
+    if(f.p==106 && !e) x.exp=-1074;
     if(f.explicit_bit && ((e!=0) != (int)((m>>(f.p-1))&1))) {
         x.kind=NANV; x.snan=1; return x;
     }
@@ -72,7 +74,7 @@ static U pack(V x,Format f,int rm,int *flags) {
     U s=(U)x.sign<<(f.bits-1);
     if(!x.mag) return s;
     int top=width(x.mag)-1+x.exp;
-    int emin=1-f.bias, emax=f.bias;
+    int emin=f.p==106 ? -969:1-f.bias, emax=f.bias;
     int target=(top<emin ? emin:top)-(f.p-1);
     Big q=rounded(x.mag,target-x.exp,x.sign,rm,flags);
     if(width(q)>f.p) { q>>=1; ++target; }
@@ -197,7 +199,11 @@ static void towide(unsigned char *p,V a,int bits,int sign,int rm,int *flags) {
     /* Slots have 64-bit limbs; clear padding of the final partial limb. */
     for(int i=(bits+7)/8;i<8*((bits+63)/64);++i) p[i]=0;
 }
+static U ppc_pack(V,int,int *);
+static V ppc_unpack(U);
+static void ppc_eval(U *,int,const U *,int,int);
 void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
+    if(fi==6) { ppc_eval(out,op,in,extra,rm); return; }
     Format f=formats[fi]; V a=unpack(in[0],f), b=unpack(in[1],f), c=unpack(in[2],f), r=a;
     int flags=0; out[0]=out[1]=out[2]=0;
     if(op==SITOFP || op==UITOFP) {
@@ -221,7 +227,7 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
             !a.mag ? (a.sign?5:6):width(a.mag)<f.p ? (a.sign?4:7):(a.sign?3:8);
         out[0]=(extra>>cls)&1; return;
     } else if(op==CONVERT) {
-        out[0]=pack(a,formats[extra],rm,&flags); out[2]=flags; return;
+        out[0]=extra==6 ? ppc_pack(a,rm,&flags):pack(a,formats[extra],rm,&flags); out[2]=flags; return;
     } else if(op==CANONICALIZE) {
         out[0]=a.kind==NANV ? nanbits(f):in[0]; return;
     } else if(op>=MINNUM && op<=MAXIMUMNUM) {
@@ -316,8 +322,13 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
 }
 void bennett_sf_wide(U *out,int fi,int op,void *slot,int bits,const U *in,int rm) {
     int flags=0; out[0]=out[1]=out[2]=0;
-    if(op==SITOFP || op==UITOFP) out[0]=pack(fromwide(slot,bits,op==SITOFP),formats[fi],rm,&flags);
-    else towide(slot,unpack(in[0],formats[fi]),bits,op!=FPTOUI,
+    if(op==SITOFP || op==UITOFP) {
+        V a=fromwide(slot,bits,op==SITOFP);
+        out[0]=fi==6 ? ppc_pack(a,rm,&flags):pack(a,formats[fi],rm,&flags);
+    }
+    else towide(slot,fi==6 ? ppc_unpack(in[0]):unpack(in[0],formats[fi]),bits,op!=FPTOUI,
                 op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm,&flags);
     out[2]=flags;
 }
+
+#include "ppc.h"

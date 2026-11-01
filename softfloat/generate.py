@@ -8,7 +8,8 @@ import sys
 
 FORMATS = [('f16', 16, 'binary16'), ('bf16', 16, 'bfloat16'),
            ('f32', 32, 'binary32'), ('f64', 64, 'binary64'),
-           ('f80', 80, 'x86_fp80'), ('f128', 128, 'binary128')]
+           ('f80', 80, 'x86_fp80'), ('f128', 128, 'binary128'),
+           ('ppcf128',128,'PPCDoubleDouble')]
 OPS = ('add sub mul div rem cmp fptosi fptoui sitofp uitofp sqrt floor ceil trunc '
        'round roundeven rint nearbyint canonicalize minnum maxnum minimum maximum '
        'minimumnum maximumnum fma isfpclass ldexp frexp lround llround lrint llrint '
@@ -184,12 +185,12 @@ def generate(dest):
                              formats='each of seven formats from metadata-named APFloat format',
                              section='13.1', status='staged', bead='bennett-arith-38c')])
     implemented={e['name'] for e in rows}
-    for e in entries(FORMATS+[('ppcf128',128,'PPCDoubleDouble')]):
+    for e in entries(FORMATS):
         if e['name'] not in implemented:
             e['signature']=f"{e['result']} ({', '.join(e['params'])})"
             e.update(status='staged', bead='bennett-arith-r3d', section='13.1/13.3/13.5')
             manifest['staged_exports'].append(e)
-    for suffix,bits,fmt in FORMATS+[('ppcf128',128,'PPCDoubleDouble')]:
+    for suffix,bits,fmt in FORMATS:
         C=f'i{bits}'
         manifest['staged_exports'].append(dict(name=f'__bennett_sf_powi_{suffix}_i32_rm',
             result=C, params=[C,'i32','i32'], signature=f'{C} ({C}, i32, i32)',
