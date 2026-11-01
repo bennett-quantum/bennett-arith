@@ -1,7 +1,16 @@
 {
-  "dialect": "0.2.10",
-  "dialect_commit": "023f5a7",
+  "dialect": "0.2.12",
   "isa": "0.8",
+  "conformance_pending": [
+    "bennett-arith-chn.1",
+    "bennett-arith-4yg",
+    "bennett-arith-wvh"
+  ],
+  "instance_generator": {
+    "command": "python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY",
+    "request_schema": "bennett-arith-instantiations-1",
+    "manifest_schema": "bennett-arith-instances-1"
+  },
   "implementation": "integer-core-v2-libm1",
   "exports": [
     {
@@ -20657,7 +20666,7 @@
       "constrained_name": "__bennett_sf_powi_B_i<K>_rm",
       "constrained_signature": "C_B (C_B, iK, i32 R)",
       "formats": "all seven",
-      "status": "published listed widths; additional LLVM iK widths generated without narrowing",
+      "status": "published listed widths; arbitrary LLVM iK widths available offline",
       "published_widths": [
         32,
         1,
@@ -20670,29 +20679,32 @@
         513,
         1025
       ],
-      "generator": "scripts/build MAJOR [K ...]",
+      "generator": "softfloat/instantiate.py",
       "section": "13.4",
       "bead": "bennett-arith-0he"
     },
     {
       "name": "__bennett_sf_convert_to_<fmt>_B",
-      "signature": "C_fmt (C_B)",
-      "formats": "metadata-named APFloat format from each of seven formats",
+      "signature": "iN (C_B, i32 R, i1 Sat)",
+      "formats": "all eleven LLVM23 interpretation names from each of seven bases; no names on LLVM18",
+      "generator": "softfloat/instantiate.py",
       "section": "13.1",
-      "status": "staged",
+      "status": "available-offline",
       "bead": "bennett-arith-38c"
     },
     {
       "name": "__bennett_sf_convert_from_<fmt>_B",
-      "signature": "C_B (C_fmt)",
-      "formats": "each of seven formats from metadata-named APFloat format",
+      "signature": "C_B (iN)",
+      "formats": "each of seven bases from all eleven LLVM23 interpretation names; no names on LLVM18",
+      "generator": "softfloat/instantiate.py",
       "section": "13.1",
-      "status": "staged",
+      "status": "available-offline",
       "bead": "bennett-arith-38c"
     }
   ],
   "numerical_accuracy": {
-    "contract": "13.4 explicitly waives correct rounding and specifies no error bound",
+    "contract": "0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags",
+    "pending_bead": "bennett-arith-wvh",
     "claim": "deterministic approximation; no global correct-rounding or ulp-bound proof",
     "working_significand_bits": 224,
     "payne_hanek_constant_bits": 17408,
@@ -20703,14 +20715,15 @@
     "high_component_carrier_bits": "0..63",
     "llvm18": "component add/mul and legacy 106-bit fallbacks",
     "llvm23": "component integral rounding and integer conversion, otherwise same legacy fallbacks",
-    "conflicts": "b-dialect-spec-dfd; APFloat PPC-to-IEEE conversion uses high component only; sqrt absent in APFloat uses correctly rounded legacy 106-bit result"
+    "pending_bead": "bennett-arith-4yg",
+    "implementation_gaps": "0.2.12 requires exact-sum conversions and canonical-pair sqrt/FMA/integral rounding; current default still uses high-only conversion and legacy 106-bit sqrt/FMA"
   },
   "contract_questions": [
     {
       "bead": "bennett-arith-chn",
       "section": "13.1/13.5",
       "capability": "constrained.fcmps signaling comparison",
-      "required_change": "Distinguish signaling comparison from quiet cmp_B_rm in the published ABI; see bead for exact proposed spelling."
+      "required_change": "0.2.12 specifies cmps_B_rm; publish its distinct signaling implementation (bennett-arith-chn.1)."
     }
   ],
   "llvm_major": 18,
@@ -20739,12 +20752,32 @@
       "git_blob_sha1": "f4e3a2da792e56128e15d55caf8e572495a51313"
     },
     "softfloat/generate.py": {
-      "sha256": "ff281d48b2b7582f41ac70309ee19caa65fba36c2871b44078f10c0a92331e6b",
-      "git_blob_sha1": "b54be8be200c90e999e70f03ee7e7e0da14bd83c"
+      "sha256": "05dba2be81ad876713a5dd7627209b4a4e3902d281e4c90854ad9ecea4b71dbf",
+      "git_blob_sha1": "8c1fd94ce0cd35efaf3d7d540ab7ee3e28ed2ce4"
+    },
+    "softfloat/instantiate.py": {
+      "sha256": "0b406a951a090a23fc24f3d0eb8b364d5de0d988938e3cc3f49b72d164875ba0",
+      "git_blob_sha1": "66f14b00b67020b01e90ca6bcbd74ebb6d8b3695"
+    },
+    "softfloat/named.c": {
+      "sha256": "7256883acf65d744101feff594a7d6a008afd29ac22d5e9bdefc53c54f5ea1c2",
+      "git_blob_sha1": "07d3108d7a064aa6dc86041a1c1d3f9f2fef4bbe"
     },
     "softfloat/ppc.h": {
       "sha256": "700777078fb7c436d6c03d7945f0299421e1eee9ac9ddc905f63503ebe45ecdc",
       "git_blob_sha1": "c6ea397414d6f6f1775a91086b774eb591088d96"
+    },
+    "softfloat/test_instance_limits.py": {
+      "sha256": "7792825878313a84bc53f1b9a43d6a1aa7328c140a867ba31c3360c8dda76df5",
+      "git_blob_sha1": "5455f9c79c53e755e251cf4f18cd6147a380486e"
+    },
+    "softfloat/test_instances.py": {
+      "sha256": "e4d904f3d822854472725a8ec9f00960d6c1e0053b2119f484b4c07700e06d7a",
+      "git_blob_sha1": "3221d50a954994e34a9ebd819ae2fcda2fae39dd"
+    },
+    "softfloat/test_publication.py": {
+      "sha256": "96485566f7c7447ed4635240cbfdfbf700572caa0ad7fcb57ee6bc6982716823",
+      "git_blob_sha1": "638ec82402da8ad274622db39fbc7334884d9915"
     },
     "softfloat/trans.h": {
       "sha256": "45bc15fbe607227c6bfc0a0a75985a7e4a972a279a1be9e0148b2bb15f36e0ed",

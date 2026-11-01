@@ -231,36 +231,41 @@ def generate(dest, widths=POWI_WIDTHS):
     (dest/'wrappers.ll').write_text('\n'.join(ir)+'\n')
     (dest/'bridge.ll').write_text('\n'.join(bridge)+'\n')
     (dest/'exports.txt').write_text('\n'.join(e['name'] for e in rows)+'\n__bennett_rt_fenv\n')
-    manifest = dict(dialect='0.2.10', dialect_commit='023f5a7', isa='0.8',
+    manifest = dict(dialect='0.2.12', isa='0.8',
+                    conformance_pending=['bennett-arith-chn.1','bennett-arith-4yg','bennett-arith-wvh'],
+                    instance_generator=dict(command='python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY',
+                        request_schema='bennett-arith-instantiations-1',manifest_schema='bennett-arith-instances-1'),
                     implementation='integer-core-v2-libm1', exports=rows,
                     external_globals=[dict(name='__bennett_rt_fenv', type='{ i32 round, i32 flags }',
                                            owner='bennett-runtimes', used_by='constrained _rm wrappers only')],
                     staged_exports=[], parametric_families=[
                         dict(name='__bennett_sf_powi_B_i<K>', signature='C_B (C_B, iK)',
                              constrained_name='__bennett_sf_powi_B_i<K>_rm', constrained_signature='C_B (C_B, iK, i32 R)',
-                             formats='all seven', status='published listed widths; additional LLVM iK widths generated without narrowing', published_widths=[32]+list(widths), generator='scripts/build MAJOR [K ...]',
+                             formats='all seven', status='published listed widths; arbitrary LLVM iK widths available offline', published_widths=[32]+list(widths), generator='softfloat/instantiate.py',
                              section='13.4', bead='bennett-arith-0he'),
-                        dict(name='__bennett_sf_convert_to_<fmt>_B', signature='C_fmt (C_B)',
-                             formats='metadata-named APFloat format from each of seven formats',
-                             section='13.1', status='staged', bead='bennett-arith-38c'),
-                        dict(name='__bennett_sf_convert_from_<fmt>_B', signature='C_B (C_fmt)',
-                             formats='each of seven formats from metadata-named APFloat format',
-                             section='13.1', status='staged', bead='bennett-arith-38c')])
+                        dict(name='__bennett_sf_convert_to_<fmt>_B', signature='iN (C_B, i32 R, i1 Sat)',
+                             formats='all eleven LLVM23 interpretation names from each of seven bases; no names on LLVM18',
+                             generator='softfloat/instantiate.py',section='13.1', status='available-offline', bead='bennett-arith-38c'),
+                        dict(name='__bennett_sf_convert_from_<fmt>_B', signature='C_B (iN)',
+                             formats='each of seven bases from all eleven LLVM23 interpretation names; no names on LLVM18',
+                             generator='softfloat/instantiate.py',section='13.1', status='available-offline', bead='bennett-arith-38c')])
     implemented={e['name'] for e in rows}
     for e in entries(FORMATS):
         if e['name'] not in implemented:
             e['signature']=f"{e['result']} ({', '.join(e['params'])})"
             e.update(status='staged', bead='bennett-arith-r3d', section='13.1/13.3/13.5')
             manifest['staged_exports'].append(e)
-    manifest['numerical_accuracy'] = dict(contract='13.4 explicitly waives correct rounding and specifies no error bound',
+    manifest['numerical_accuracy'] = dict(contract='0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
+        pending_bead='bennett-arith-wvh',
         claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=224,
         payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')
     manifest['ppc_semantics'] = dict(oracle='same-major LLVM APFloat', high_component_carrier_bits='0..63',
         llvm18='component add/mul and legacy 106-bit fallbacks', llvm23='component integral rounding and integer conversion, otherwise same legacy fallbacks',
-        conflicts='b-dialect-spec-dfd; APFloat PPC-to-IEEE conversion uses high component only; sqrt absent in APFloat uses correctly rounded legacy 106-bit result')
+        pending_bead='bennett-arith-4yg',
+        implementation_gaps='0.2.12 requires exact-sum conversions and canonical-pair sqrt/FMA/integral rounding; current default still uses high-only conversion and legacy 106-bit sqrt/FMA')
     manifest['contract_questions']=[dict(bead='bennett-arith-chn', section='13.1/13.5',
         capability='constrained.fcmps signaling comparison',
-        required_change='Distinguish signaling comparison from quiet cmp_B_rm in the published ABI; see bead for exact proposed spelling.')]
+        required_change='0.2.12 specifies cmps_B_rm; publish its distinct signaling implementation (bennett-arith-chn.1).')]
     (dest/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 
 if __name__ == '__main__':

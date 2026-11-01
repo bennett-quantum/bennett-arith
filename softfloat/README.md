@@ -90,25 +90,25 @@ component algorithms, preserving sparse integer tails. Wide integer inputs and
 outputs retain all bits; tests include 2^1023+1. Comparison is lexicographic high,
 then low. Canonical NaN is high 0x7ff8000000000000, low +0.
 
-The explicit APFloat rule conflicts with other §13.1 sentences. In both tested
-majors APFloat PPC-to-IEEE conversion reads **only the high component**; it does
-not implement the sentence “fpext is exact”. LLVM subtraction can return −0 in
-both components; LLVM 23 unsigned integer conversion can saturate a positive
-sum with a negative integral low component. These are reproduced against the
-same-major oracle and deliberately retained. APFloat has no PPC sqrt; that entry
-uses a correctly rounded legacy 106-bit result and nearest/even component split.
-See dialect **b-dialect-spec-dfd** for both readings and requested resolution.
-This is not a claim of ideal IEEE double-double arithmetic.
+Dialect 0.2.12 resolves the PPC priority rule: exact-sum conversion and correctly
+rounded canonical-pair sqrt/FMA/integral operations take precedence over legacy
+APFloat fallbacks. The current default core still has high-only PPC-to-IEEE
+conversion and a legacy 106-bit sqrt/FMA fallback. LLVM 23 unsigned conversion
+can also saturate an in-range positive sum with a negative low component.
+These implementation gaps remain in **bennett-arith-4yg**. Same-major APFloat
+matching does not establish the new guarantees. The separate named-format
+generator already converts using both PPC components.
 
-§13.4 explicitly waives correct rounding and gives **no numerical error bound**.
-Libm v1 is a deterministic approximation evaluated at 224 working bits, then
+Dialect 0.2.12 §13.4 requires a full-domain one-local-ulp envelope, correctly
+rounded constrained selection, and exact mathematical flags. The current
+libm v1 is a deterministic approximation evaluated at 224 working bits, then
 rounded to the requested carrier format (including explicit R for `_rm`). The
 engineering tests require <=4 ulp against MPFR at 384 bits, and exhaustive half/
 bfloat sin <=1 ulp. Passing these tests is measured evidence, not a universal
 error-bound or correct-rounding proof. No float/long-double host ABI is used.
-Constrained wrappers preserve sticky flags; approximation inexact/flag policy
-and the missing quantitative contract are recorded in dialect
-**b-dialect-spec-1av**. Aggregate order and signed zeros are tested separately.
+Constrained wrappers preserve sticky flags; full-domain accuracy and exact-flag
+implementation evidence remains in **bennett-arith-wvh**. Aggregate order and
+signed zeros are tested separately.
 
 The default bitcode publishes powi at K = 1, 8, 16, 32, 64, 128, 192, 256, 513,
 1025 on every format, with `_rm` variants. `scripts/build 18 7 193` (or major 23)
@@ -122,18 +122,18 @@ manifest lists its widths. No exponent is narrowed to i32/i128.
 ## Remaining parametric contracts
 
 The offline generator below implements the 0.2.12 static request protocol.
-The default `dist/` cache described in this section remains the older publication
-until the dual-major gate and the required consumer re-pin notice are complete.
+The default `dist/` manifest targets 0.2.12 and records the remaining comparison,
+PPC and libm obligations in `conformance_pending`.
 
 All 1,008 previously inventoried concrete signatures are published, plus 126
 additional powi signatures: **1,134 exports per major**, no staged concrete bodies.
 The remaining obligations are retained:
 
-- `bennett-arith-38c`: the 0.2.12 named-format conversion and offline
-  instantiation implementation is under verification in **bennett-arith-38c.1**.
+- `bennett-arith-38c`: named-format conversions and arbitrary powi widths are
+  available through the documented offline generator below.
 - `bennett-arith-chn`: signaling constrained comparison cannot share quiet
-  `cmp_B_rm` with identical operands/P/R. Dialect **b-dialect-spec-21a** requests
-  the exact signaling ABI.
+  `cmp_B_rm` with identical operands/P/R. The 0.2.12 distinct `cmps_B_rm`
+  implementation remains in **bennett-arith-chn.1**.
 
 No placeholder numerical bodies or input-dependent unsupported traps implement
 these unresolved families. This publication alone is not full DF/runtime or
