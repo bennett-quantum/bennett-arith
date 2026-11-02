@@ -26,6 +26,7 @@ for major in map(int,sys.argv[1:] or (18,23)):
     allrows=exports|staged
     expected={}
     for f,c in formats.items():
+        expected[f'__bennett_sf_cmps_{f}_rm']=f'i1 ({c}, {c}, i32, i32)'
         specs={op:(c,[c,c]) for op in binary}
         specs.update({op:(c,[c]) for op in unary})
         specs.update({op:('i128',[c,'i32']) for op in integer})
@@ -64,5 +65,8 @@ for major in map(int,sys.argv[1:] or (18,23)):
         if name in staged:
             assert row['bead'].startswith('bennett-arith-') and row['status']=='staged'
     assert len(data['parametric_families'])==3
-    assert data['contract_questions'][0]['bead']=='bennett-arith-chn'
+    assert data['contract_questions']==[]
+    assert {'bennett-arith-4yg','bennett-arith-wvh'}<=set(data['conformance_pending'])
+    assert data['comparison_semantics']['predicate_range']==[0,15]
+    assert data['comparison_semantics']['rounding_operand']==0
     print(f'LLVM {major}: manifest accounts for {len(expected)} concrete signatures and 3 parametric families')
