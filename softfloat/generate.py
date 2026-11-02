@@ -317,8 +317,8 @@ def generate(dest, widths=POWI_WIDTHS):
     manifest['numerical_accuracy'] = dict(contract='0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
         pending_bead='bennett-arith-wvh',
         claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=224,
-        proven_paths=[dict(operation='exp_ppcf128',domain='finite |x| <= 2^-538',
-            method='exact high+low rounding with a strict positive Taylor correction below 2^-1076',
+        proven_paths=[dict(operation='exp_ppcf128',domain='finite |x| <= 2^-112',
+            method='exact high+low midpoint comparison; quadratic/cubic log(1+h) comparison for directed sides',
             guarantee='correct canonical pair in all five modes; zero is exact, otherwise only inexact',
             test='tests/test_ppc_exp.py',bead='bennett-arith-wvh.1')],
         payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')

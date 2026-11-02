@@ -126,26 +126,38 @@ static V tpow(V a,V b) {
     if(a.sign && !integer)return nanv();
     int sign=a.sign&&odd;a.sign=0;V r=texp(tm(b,tlog(a)));r.sign=sign;return r;
 }
-/* For 0<|x|<=2^-538, Taylor's theorem bounds
- *   0 < exp(x)-1-x < x*x <= 2^-1076.
- * Exact PPC inputs are multiples of u=2^-1074, and binary64 midpoints are
- * multiples of u/2. The positive correction (<u/4) cannot cross an endpoint
- * or midpoint unless x is exactly on it, in which case it selects above.
- * exp(x) has high=1; round the complete input sum directly into its low.
- * The pair sum is normal and off the u grid, hence only inexact is raised.
- * This proven path retains sparse tails that the 224/106-bit paths lose.
+/* Canonicalise the exact two-component input sum x=h+l first, so overlapping
+ * or cancelling input fields have the same result. With |x|<=2^-112, exp(x)
+ * has high=1.
+ * Nearest rounding of its low differs from rounding x only at exact binary64
+ * midpoints: the positive correction exp(x)-1-x < x*x is smaller than the
+ * smallest nonzero midpoint gap of a two-binary64 input (>=2^(E-107)).
+ * Directed rounding also needs to know whether exp(x)-1 crosses h. Compare
+ * x with log(1+h), whose residual is -h*h/2 + h*h*h/3 - ... . A nonzero
+ * quadratic comparison gap is at least 2^(2*h.exp-1), or much larger when l
+ * is tiny; the cubic remainder is smaller by >=32. At exact quadratic
+ * equality its sign is the sign of h, settling the side without approximation.
+ * All comparisons below are exact integers at quantum 2^-2149. A nonzero
+ * rational input has non-dyadic exp(x), so the normal result raises only
+ * inexact. This retains sparse tails that the 224/106-bit paths lose.
  */
 static U ppc_exp_near_zero(PairSum a,int rm,int *flags) {
     const U one=0x3ff0000000000000ULL;
     if(!a.mag)return one;
     int ignored=0;V v=sum_value(a);
-    U lower=pack(v,formats[3],1,&ignored),upper=pack(v,formats[3],2,&ignored),lo;
-    int exact=lower==upper;
-    if(exact)upper=(lower>>63) ? lower-1:lower+1;
-    if(rm==1 || rm==3)lo=lower; /* exp(x) is positive, even for negative x. */
-    else if(rm==2)lo=upper;
-    else if(exact)lo=lower;
-    else {
+    U hb=pack(v,formats[3],0,&ignored),lo;V h=unpack(hb,formats[3]);
+    PairSum tail=sum_difference(a,sum_scalar(h));
+    if(rm==1 || rm==2 || rm==3) {
+        int above=1;
+        if(tail.sign && tail.mag) {
+            SquareBits low=(SquareBits)tail.mag<<1075;
+            SquareBits high=(SquareBits)sum_scalar(h).mag,quadratic=high*high;
+            above=low<quadratic || (low==quadratic && h.sign);
+        }
+        U previous=(hb>>63) ? hb+1:hb-1,following=(hb>>63) ? hb-1:hb+1;
+        lo=rm==2 ? (above ? following:hb):(above ? hb:previous);
+    } else {
+        U lower=pack(v,formats[3],1,&ignored),upper=pack(v,formats[3],2,&ignored);
         PairSum down=sum_difference(a,sum_scalar(unpack(lower,formats[3])));
         PairSum up=sum_difference(sum_scalar(unpack(upper,formats[3])),a);
         lo=down.mag<up.mag ? lower:upper; /* An exact midpoint moves upward. */
@@ -163,7 +175,7 @@ static V trans_unpack(U x,int fi) {
 static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
     if(fi==6 && op==EXP) {
         PairSum exact=sum_read(in[0]);
-        if(exact.kind==FINITE && exact.mag<=((SumBits)1<<536)) {
+        if(exact.kind==FINITE && exact.mag<=((SumBits)1<<962)) {
             int flags=0;out[0]=ppc_exp_near_zero(exact,rm,&flags);
             out[1]=0;out[2]=flags;return;
         }

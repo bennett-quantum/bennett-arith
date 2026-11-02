@@ -139,16 +139,20 @@ Constrained wrappers preserve sticky flags; full-domain accuracy and exact-flag
 implementation evidence remains in **bennett-arith-wvh**. Aggregate order and
 signed zeros are tested separately.
 
-The PPC exponential has a separate exact path for finite |x| <= 2^-538.
-For nonzero x, Taylor bounds prove 0 < exp(x)-1-x < 2^-1076. Input sums are
-multiples of 2^-1074; binary64 component midpoints are multiples of 2^-1075.
-The strict positive correction therefore determines the low component's
-rounding cell without evaluating an approximate exponential. The result has
-high component 1, preserves sparse tails in all five modes, and raises only
-inexact; exp(±0) is exactly 1 with no flags. This fixes **bennett-arith-wvh.1**,
+The PPC exponential has a separate exact path for finite |x| <= 2^-112.
+The exact input sum is first split into canonical h+l, including overlapping
+or cancelling input fields. Its result has high component 1. The positive
+correction exp(x)-1-x is too small to cross a low-component midpoint unless
+x is exactly on it; that case selects the upper neighbour. Directed rounding
+compares x with log(1+h): the exact quadratic term settles the comparison
+unless it cancels l exactly, when the sign of the cubic term settles it.
+These integer comparisons preserve sparse tails in all five modes and raise
+only inexact; exp(±0) is exactly 1 with no flags. This fixes **bennett-arith-wvh.1**,
 whose original exp(2^-700) result exceeded one local ulp by over 2^52.
 `tests/test_ppc_exp.py` verifies every power-of-two exponent in this range,
-both signs, sparse tails, component midpoints, signed zeros and final flags.
+both signs, sparse tails, component midpoints, quadratic cancellation, signed
+zeros and final flags. Its oracle encloses the exact result between independent
+rational Taylor bounds and requires both endpoints to round identically.
 The earlier diagnostic `tests/ppc_exp_sparse_witness.py` retains the exact
 counterexample bounds. Full-domain libm correctness remains in wvh; the
 published contract's domain and available operations are unchanged.

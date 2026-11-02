@@ -20890,8 +20890,8 @@
     "proven_paths": [
       {
         "operation": "exp_ppcf128",
-        "domain": "finite |x| <= 2^-538",
-        "method": "exact high+low rounding with a strict positive Taylor correction below 2^-1076",
+        "domain": "finite |x| <= 2^-112",
+        "method": "exact high+low midpoint comparison; quadratic/cubic log(1+h) comparison for directed sides",
         "guarantee": "correct canonical pair in all five modes; zero is exact, otherwise only inexact",
         "test": "tests/test_ppc_exp.py",
         "bead": "bennett-arith-wvh.1"
@@ -20936,5 +20936,71 @@
     ],
     "rounding_operand": 0,
     "flags": "sticky invalid only; plain cmp_B has no fenv access"
+  },
+  "llvm_major": 23,
+  "bitcode_sha256": "44afe702c6cbb6030ff49e7d2b18aa1b5a81ec7c521b4d5f65ecb0132b0d9abc",
+  "tool_versions": {
+    "clang": "Ubuntu clang version 23.1.5 (++20261028083854+a738f2737189-1~exp1~20261028203912.92)",
+    "llvm-as": "Ubuntu LLVM version 23.1.5",
+    "llvm-link": "Ubuntu LLVM version 23.1.5",
+    "opt": "Ubuntu LLVM version 23.1.5"
+  },
+  "sources": {
+    "scripts/build": {
+      "sha256": "4850c9d6f80217f1ca86ce748ecab57c8bd4d56e21e9fa973f763492ce3192a8",
+      "git_blob_sha1": "aa0bbfd5c7a6bfa35e6f33141401fe51d119e6ad"
+    },
+    "scripts/provenance.py": {
+      "sha256": "35116f907716df661cdfa74a402670eea2074a64d2eedae9fb1f0a2bbfc75298",
+      "git_blob_sha1": "144e40ced7f5f86dd088928d1c9bfdc405448274"
+    },
+    "softfloat/constants.py": {
+      "sha256": "55a2e8c9fd138cf9214d493a96b292c2ac6cc69798b20b49e0b33eb07c0e96a6",
+      "git_blob_sha1": "f257a1a03b0fffd92ba90038475e6071dae26426"
+    },
+    "softfloat/core.c": {
+      "sha256": "59bb4e7c6959a97b32f73c3ef20ad1b7027312f10ca813428b9839de4fb6401c",
+      "git_blob_sha1": "af4b0b3e86575c921becd18ac7069e10f495dedb"
+    },
+    "softfloat/generate.py": {
+      "sha256": "addd2723b361cd7a24792499de3840d69f0337f2e7d4b59231730dc3786a0f3b",
+      "git_blob_sha1": "c87bf1cac9c82a13ae3d99ea626a45608213d7f0"
+    },
+    "softfloat/instantiate.py": {
+      "sha256": "0b406a951a090a23fc24f3d0eb8b364d5de0d988938e3cc3f49b72d164875ba0",
+      "git_blob_sha1": "66f14b00b67020b01e90ca6bcbd74ebb6d8b3695"
+    },
+    "softfloat/named.c": {
+      "sha256": "7256883acf65d744101feff594a7d6a008afd29ac22d5e9bdefc53c54f5ea1c2",
+      "git_blob_sha1": "07d3108d7a064aa6dc86041a1c1d3f9f2fef4bbe"
+    },
+    "softfloat/ppc.h": {
+      "sha256": "fdacc766a4920c1a705d2421d3581202c829bf7b5e88c85391fe62f93d2f6f7c",
+      "git_blob_sha1": "881e1c955dd6ceebffc03cbf54d4c2290251b06c"
+    },
+    "softfloat/ppc_sum.h": {
+      "sha256": "83f54e9a142b2a7ea9a7d3e8eba141782c294177349c4ed3a30a2dcb899fa8b9",
+      "git_blob_sha1": "6049ff9c34f4ee52d8b24915de5b7dc8eb60f820"
+    },
+    "softfloat/test_cmps.py": {
+      "sha256": "87031e689c53bf5c90ef67ed143ddeb4f6965b6cfcbdb2d41cb9a37f008d13f0",
+      "git_blob_sha1": "ab0667a5c2cd449f21f0460cc39b35c14ef4f107"
+    },
+    "softfloat/test_instance_limits.py": {
+      "sha256": "7792825878313a84bc53f1b9a43d6a1aa7328c140a867ba31c3360c8dda76df5",
+      "git_blob_sha1": "5455f9c79c53e755e251cf4f18cd6147a380486e"
+    },
+    "softfloat/test_instances.py": {
+      "sha256": "e4d904f3d822854472725a8ec9f00960d6c1e0053b2119f484b4c07700e06d7a",
+      "git_blob_sha1": "3221d50a954994e34a9ebd819ae2fcda2fae39dd"
+    },
+    "softfloat/test_publication.py": {
+      "sha256": "96485566f7c7447ed4635240cbfdfbf700572caa0ad7fcb57ee6bc6982716823",
+      "git_blob_sha1": "638ec82402da8ad274622db39fbc7334884d9915"
+    },
+    "softfloat/trans.h": {
+      "sha256": "e9a610678cbb808636df2f76a1129711e46714be320be45b902ced9f2bb2bfb1",
+      "git_blob_sha1": "39f199fdba1e262c55f650fa8de2b7c647de6034"
+    }
   }
 }
