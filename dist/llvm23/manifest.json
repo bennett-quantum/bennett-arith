@@ -2,7 +2,6 @@
   "dialect": "0.2.12",
   "isa": "0.8",
   "conformance_pending": [
-    "bennett-arith-chn.1",
     "bennett-arith-4yg",
     "bennett-arith-wvh"
   ],
@@ -2574,7 +2573,8 @@
       "constrained": false,
       "id": 141,
       "signature": "i128 (i16)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -2592,7 +2592,8 @@
       "constrained": true,
       "id": 142,
       "signature": "i128 (i16, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -2609,7 +2610,8 @@
       "constrained": false,
       "id": 143,
       "signature": "i128 (i16)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -2627,7 +2629,8 @@
       "constrained": true,
       "id": 144,
       "signature": "i128 (i16, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -5191,7 +5194,8 @@
       "constrained": false,
       "id": 286,
       "signature": "i128 (i16)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -5209,7 +5213,8 @@
       "constrained": true,
       "id": 287,
       "signature": "i128 (i16, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -5226,7 +5231,8 @@
       "constrained": false,
       "id": 288,
       "signature": "i128 (i16)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -5244,7 +5250,8 @@
       "constrained": true,
       "id": 289,
       "signature": "i128 (i16, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -7808,7 +7815,8 @@
       "constrained": false,
       "id": 431,
       "signature": "i128 (i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -7826,7 +7834,8 @@
       "constrained": true,
       "id": 432,
       "signature": "i128 (i32, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -7843,7 +7852,8 @@
       "constrained": false,
       "id": 433,
       "signature": "i128 (i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -7861,7 +7871,8 @@
       "constrained": true,
       "id": 434,
       "signature": "i128 (i32, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -10425,7 +10436,8 @@
       "constrained": false,
       "id": 576,
       "signature": "i128 (i64)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -10443,7 +10455,8 @@
       "constrained": true,
       "id": 577,
       "signature": "i128 (i64, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -10460,7 +10473,8 @@
       "constrained": false,
       "id": 578,
       "signature": "i128 (i64)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -10478,7 +10492,8 @@
       "constrained": true,
       "id": 579,
       "signature": "i128 (i64, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -13042,7 +13057,8 @@
       "constrained": false,
       "id": 721,
       "signature": "i128 (i80)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -13060,7 +13076,8 @@
       "constrained": true,
       "id": 722,
       "signature": "i128 (i80, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -13077,7 +13094,8 @@
       "constrained": false,
       "id": 723,
       "signature": "i128 (i80)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -13095,7 +13113,8 @@
       "constrained": true,
       "id": 724,
       "signature": "i128 (i80, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -15659,7 +15678,8 @@
       "constrained": false,
       "id": 866,
       "signature": "i128 (i128)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -15677,7 +15697,8 @@
       "constrained": true,
       "id": 867,
       "signature": "i128 (i128, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -15694,7 +15715,8 @@
       "constrained": false,
       "id": 868,
       "signature": "i128 (i128)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -15712,7 +15734,8 @@
       "constrained": true,
       "id": 869,
       "signature": "i128 (i128, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -16770,7 +16793,8 @@
       "constrained": false,
       "id": 927,
       "signature": "i128 (i128, i128, i128)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
     {
@@ -16790,7 +16814,8 @@
       "constrained": true,
       "id": 928,
       "signature": "i128 (i128, i128, i128, i32)",
-      "status": "exact",
+      "status": "legacy-106-bit-pending-canonical-pair",
+      "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
     {
@@ -20851,14 +20876,24 @@
     "verification": "tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp"
   },
   "ppc_semantics": {
-    "oracle": "same-major LLVM APFloat",
+    "oracle": "independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations",
     "high_component_carrier_bits": "0..63",
-    "llvm18": "component add/mul and legacy 106-bit fallbacks",
-    "llvm23": "component integral rounding and integer conversion, otherwise same legacy fallbacks",
+    "both_majors": "exact high+low outgoing FP/integer conversions; full-width integer inputs; canonical-pair integral rounding and sqrt",
+    "exact_sum_quantum": "2^-1074",
+    "exact_sum_bits": 2176,
+    "sqrt_comparison_bits": 4352,
+    "llvm18": "component add/mul; legacy 106-bit divide/remainder/FMA and incoming IEEE conversion",
+    "llvm23": "same operations as LLVM18, including explicit 0.2.12 exact-value overrides",
     "pending_bead": "bennett-arith-4yg",
-    "implementation_gaps": "0.2.12 requires exact-sum conversions and canonical-pair sqrt/FMA/integral rounding; current default still uses high-only conversion and legacy 106-bit sqrt/FMA"
+    "implementation_gaps": "incoming IEEE conversion and FMA retain legacy 106-bit rounding; zero-low FMA tie parity requires the 4yg.1 contract decision"
   },
-  "contract_questions": [],
+  "contract_questions": [
+    {
+      "bead": "bennett-arith-4yg.1",
+      "section": "13.1",
+      "question": "At a zero-low transition, both adjacent nearest canonical pairs can have odd significands under the published high fallback. Specify parity or a deterministic equal-parity rule."
+    }
+  ],
   "comparison_semantics": {
     "quiet": "cmp_B_rm: invalid only on signaling NaN",
     "signaling": "cmps_B_rm: invalid on any NaN, including false/true predicates",
@@ -20870,7 +20905,7 @@
     "flags": "sticky invalid only; plain cmp_B has no fenv access"
   },
   "llvm_major": 23,
-  "bitcode_sha256": "1716a8fe41a01dd0f201b0359f9a0dc5ecfd9aaec4dc5a406b1e425f8d5be664",
+  "bitcode_sha256": "bf0736468e58db72810b0832fbb5fb0340bab619d6c49398d7996ed0733edfc6",
   "tool_versions": {
     "clang": "Ubuntu clang version 23.1.5 (++20261028083854+a738f2737189-1~exp1~20261028203912.92)",
     "llvm-as": "Ubuntu LLVM version 23.1.5",
@@ -20891,12 +20926,12 @@
       "git_blob_sha1": "f257a1a03b0fffd92ba90038475e6071dae26426"
     },
     "softfloat/core.c": {
-      "sha256": "ffdc95be5312fe294acbc4ff88500e51cc6b653ae1b0f51a51e37b76c3418bdb",
-      "git_blob_sha1": "a6d34c966cae4b931e4a82cc8fdd8a11c1ee3742"
+      "sha256": "59bb4e7c6959a97b32f73c3ef20ad1b7027312f10ca813428b9839de4fb6401c",
+      "git_blob_sha1": "af4b0b3e86575c921becd18ac7069e10f495dedb"
     },
     "softfloat/generate.py": {
-      "sha256": "59f2fd4d91c795e4ec027291f99277ee6a2f1721f4727ebbea8c5570b08549c6",
-      "git_blob_sha1": "60aefb6f43e4db5cf6d1137b5653ce036eae7f92"
+      "sha256": "70bd2d84bfd88acab66ee55ba7a05a24b1702e72f5e9012bb69ccff646eae3a2",
+      "git_blob_sha1": "a6dc31ca2f1739cfdef08e11b0c94255b5ec0fde"
     },
     "softfloat/instantiate.py": {
       "sha256": "0b406a951a090a23fc24f3d0eb8b364d5de0d988938e3cc3f49b72d164875ba0",
@@ -20907,8 +20942,12 @@
       "git_blob_sha1": "07d3108d7a064aa6dc86041a1c1d3f9f2fef4bbe"
     },
     "softfloat/ppc.h": {
-      "sha256": "700777078fb7c436d6c03d7945f0299421e1eee9ac9ddc905f63503ebe45ecdc",
-      "git_blob_sha1": "c6ea397414d6f6f1775a91086b774eb591088d96"
+      "sha256": "fdacc766a4920c1a705d2421d3581202c829bf7b5e88c85391fe62f93d2f6f7c",
+      "git_blob_sha1": "881e1c955dd6ceebffc03cbf54d4c2290251b06c"
+    },
+    "softfloat/ppc_sum.h": {
+      "sha256": "83f54e9a142b2a7ea9a7d3e8eba141782c294177349c4ed3a30a2dcb899fa8b9",
+      "git_blob_sha1": "6049ff9c34f4ee52d8b24915de5b7dc8eb60f820"
     },
     "softfloat/test_cmps.py": {
       "sha256": "a36d6c5f6d5dfe34b11d8e66189a063c15fa3d346eab78cf4e1cd8791a050988",

@@ -2,7 +2,7 @@
  * DoubleAPFloat (Apache-2.0 WITH LLVM-exception), using our integer f64 core.
  * High double occupies bits 0..63, low double bits 64..127.
  * Component operations retain APFloat conventions. Exact conversions and
- * integral operations use ppc_sum.h; remaining numerical gaps are explicit.
+ * integral operations and sqrt use ppc_sum.h; remaining gaps are explicit.
  */
 static U low64(U x) { return x & (((U)1<<64)-1); }
 #include "ppc_sum.h"

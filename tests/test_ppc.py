@@ -1,14 +1,20 @@
-"""Published PPC carrier operations vs the contract's LLVM-major APFloat oracle."""
-import importlib.util, pathlib, subprocess, sys, random
+"""PPC component operations vs APFloat; explicit exact guarantees vs Fraction."""
+import argparse, importlib.util, pathlib, subprocess, sys, random
 sys.dont_write_bytecode=True
 R=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('edge',R/'tests/test_edge.py');e=importlib.util.module_from_spec(spec);spec.loader.exec_module(e)
-for major in map(int,sys.argv[1:] or [18,23]):
-    edge=e.Edge(major)
+spec=importlib.util.spec_from_file_location('ppc_exact',R/'tests/test_ppc_exact.py');exact=importlib.util.module_from_spec(spec);spec.loader.exec_module(exact)
+o=exact.o
+parser=argparse.ArgumentParser()
+parser.add_argument('majors',type=int,nargs='*',default=[18,23])
+parser.add_argument('--root',type=pathlib.Path,default=R)
+options=parser.parse_args()
+for major in options.majors:
+    edge=e.Edge(major,options.root)
     assert '__bennett_sf_add_ppcf128' in edge.rows, 'RED: missing PPCDoubleDouble publication'
     llvm=f'/usr/lib/llvm-{major}/bin/'
     flags=subprocess.check_output([llvm+'llvm-config','--cxxflags','--ldflags','--libs','support','--system-libs'],text=True).split()
-    exe=R/f'.tmp/llvm{major}/ppc-oracle'
+    exe=options.root/f'.tmp/llvm{major}/ppc-oracle'
     subprocess.run([llvm+'clang++',str(R/'tests/ppc_oracle.cpp'),*flags,'-o',str(exe)],check=True)
     rng=random.Random(0xDD128)
     # Canonical pairs, subnormals, sparse tails, ties, cancellation, overflow.
@@ -52,8 +58,22 @@ for major in map(int,sys.argv[1:] or [18,23]):
     proc=subprocess.run([str(exe)],input=payload,text=True,capture_output=True,check=True)
     answers=proc.stdout.splitlines();assert len(answers)==len(jobs)
     ops=['add','sub','mul','div','rem','fma','rint','fpext_ppcf128_f128','fptrunc_f128_ppcf128',None,'sitofp','uitofp','fptosi','fptoui']
+    overrides=0
     for (op,rm,a,b,c),line in zip(jobs,answers):
         lo,hi=map(lambda s:int(s,16),line.split());expected=lo|(hi<<64)
+        apfloat=expected;flags=None
+        # 0.2.12 explicitly overrides APFloat for these operations. Keep every
+        # existing input and use an independent mathematical oracle instead.
+        if op==6:expected,flags=o.integral(a,'rint',rm)
+        elif op==7:expected,flags=o.convert(a,e.FORMATS['f128'],rm)
+        elif op in (10,11):
+            n=a-(1<<128) if op==10 and a>>127 else a
+            expected,flags=o.integer_to_pair(n,rm)
+        elif op in (12,13):
+            expected,_=o.to_integer(a,128,op==12,3)
+            expected&=e.MASK128
+            flags=0 # These existing jobs exercise the plain, fenv-free ABI.
+        overrides+=int(expected!=apfloat)
         if op==14:
             for cls in range(10):edge.check('isfpclass_ppcf128',[a,1<<cls],int(bool(lo&(1<<cls))))
             continue
@@ -69,5 +89,6 @@ for major in map(int,sys.argv[1:] or [18,23]):
         args=[a,b,c] if op==5 else [a,b] if op<5 else [a]
         if op in (12,13):args+=[128]
         elif op!=4:name+='_rm';args+=[rm]
-        edge.check(name,args,expected)
-    print(f'LLVM {major}: {edge.count} PPCDoubleDouble/APFloat checks')
+        edge.check(name,args,expected,flags)
+    print(f'LLVM {major}: {edge.count} PPC component/exact-value checks; {overrides} explicit-guarantee differences from APFloat',flush=True)
+    exact.run(major,options.root)

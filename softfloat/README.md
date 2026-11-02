@@ -93,20 +93,30 @@ it does not run or modify the sibling plugin.
 PPC high double occupies carrier bits 0..63 and low double bits 64..127. Add and
 multiply use the same component operation sequence as LLVM DoubleAPFloat, with
 integer-only binary64 operations. Divide, fmod and FMA use LLVM's legacy 106-bit
-fallback (minimum normal exponent −969, subnormal quantum 2^-1074). LLVM 18 uses
-that fallback for integral/integer conversion too; LLVM 23 uses its newer
-component algorithms, preserving sparse integer tails. Wide integer inputs and
-outputs retain all bits; tests include 2^1023+1. Comparison is lexicographic high,
+fallback (minimum normal exponent −969, subnormal quantum 2^-1074). Comparison is lexicographic high,
 then low. Canonical NaN is high 0x7ff8000000000000, low +0.
 
 Dialect 0.2.12 resolves the PPC priority rule: exact-sum conversion and correctly
 rounded canonical-pair sqrt/FMA/integral operations take precedence over legacy
-APFloat fallbacks. The current default core still has high-only PPC-to-IEEE
-conversion and a legacy 106-bit sqrt/FMA fallback. LLVM 23 unsigned conversion
-can also saturate an in-range positive sum with a negative low component.
-These implementation gaps remain in **bennett-arith-4yg**. Same-major APFloat
-matching does not establish the new guarantees. The separate named-format
-generator already converts using both PPC components.
+APFloat fallbacks. On both LLVM majors, outgoing FP conversion rounds the exact
+sum once, and integer conversion saturates the combined value. Integer inputs
+retain every source bit, including sparse tails such as 2^1023+1. Integral
+rounding preserves the named operation's flags, including the rint/nearbyint
+difference. These paths use an exact 2176-bit magnitude at quantum 2^-1074.
+Square root finds its bounding canonical pairs using an integer square root,
+then compares exact squares and squared midpoints in 4352 bits. Only the final
+result affects its flags; no intermediate binary64 underflow is reported.
+Independent Fraction tests cover exact-value conversions, integer saturation,
+canonical neighbours and hard square-root midpoints on both majors.
+
+Incoming IEEE conversion and FMA still use legacy 106-bit rounding and remain in
+**bennett-arith-4yg**. **bennett-arith-4yg.1** records a published tie-rule
+ambiguity: at a zero-low transition both nearest neighbours can have odd parity
+under the stated high-significand fallback. The exact witness is
+`tests/ppc_zero_low_witness.py`. No arbitrary tie policy is claimed as contract
+conformance. Same-major APFloat matching alone does not establish the explicit
+canonical-pair guarantees. The separate named-format generator converts using
+both PPC components.
 
 Dialect 0.2.12 §13.4 requires a full-domain one-local-ulp envelope, correctly
 rounded constrained selection, and exact mathematical flags. The current
@@ -118,6 +128,12 @@ error-bound or correct-rounding proof. No float/long-double host ABI is used.
 Constrained wrappers preserve sticky flags; full-domain accuracy and exact-flag
 implementation evidence remains in **bennett-arith-wvh**. Aggregate order and
 signed zeros are tested separately.
+
+**bennett-arith-wvh.1** records an exact counterexample beyond those samples:
+PPC exp(2^-700) currently loses the sparse low component. The diagnostic
+`tests/ppc_exp_sparse_witness.py` proves its adjacent canonical results with
+rational Taylor bounds; returning 1 exceeds the envelope by over 2^52 local
+ulps. A successful diagnostic verifies that witness, not libm conformance.
 
 The default bitcode publishes powi at K = 1, 8, 16, 32, 64, 128, 192, 256, 513,
 1025 on every format, with `_rm` variants. `scripts/build 18 7 193` (or major 23)
@@ -142,8 +158,8 @@ The remaining obligations are retained:
 - `bennett-arith-38c`: named-format conversions and arbitrary powi widths are
   available through the documented offline generator below.
 - `bennett-arith-chn`: the distinct 0.2.12 `cmps_B_rm` implementation is
-  published for all seven formats. Verification is tracked in
-  **bennett-arith-chn.1**; `softfloat/test_cmps.py` tests all predicates,
+  published and verified for all seven formats; **bennett-arith-chn.1** is
+  closed. `softfloat/test_cmps.py` tests all predicates,
   half/bfloat NaN payloads, sticky flags and scalar lane sequences.
 
 No placeholder numerical bodies or input-dependent unsupported traps implement

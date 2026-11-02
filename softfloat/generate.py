@@ -138,6 +138,8 @@ def generate(dest, widths=POWI_WIDTHS):
         e['id'] = index
         e['signature'] = f"{e['result']} ({', '.join(e['params'])})"
         e['status'] = 'deterministic-integer-libm-v1' if e['op']!='cmps' and OPS.index(e['op'])>=OPS.index('sin') else 'exact' if e['op'] != 'powi' else 'deterministic-repeated-squaring'
+        if (e['fi']==6 and e['op']=='fma') or (e['op']=='convert' and e['extra']==6):
+            e.update(status='legacy-106-bit-pending-canonical-pair',bead='bennett-arith-4yg')
         ret, params, op = e['result'], e['params'], e['op']
         if 'exponent_bits' in e:
             ir += powi_wrapper(e)
@@ -236,7 +238,7 @@ def generate(dest, widths=POWI_WIDTHS):
     (dest/'bridge.ll').write_text('\n'.join(bridge)+'\n')
     (dest/'exports.txt').write_text('\n'.join(e['name'] for e in rows)+'\n__bennett_rt_fenv\n')
     manifest = dict(dialect='0.2.12', isa='0.8',
-                    conformance_pending=['bennett-arith-chn.1','bennett-arith-4yg','bennett-arith-wvh'],
+                    conformance_pending=['bennett-arith-4yg','bennett-arith-wvh'],
                     instance_generator=dict(command='python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY',
                         request_schema='bennett-arith-instantiations-1',manifest_schema='bennett-arith-instances-1'),
                     implementation='integer-core-v2-libm1', exports=rows,
@@ -263,11 +265,15 @@ def generate(dest, widths=POWI_WIDTHS):
         pending_bead='bennett-arith-wvh',
         claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=224,
         payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')
-    manifest['ppc_semantics'] = dict(oracle='same-major LLVM APFloat', high_component_carrier_bits='0..63',
-        llvm18='component add/mul and legacy 106-bit fallbacks', llvm23='component integral rounding and integer conversion, otherwise same legacy fallbacks',
+    manifest['ppc_semantics'] = dict(oracle='independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations', high_component_carrier_bits='0..63',
+        both_majors='exact high+low outgoing FP/integer conversions; full-width integer inputs; canonical-pair integral rounding and sqrt',
+        exact_sum_quantum='2^-1074',exact_sum_bits=2176,sqrt_comparison_bits=4352,
+        llvm18='component add/mul; legacy 106-bit divide/remainder/FMA and incoming IEEE conversion',
+        llvm23='same operations as LLVM18, including explicit 0.2.12 exact-value overrides',
         pending_bead='bennett-arith-4yg',
-        implementation_gaps='0.2.12 requires exact-sum conversions and canonical-pair sqrt/FMA/integral rounding; current default still uses high-only conversion and legacy 106-bit sqrt/FMA')
-    manifest['contract_questions']=[]
+        implementation_gaps='incoming IEEE conversion and FMA retain legacy 106-bit rounding; zero-low FMA tie parity requires the 4yg.1 contract decision')
+    manifest['contract_questions']=[dict(bead='bennett-arith-4yg.1',section='13.1',
+        question='At a zero-low transition, both adjacent nearest canonical pairs can have odd significands under the published high fallback. Specify parity or a deterministic equal-parity rule.')]
     manifest['comparison_semantics']=dict(quiet='cmp_B_rm: invalid only on signaling NaN',
         signaling='cmps_B_rm: invalid on any NaN, including false/true predicates',
         predicate_range=[0,15],rounding_operand=0,flags='sticky invalid only; plain cmp_B has no fenv access')

@@ -38,8 +38,22 @@ parity=lambda p:((p>>64) if p>>64 else p&mask)&1
 assert parity(lower)==parity(upper)==1
 print('Exact FMA is h + 2^-1075, h = 1 + 2^-52; its two adjacent canonical neighbours are equidistant.')
 print(f'Lower = {lower:032x}; upper = {upper:032x}; literal zero-low fallback gives odd/odd parity.')
+# The same ambiguity is reachable by a binary128 conversion, independently of
+# FMA: scale the odd high component into a small normal binary64 high bin.
+chbits=(3<<52)|1;ch=e.decode(chbits,f)[0]
+clower=chbits;cupper=chbits|(1<<64);cv=ch+u/2
+assert canonical(clower) and canonical(cupper)
+assert cv-value(clower)==value(cupper)-cv==u/2
+assert parity(clower)==parity(cupper)==1
+cbits=e.encode(cv,e.FORMATS['f128'])[0]
+assert e.decode(cbits,e.FORMATS['f128'])[0]==cv
+assert e.encode(cv,f)[0]==chbits
+print(f'Exact binary128 input {cbits:032x} is also a zero-low odd/odd canonical-pair midpoint.')
 for major in map(int,sys.argv[1:] or (18,23)):
     edge=e.Edge(major);edge.env[1]=0
     actual=edge.call('fma_ppcf128_rm',a,b,c,0)[0]
     print(f'LLVM {major} current result {actual:032x}, flags={edge.env[1]}; every nearest result must be inexact (16).')
+    edge.env[1]=0
+    actual=edge.call('fptrunc_f128_ppcf128_rm',cbits,0)[0]
+    print(f'LLVM {major} current conversion {actual:032x}, flags={edge.env[1]}; every nearest result must be inexact (16), without underflow.')
 print('Witness verified; the nearest-even tie rule requires a contract decision. This is not a conformance pass.')

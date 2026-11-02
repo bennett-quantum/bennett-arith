@@ -1,7 +1,7 @@
-"""Outgoing PPC conversions and integral operations use the exact high+low.
+"""Exact-sum PPC conversions, integral operations and canonical-pair sqrt.
 
 Independent Fraction expectations; actual calls use the published bitcode.
-Sqrt/FMA/canonical pair midpoint selection remain separately tracked by 4yg.
+FMA's zero-low midpoint ambiguity remains separately tracked by 4yg.1.
 """
 import importlib.util
 import argparse
@@ -26,6 +26,12 @@ def run(major,root=ROOT):
                o.pair(e.Q(1,2),e.power(-1074)),o.pair(e.Q(-1,2),-e.power(-1074)),
                o.pair(e.Q(0)),o.pair(e.Q(0),zero_sign=1),1,(1<<63)|1,
                e.infinity(F),e.infinity(F,1),e.nan(F),e.infinity(F)|1]
+    values += [o.pair(e.Q(1)),o.pair(e.power(1022)),o.pair(e.power(-1022))]
+    # Roots lie just below/above 2^511 + 2^-1075. Squared-midpoint comparison
+    # must retain the unit at bit zero of a 3173-bit integer.
+    near=e.encode(e.power(-563),F)[0]
+    values += [o.pair(e.power(1022),e.decode(near,F)[0]),
+               o.pair(e.power(1022),e.decode(near+1,F)[0])]
     maximum=e.decode(0x7fefffffffffffff,F)[0]
     values += [o.pair(maximum,e.power(970)-e.power(917))]
     rng=random.Random(0x02124)
@@ -119,7 +125,7 @@ def run(major,root=ROOT):
                     if bits<=128:
                         carrier=n&e.MASK128 if signed else unsigned
                         edge.check(op+'_ppcf128_rm',[carrier,rm],want,flags)
-    print(f'LLVM {major}: {edge.count} exact-sum conversion/integral/narrow/wide checks',flush=True)
+    print(f'LLVM {major}: {edge.count} exact-sum conversion/integral/integer/sqrt checks',flush=True)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
