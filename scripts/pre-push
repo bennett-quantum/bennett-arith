@@ -1,41 +1,20 @@
 #!/usr/bin/env bash
-# Gates PPC/APFloat, width-preserving powi, and MPFR libm including exhaustive
-# half/bfloat sin on both majors through scripts/gate.
-# Read Git's ref-update stream; gate each non-deletion local commit in isolation.
+# Push gate (no CI). Runs the [[check]]s of gate.toml on the pushed sha in a clean detached
+# worktree, with siblings at the shas pinned there. See bennett/tools/gate_README.md in the
+# meta repo. The tool is run, never imported: it is a dev tool at a pinned commit, like cargo.
 set -euo pipefail
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
-script_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
-root="$(git -C "$script_dir" rev-parse --show-toplevel)"
-export TMPDIR="$root/.tmp"
-mkdir -p "$TMPDIR"
-shas=()
-updates=0
-if [ ! -t 0 ]; then
-  while read -r -t 10 local_ref local_sha remote_ref remote_sha; do
-    updates=$((updates+1))
-    case "$local_sha" in
-      0000000000000000000000000000000000000000) continue;;
-      ''|*[!0-9a-f]*) echo "invalid pushed SHA: $local_sha" >&2; exit 1;;
-    esac
-    shas+=("$(git -C "$root" rev-parse --verify "${local_sha}^{commit}")")
-  done
+root="$(git -C "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" rev-parse --show-toplevel)"
+if [ "${BENNETT_GATE_HOOK_PROBE:-}" = 1 ]; then echo "bennett-gate-hook-chained $root"; exit 0; fi
+pin="$(git -C "$root" show HEAD:gate.toml 2>/dev/null)" || { echo "pre-push: HEAD has no gate.toml" >&2; exit 3; }
+tool_sha="$(sed -n 's/^tool_sha = "\([0-9a-f]\{40\}\)"$/\1/p' <<<"$pin")"
+[ -n "$tool_sha" ] || { echo "pre-push: gate.toml has no full tool_sha" >&2; exit 3; }
+common="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)"
+meta="${BENNETT_GATE_WORKSPACE:-$(dirname "$(dirname "$common")")}/bennett"
+tool="$root/.tmp/gate/tool/gate_run-$tool_sha.py"
+if [ ! -s "$tool" ]; then
+  mkdir -p "$(dirname "$tool")"
+  git -C "$meta" show "$tool_sha:tools/gate_run.py" >"$tool.$$"
+  mv "$tool.$$" "$tool"
 fi
-if [ "$updates" -eq 0 ]; then
-  shas=("$(git -C "$root" rev-parse --verify HEAD)")
-fi
-for sha in "${shas[@]}"; do
-  wt="$(mktemp -d "$TMPDIR/push-$sha-XXXXXXXX")"
-  cleanup() {
-    git -C "$root" worktree remove --force "$wt"
-  }
-  git -C "$root" worktree add --detach "$wt" "$sha"
-  trap cleanup EXIT
-  echo "pre-push: gate pushed commit $sha in $wt" >&2
-  mkdir -p "$wt/.tmp"
-  env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
-    -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS -u BROWSER \
-    TMPDIR="$wt/.tmp" "$wt/scripts/gate"
-  "$wt/tests/circuits/run"
-  cleanup
-  trap - EXIT
-done
+exec python3 -I "$tool" run --repo "$root" --tool-sha "$tool_sha" "$@"
