@@ -156,10 +156,10 @@ class Aligned:
     def read(self): return ctypes.string_at(self.addr,self.size)
 
 class Edge:
-    def __init__(self,major):
+    def __init__(self,major,root=ROOT):
         self.major=major
-        self.path=ROOT/f'.tmp/llvm{major}'
-        self.manifest=json.loads((ROOT/f'dist/llvm{major}/manifest.json').read_text())
+        self.path=root/f'.tmp/llvm{major}'
+        self.manifest=json.loads((root/f'dist/llvm{major}/manifest.json').read_text())
         self.rows={x['name']:x for x in self.manifest['exports']}
         self.lib=ctypes.CDLL(str(self.path/'oracle.so'))
         self.fn=self.lib.test_call

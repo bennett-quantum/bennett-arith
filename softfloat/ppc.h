@@ -4,6 +4,7 @@
  * Legacy fallbacks deliberately match APFloat, including sparse-tail loss.
  */
 static U low64(U x) { return x & (((U)1<<64)-1); }
+#include "ppc_sum.h"
 static U ppc_pack(V a,int rm,int *flags) {
     /* Legacy 106-bit rounding precedes the nearest/even component split. */
     a=unpack(pack(a,formats[7],rm,flags),formats[7]);
@@ -126,6 +127,17 @@ static void ppc_eval(U *out,int op,const U *in,int extra,int rm) {
         r=op==MUL ? ddmul(x,y,rm,&flags):op==ADD ? ddadd(x,y,rm,&flags):ddadd(x^neg,y,rm,&flags)^neg;
         if(ddcat(r)==NANV) r=nanbits(formats[3]);
         out[0]=r;out[2]=flags;return;
+    }
+    if(op==CONVERT) {
+        out[0]=pack(sum_value(sum_read(x)),formats[extra],rm,&flags);out[2]=flags;return;
+    }
+    if(op==FPTOSI || op==FPTOUI || (op>=LROUND && op<=LLRINT)) {
+        int mode=op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm;
+        out[0]=ppc_sum_integer(x,extra,op!=FPTOUI,mode,op!=LROUND && op!=LLROUND,&flags);
+        out[2]=flags;return;
+    }
+    if(op>=FLOOR && op<=NEARBYINT) {
+        out[0]=ppc_sum_integral(x,op,rm,&flags);out[2]=flags;return;
     }
     if(op==MODF) {
         int cat=ddcat(x);U hi=low64(x),lo=x>>64;
