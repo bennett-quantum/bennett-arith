@@ -112,6 +112,61 @@ static U ppc_sum_integral(U x,int op,int rm,int *flags) {
     SumBits n=sum_integral(a,mode,op==RINT,flags);
     return sum_integer_pair(n,a.sign,rm,flags);
 }
+/* sqrt(x)/2^-1074 = sqrt(M*2^1074), where x=M*2^-1074 exactly.
+ * The radicand has at most 3173 bits, and squared pair midpoints at most 3176.
+ * Every canonical pair lies on the 2^-1074 grid. Its neighbours are therefore
+ * found by directed rounding of floor(root) and floor(root)+1, without an
+ * approximate real square root. Only final comparisons affect IEEE flags. */
+typedef unsigned _BitInt(4352) SquareBits;
+static int square_width(SquareBits x) {
+    int n=0;
+    if(x>>4096){x>>=4096;n+=4096;}
+    if(x>>2048){x>>=2048;n+=2048;}
+    if(x>>1024){x>>=1024;n+=1024;}
+    if(x>>512){x>>=512;n+=512;}
+    return n+width((Big)x);
+}
+static U ppc_sum_sqrt(U x,int rm,int *flags) {
+    PairSum a=sum_read(x);
+    if(a.kind==NANV){if(a.snan)*flags|=1;return nanbits(formats[3]);}
+    if(a.sign && (a.mag || a.kind==INF)){*flags|=1;return nanbits(formats[3]);}
+    if(a.kind==INF)return infbits(formats[3],0);
+    if(!a.mag)return (U)a.sign<<63;
+    SquareBits rad=(SquareBits)a.mag<<1074,root=0,rem=0;
+    for(int i=(square_width(rad)+1)/2-1;i>=0;--i) {
+        rem=(rem<<2)|((rad>>(2*i))&3);
+        SquareBits trial=(root<<2)|1;
+        root<<=1;
+        if(rem>=trial){rem-=trial;++root;}
+    }
+    int ignored=0;
+    U lower=sum_round_pair((PairSum){(SumBits)root,0,FINITE,0},1,&ignored);
+    PairSum ls=sum_read(lower);
+    if((SquareBits)ls.mag*ls.mag==rad)return lower;
+    U upper=sum_round_pair((PairSum){(SumBits)(root+1),0,FINITE,0},2,&ignored);
+    PairSum us=sum_read(upper);U result;
+    if(rm==1 || rm==3)result=lower;
+    else if(rm==2)result=upper;
+    else {
+        SquareBits mid=(SquareBits)ls.mag+us.mag;
+        SquareBits squared=mid*mid,scaled=rad<<2;
+        if(scaled<squared)result=lower;
+        else if(scaled>squared || rm==4)result=upper;
+        else {
+            U low=lower>>64;
+            /* At a zero-low transition an odd/odd pair midpoint has a half
+             * grid unit, whose square cannot be a binary64-pair input. Thus
+             * the unresolved 4yg.1 FMA tie is unreachable for sqrt. */
+            result=!((low ? low:low64(lower))&1) ? lower:upper;
+        }
+    }
+    PairSum r=sum_read(result);
+    if((SquareBits)r.mag*r.mag!=rad) {
+        *flags|=16;
+        if(r.mag<((SumBits)1<<52))*flags|=8;
+    }
+    return result;
+}
 static U ppc_sum_integer(U x,int bits,int sign,int mode,int record_inexact,int *flags) {
     if(bits<1 || bits>128)__builtin_trap();
     PairSum a=sum_read(x);

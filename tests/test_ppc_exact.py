@@ -17,6 +17,8 @@ e=o.e;F=o.F
 
 def run(major,root=ROOT):
     edge=e.Edge(major,root)
+    odd_integer=(1<<52)+1
+    assert o.integer_to_pair(odd_integer)==(e.encode(e.Q(odd_integer),F)[0],0)
     witness=o.pair(e.Q(1),e.power(-60))
     edge.check('fpext_ppcf128_f80_rm',[witness,0],*o.convert(witness,e.FORMATS['f80']))
     values=[o.pair(e.Q(h),e.power(ex)*sign) for h in (1,-1) for ex in (-60,-200,-1074) for sign in (1,-1)]
@@ -70,10 +72,40 @@ def run(major,root=ROOT):
                     assert int.from_bytes(slot.read(),'little')==want%(1<<bits),(major,op,bits,rm)
                     assert edge.env[1]==32|flags,(major,op,bits,rm,'flags',edge.env[1],flags)
                     edge.count+=1
+    for raw in values:
+        v,sign,sn=o.decode(raw);nearest=None
+        for rm in range(5):
+            edge.env[1]=32
+            actual=edge.call('sqrt_ppcf128_rm',raw,rm)[0]
+            if v=='nan' or v=='inf' or not v or v<0:
+                want=e.nan(F) if v=='nan' or sign and (v=='inf' or v) else e.infinity(F) if v=='inf' else sign<<63
+                flags=int(sn or sign and (v=='inf' or not isinstance(v,str) and v<0))
+                assert actual==want,(major,'sqrt special',raw,rm,actual,want)
+            else:
+                y,_,_=o.decode(actual)
+                assert not isinstance(y,str) and y>0
+                assert e.encode(y,F)[0]==actual&o.MASK64 and actual>>64!=1<<63
+                (prev,_),(nxt,_)=o.neighbours(actual)
+                if rm in (1,3):assert y*y<=v<nxt*nxt,(major,'sqrt down',raw,rm)
+                elif rm==2:assert prev*prev<v<=y*y,(major,'sqrt up',raw,rm)
+                else:
+                    left=((prev+y)/2)**2;right=((y+nxt)/2)**2
+                    assert left<=v<=right,(major,'sqrt nearest',raw,rm)
+                    if rm==4:assert v!=right
+                    elif v in (left,right):assert not (((actual>>64) or (actual&o.MASK64))&1)
+                flags=int(y*y!=v)*16
+                if flags and y<e.power(-1022):flags|=8
+            assert edge.env[1]==32|flags,(major,'sqrt flags',raw,rm,edge.env[1],flags)
+            if rm==0:nearest=actual
+            edge.count+=1
+        edge.check('sqrt_ppcf128',[raw],nearest,0)
     for bits in (1,8,64,128,129,193,257,513,1025):
         numbers=[0,1,(1<<(bits-1))-1,1<<(bits-1),(1<<bits)-1]
         if bits>110:
             numbers += [(1<<(bits-2))+1,(1<<(bits-2))-(1<<(bits-70))-1]
+        if bits>=123:
+            exponent=min(bits-2,1023)
+            numbers += [(1<<exponent)-(1<<(exponent-68))-3*(1<<(exponent-121))]
         if bits==1025:
             maximum=o.decode(0x7fefffffffffffff|(0x7c8fffffffffffff<<64))[0]
             numbers += [int(maximum),int(maximum)+1,int(maximum)+int(e.power(916))]

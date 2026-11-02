@@ -4,6 +4,7 @@ No arithmetic implementation source is imported. Pair results here are exact
 integer decompositions; this module does not choose an ambiguous pair midpoint.
 """
 import importlib.util
+from functools import lru_cache
 from pathlib import Path
 import sys
 
@@ -67,20 +68,8 @@ def _near_low(bits):
     if not bits or bits==1<<63:return (0,1,(1<<63)|1)
     return (bits-1,bits,bits+1)
 
-def integer_to_pair(n,rm=0):
-    """Search nearby canonical pairs; compare exact distances to the integer."""
-    if not n:return 0,0
-    negative=n<0;v=e.Q(abs(n));mode=({1:2,2:1}.get(rm,rm) if negative else rm)
-    hmax=e.decode(0x7fefffffffffffff,F)[0]
-    lmax=e.decode(0x7c8fffffffffffff,F)[0];maximum=hmax+lmax
-    boundary=hmax+e.power(970)
-    overflow=(v>=(maximum+boundary)/2 if mode in (0,4) else v>maximum if mode==2 else v>=boundary)
-    maxbits=0x7fefffffffffffff|(0x7c8fffffffffffff<<64)
-    def signed(bits):
-        return bits^((1<<63)|((1<<127) if bits>>64 else 0)) if negative else bits
-    if overflow:
-        return signed(e.infinity(F) if mode in (0,2,4) else maxbits),20
-    if v>maximum:return signed(maxbits),16
+def canonical_candidates(v):
+    """Enumerate local fields and high-bin boundaries, filtering by definition."""
     high=e.encode(v,F)[0];candidates={}
     for hb in (high-1,high,high+1):
         if hb<0:continue
@@ -99,10 +88,35 @@ def integer_to_pair(n,rm=0):
                     if total<0 or e.encode(total,F)[0]!=hb:continue
                     raw=hb|((lb if lv else 0)<<64)
                     candidates[raw]=total
+    return candidates
+
+@lru_cache(maxsize=8192)
+def neighbours(raw):
+    v=decode(raw)[0];candidates=canonical_candidates(v)
+    return (max((x,b) for b,x in candidates.items() if x<v),
+            min((x,b) for b,x in candidates.items() if x>v))
+
+@lru_cache(maxsize=8192)
+def integer_to_pair(n,rm=0):
+    """Search nearby canonical pairs; compare exact distances to the integer."""
+    if not n:return 0,0
+    negative=n<0;v=e.Q(abs(n));mode=({1:2,2:1}.get(rm,rm) if negative else rm)
+    hmax=e.decode(0x7fefffffffffffff,F)[0]
+    lmax=e.decode(0x7c8fffffffffffff,F)[0];maximum=hmax+lmax
+    boundary=hmax+e.power(970)
+    overflow=(v>=(maximum+boundary)/2 if mode in (0,4) else v>maximum if mode==2 else v>=boundary)
+    maxbits=0x7fefffffffffffff|(0x7c8fffffffffffff<<64)
+    def signed(bits):
+        return bits^((1<<63)|((1<<127) if bits>>64 else 0)) if negative else bits
+    if overflow:
+        return signed(e.infinity(F) if mode in (0,2,4) else maxbits),20
+    if v>maximum:return signed(maxbits),16
+    candidates=canonical_candidates(v)
     below=[(x,b) for b,x in candidates.items() if x<=v]
     above=[(x,b) for b,x in candidates.items() if x>=v]
     low,lb=max(below);up,ub=min(above)
-    if mode in (1,3):chosen,raw=low,lb
+    if low==up:chosen,raw=low,lb
+    elif mode in (1,3):chosen,raw=low,lb
     elif mode==2:chosen,raw=up,ub
     elif v-low<up-v:chosen,raw=low,lb
     elif v-low>up-v:chosen,raw=up,ub
