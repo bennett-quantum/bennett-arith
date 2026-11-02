@@ -68,7 +68,7 @@ for major in map(int,sys.argv[1:] or [18,23]):
             else:args=[buf.addr,one,193];want=0
         elif op in ('sitofp','uitofp'):args=[1]
         elif op in ('fptosi','fptoui','lround','llround','lrint','llrint'):args=[one,128];want=1
-        elif op=='cmp':args=[one,one,1];want=1
+        elif op in ('cmp','cmps'):args=[one,one,1];want=1
         elif op=='isfpclass':args=[one,1<<8];want=1
         elif op=='fma':args=[one,one,one];want=0x4000000000000000
         elif op in ('add','sub','mul','div','rem','minnum','maxnum','minimum','maximum','minimumnum','maximumnum'):
