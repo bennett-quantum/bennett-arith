@@ -3,6 +3,7 @@ import ctypes,importlib.util,pathlib,sys,random
 sys.dont_write_bytecode=True
 R=pathlib.Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location('trans',R/'tests/test_trans.py');t=importlib.util.module_from_spec(s);s.loader.exec_module(t)
+s=importlib.util.spec_from_file_location('ppc_exp',R/'tests/test_ppc_exp.py');ppc_exp=importlib.util.module_from_spec(s);s.loader.exec_module(ppc_exp)
 e=t.e;m=t.m;C=t.C;MP=t.MP
 for op in ['sinpi','cospi']:
     fn=getattr(m,'mpfr_'+op);fn.argtypes=[C.POINTER(MP),C.POINTER(MP),C.c_int];fn.restype=C.c_int
@@ -88,3 +89,4 @@ for major in map(int,sys.argv[1:] or [18,23]):
             edge.check('sin_'+suffix+'_rm',[inf,rm],nan,1)
             edge.check('log_'+suffix+'_rm',[enc(e.Q(0)),rm],enc('inf',1),2)
     print(f'LLVM {major}: {edge.count} exhaustive/PPC/libm-rounding checks; max observed ulp {float(worst):.9f}',flush=True)
+    ppc_exp.run(major)

@@ -61,6 +61,16 @@ because their source constrained intrinsics have no rounding operand. Every
 Exception-ignore lowering uses plain `cmp_B` for either source intrinsic and
 leaves the environment unchanged. Arguments are read-only integer carriers.
 
+Comparisons on f16, bf16, f32, f64 and f128 use format-specific integer IR.
+Each export handles signed zeros, ordered predicates and NaNs directly;
+constrained entries OR the exact invalid flag into the runtime global. Selecting
+only one of these exports retains a single LLVM function with no arithmetic
+helpers or scratch slots. `tests/test_compare_closure.py` checks all fifteen
+closures in actual published bitcode. All seven formats remain available;
+f80 and PPC retain their existing comparison implementations. Consumer
+materialisation, budgets and performance must be verified against the newly
+pinned publication; producer closure measurements alone do not establish them.
+
 `__bennett_rt_fenv` is an **external runtime global**, with the ABI
 `{ i32 round, i32 flags }`; the arith library does not define a competing copy.
 For dynamic rounding the normaliser loads `round` and passes it as R. The test
@@ -129,11 +139,19 @@ Constrained wrappers preserve sticky flags; full-domain accuracy and exact-flag
 implementation evidence remains in **bennett-arith-wvh**. Aggregate order and
 signed zeros are tested separately.
 
-**bennett-arith-wvh.1** records an exact counterexample beyond those samples:
-PPC exp(2^-700) currently loses the sparse low component. The diagnostic
-`tests/ppc_exp_sparse_witness.py` proves its adjacent canonical results with
-rational Taylor bounds; returning 1 exceeds the envelope by over 2^52 local
-ulps. A successful diagnostic verifies that witness, not libm conformance.
+The PPC exponential has a separate exact path for finite |x| <= 2^-538.
+For nonzero x, Taylor bounds prove 0 < exp(x)-1-x < 2^-1076. Input sums are
+multiples of 2^-1074; binary64 component midpoints are multiples of 2^-1075.
+The strict positive correction therefore determines the low component's
+rounding cell without evaluating an approximate exponential. The result has
+high component 1, preserves sparse tails in all five modes, and raises only
+inexact; exp(±0) is exactly 1 with no flags. This fixes **bennett-arith-wvh.1**,
+whose original exp(2^-700) result exceeded one local ulp by over 2^52.
+`tests/test_ppc_exp.py` verifies every power-of-two exponent in this range,
+both signs, sparse tails, component midpoints, signed zeros and final flags.
+The earlier diagnostic `tests/ppc_exp_sparse_witness.py` retains the exact
+counterexample bounds. Full-domain libm correctness remains in wvh; the
+published contract's domain and available operations are unchanged.
 
 The default bitcode publishes powi at K = 1, 8, 16, 32, 64, 128, 192, 256, 513,
 1025 on every format, with `_rm` variants. `scripts/build 18 7 193` (or major 23)

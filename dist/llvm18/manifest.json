@@ -214,6 +214,7 @@
       "id": 10,
       "signature": "i1 (i16, i16, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.1"
     },
     {
@@ -234,6 +235,7 @@
       "id": 11,
       "signature": "i1 (i16, i16, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -2207,6 +2209,7 @@
       "id": 120,
       "signature": "i1 (i16, i16, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -2835,6 +2838,7 @@
       "id": 155,
       "signature": "i1 (i16, i16, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.1"
     },
     {
@@ -2855,6 +2859,7 @@
       "id": 156,
       "signature": "i1 (i16, i16, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -4828,6 +4833,7 @@
       "id": 265,
       "signature": "i1 (i16, i16, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -5456,6 +5462,7 @@
       "id": 300,
       "signature": "i1 (i32, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.1"
     },
     {
@@ -5476,6 +5483,7 @@
       "id": 301,
       "signature": "i1 (i32, i32, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -7449,6 +7457,7 @@
       "id": 410,
       "signature": "i1 (i32, i32, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -8077,6 +8086,7 @@
       "id": 445,
       "signature": "i1 (i64, i64, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.1"
     },
     {
@@ -8097,6 +8107,7 @@
       "id": 446,
       "signature": "i1 (i64, i64, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -10070,6 +10081,7 @@
       "id": 555,
       "signature": "i1 (i64, i64, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -13319,6 +13331,7 @@
       "id": 735,
       "signature": "i1 (i128, i128, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.1"
     },
     {
@@ -13339,6 +13352,7 @@
       "id": 736,
       "signature": "i1 (i128, i128, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -15312,6 +15326,7 @@
       "id": 845,
       "signature": "i1 (i128, i128, i32, i32)",
       "status": "exact",
+      "comparison_implementation": "format-specific-integer-ir",
       "section": "13.5"
     },
     {
@@ -20872,6 +20887,16 @@
     "pending_bead": "bennett-arith-wvh",
     "claim": "deterministic approximation; no global correct-rounding or ulp-bound proof",
     "working_significand_bits": 224,
+    "proven_paths": [
+      {
+        "operation": "exp_ppcf128",
+        "domain": "finite |x| <= 2^-538",
+        "method": "exact high+low rounding with a strict positive Taylor correction below 2^-1076",
+        "guarantee": "correct canonical pair in all five modes; zero is exact, otherwise only inexact",
+        "test": "tests/test_ppc_exp.py",
+        "bead": "bennett-arith-wvh.1"
+      }
+    ],
     "payne_hanek_constant_bits": 17408,
     "verification": "tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp"
   },
@@ -20897,6 +20922,14 @@
   "comparison_semantics": {
     "quiet": "cmp_B_rm: invalid only on signaling NaN",
     "signaling": "cmps_B_rm: invalid on any NaN, including false/true predicates",
+    "specialized_formats": [
+      "f16",
+      "bf16",
+      "f32",
+      "f64",
+      "f128"
+    ],
+    "specialization": "direct integer IR; no arithmetic evaluator, private helpers or scratch slots",
     "predicate_range": [
       0,
       15
@@ -20905,7 +20938,7 @@
     "flags": "sticky invalid only; plain cmp_B has no fenv access"
   },
   "llvm_major": 18,
-  "bitcode_sha256": "586e6ef41d2404d5fc06f88d12c0b0a4334a1e66ec480a285da1d7c645e79a74",
+  "bitcode_sha256": "56e3c161dbf418539882106af31f42d2fa9aed6c0fa723eb179be889e6e82c69",
   "tool_versions": {
     "clang": "Ubuntu clang version 18.1.3 (1ubuntu1)",
     "llvm-as": "Ubuntu LLVM version 18.1.3",
@@ -20930,8 +20963,8 @@
       "git_blob_sha1": "af4b0b3e86575c921becd18ac7069e10f495dedb"
     },
     "softfloat/generate.py": {
-      "sha256": "70bd2d84bfd88acab66ee55ba7a05a24b1702e72f5e9012bb69ccff646eae3a2",
-      "git_blob_sha1": "a6dc31ca2f1739cfdef08e11b0c94255b5ec0fde"
+      "sha256": "39152ea690f6a993fdf6f9798ee6d42dca56f64ba035bdd8f3b5d98112a57888",
+      "git_blob_sha1": "12fd314369479e05aebc3661d37e6a003d7d3fdd"
     },
     "softfloat/instantiate.py": {
       "sha256": "0b406a951a090a23fc24f3d0eb8b364d5de0d988938e3cc3f49b72d164875ba0",
@@ -20950,8 +20983,8 @@
       "git_blob_sha1": "6049ff9c34f4ee52d8b24915de5b7dc8eb60f820"
     },
     "softfloat/test_cmps.py": {
-      "sha256": "a36d6c5f6d5dfe34b11d8e66189a063c15fa3d346eab78cf4e1cd8791a050988",
-      "git_blob_sha1": "14f62282be4881d1751e8ccbe81f8eaf24561a89"
+      "sha256": "87031e689c53bf5c90ef67ed143ddeb4f6965b6cfcbdb2d41cb9a37f008d13f0",
+      "git_blob_sha1": "ab0667a5c2cd449f21f0460cc39b35c14ef4f107"
     },
     "softfloat/test_instance_limits.py": {
       "sha256": "7792825878313a84bc53f1b9a43d6a1aa7328c140a867ba31c3360c8dda76df5",
@@ -20966,8 +20999,8 @@
       "git_blob_sha1": "638ec82402da8ad274622db39fbc7334884d9915"
     },
     "softfloat/trans.h": {
-      "sha256": "45bc15fbe607227c6bfc0a0a75985a7e4a972a279a1be9e0148b2bb15f36e0ed",
-      "git_blob_sha1": "456be17676a7c297a64675e48ac491bc660cd985"
+      "sha256": "8ba07a5f1308cd19218a0df3354a4f933740c84bf63e9a2dfd1d0e6a4702eed0",
+      "git_blob_sha1": "e71b075f31bc5de9ee863692bab0e5fb2b3cc4e8"
     }
   }
 }

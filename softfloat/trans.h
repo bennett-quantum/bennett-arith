@@ -126,6 +126,34 @@ static V tpow(V a,V b) {
     if(a.sign && !integer)return nanv();
     int sign=a.sign&&odd;a.sign=0;V r=texp(tm(b,tlog(a)));r.sign=sign;return r;
 }
+/* For 0<|x|<=2^-538, Taylor's theorem bounds
+ *   0 < exp(x)-1-x < x*x <= 2^-1076.
+ * Exact PPC inputs are multiples of u=2^-1074, and binary64 midpoints are
+ * multiples of u/2. The positive correction (<u/4) cannot cross an endpoint
+ * or midpoint unless x is exactly on it, in which case it selects above.
+ * exp(x) has high=1; round the complete input sum directly into its low.
+ * The pair sum is normal and off the u grid, hence only inexact is raised.
+ * This proven path retains sparse tails that the 224/106-bit paths lose.
+ */
+static U ppc_exp_near_zero(PairSum a,int rm,int *flags) {
+    const U one=0x3ff0000000000000ULL;
+    if(!a.mag)return one;
+    int ignored=0;V v=sum_value(a);
+    U lower=pack(v,formats[3],1,&ignored),upper=pack(v,formats[3],2,&ignored),lo;
+    int exact=lower==upper;
+    if(exact)upper=(lower>>63) ? lower-1:lower+1;
+    if(rm==1 || rm==3)lo=lower; /* exp(x) is positive, even for negative x. */
+    else if(rm==2)lo=upper;
+    else if(exact)lo=lower;
+    else {
+        PairSum down=sum_difference(a,sum_scalar(unpack(lower,formats[3])));
+        PairSum up=sum_difference(sum_scalar(unpack(upper,formats[3])),a);
+        lo=down.mag<up.mag ? lower:upper; /* An exact midpoint moves upward. */
+    }
+    if(lo==((U)1<<63))lo=0; /* Canonical residual zero is positive. */
+    *flags|=16;
+    return one|(lo<<64);
+}
 static V trans_unpack(U x,int fi) {
     if(fi!=6)return unpack(x,formats[fi]);
     V hi=unpack(low64(x),formats[3]);
@@ -133,6 +161,13 @@ static V trans_unpack(U x,int fi) {
     return ta(hi,unpack(x>>64,formats[3]));
 }
 static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
+    if(fi==6 && op==EXP) {
+        PairSum exact=sum_read(in[0]);
+        if(exact.kind==FINITE && exact.mag<=((SumBits)1<<536)) {
+            int flags=0;out[0]=ppc_exp_near_zero(exact,rm,&flags);
+            out[1]=0;out[2]=flags;return;
+        }
+    }
     Format f=formats[fi];V a=trans_unpack(in[0],fi),b=trans_unpack(in[1],fi),r=nanv(),c=ti(0);
     int flags=a.snan || ((op==ATAN2 || op==POW) && b.snan),pair=0;
     if(op==SIN || op==COS || op==TAN || op==SINCOS || op==SINCOSPI){

@@ -3,6 +3,7 @@
 Expected truth values use independent Fraction decoding, never host FP.
 """
 import importlib.util
+import argparse
 from pathlib import Path
 import sys
 
@@ -26,8 +27,12 @@ def expected(a,b,suffix,pred):
     d=(av>bv)-(av<bv)
     return int((False,d==0,d>0,d>=0,d<0,d<=0,d!=0,True)[pred&7])
 
-for major in map(int,sys.argv[1:] or (18,23)):
-    edge=e.Edge(major)
+parser=argparse.ArgumentParser()
+parser.add_argument('majors',type=int,nargs='*',default=[18,23])
+parser.add_argument('--root',type=Path,default=ROOT)
+options=parser.parse_args()
+for major in options.majors:
+    edge=e.Edge(major,options.root)
     suffixes=[*e.FORMATS,'ppcf128']
     missing={f'__bennett_sf_cmps_{s}_rm' for s in suffixes}-set(edge.rows)
     assert not missing, f'RED: missing signaling comparison definitions: {sorted(missing)}'

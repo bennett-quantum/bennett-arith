@@ -4,6 +4,7 @@ sys.dont_write_bytecode=True
 R=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('edge',R/'tests/test_edge.py');e=importlib.util.module_from_spec(spec);spec.loader.exec_module(e)
 spec=importlib.util.spec_from_file_location('ppc_exact',R/'tests/test_ppc_exact.py');exact=importlib.util.module_from_spec(spec);spec.loader.exec_module(exact)
+spec=importlib.util.spec_from_file_location('comparison_closure',R/'tests/test_compare_closure.py');closure=importlib.util.module_from_spec(spec);spec.loader.exec_module(closure)
 o=exact.o
 parser=argparse.ArgumentParser()
 parser.add_argument('majors',type=int,nargs='*',default=[18,23])
@@ -92,3 +93,4 @@ for major in options.majors:
         edge.check(name,args,expected,flags)
     print(f'LLVM {major}: {edge.count} PPC component/exact-value checks; {overrides} explicit-guarantee differences from APFloat',flush=True)
     exact.run(major,options.root)
+    closure.run(major,options.root)

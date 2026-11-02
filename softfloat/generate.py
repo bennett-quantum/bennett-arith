@@ -69,6 +69,56 @@ def entries(formats=FORMATS):
 
 
 POWI_WIDTHS = [1,8,16,64,128,192,256,513,1025]
+IEEE_COMPARE = {0:10,1:7,2:23,3:52,5:112}
+
+def ieee_compare_wrapper(e):
+    """Compare the format's integer fields without retaining the evaluator.
+
+    Ordered positive encodings increase numerically; negative encodings run
+    in reverse. Collapse signed zeros for equality, then select the predicate
+    truth mask. NaN classification and invalid differ only for cmp/cmps.
+    """
+    bits=FORMATS[e['fi']][1];C=f'i{bits}';fraction=IEEE_COMPARE[e['fi']]
+    magnitude=(1<<(bits-1))-1;infinity=magnitude^((1<<fraction)-1)
+    ir=[f"define i1 @{e['name']}({', '.join(t+' %a'+str(i) for i,t in enumerate(e['params']))}) {{"]
+    for i in (0,1):
+        ir += [f'  %mag{i} = and {C} %a{i}, {magnitude}',
+               f'  %nan{i} = icmp ugt {C} %mag{i}, {infinity}',
+               f'  %zero{i} = icmp eq {C} %mag{i}, 0']
+    ir += ['  %unordered = or i1 %nan0, %nan1',
+           '  %bothzero = and i1 %zero0, %zero1',
+           f'  %samebits = icmp eq {C} %a0, %a1',
+           '  %equal = or i1 %samebits, %bothzero',
+           '  %unequal = xor i1 %equal, true',
+           f'  %negative = icmp slt {C} %a0, 0',
+           f'  %different = xor {C} %a0, %a1',
+           f'  %differentsigns = icmp slt {C} %different, 0',
+           f'  %ascending = icmp ult {C} %a0, %a1',
+           f'  %descending = icmp ugt {C} %a0, %a1',
+           '  %samesignless = select i1 %negative, i1 %descending, i1 %ascending',
+           '  %rawless = select i1 %differentsigns, i1 %negative, i1 %samesignless',
+           '  %less = and i1 %rawless, %unequal',
+           '  %eqgtmask = select i1 %equal, i32 170, i32 204',
+           '  %mask = select i1 %less, i32 240, i32 %eqgtmask',
+           '  %predicate = and i32 %a2, 7',
+           '  %shifted = lshr i32 %mask, %predicate',
+           '  %ordered = trunc i32 %shifted to i1',
+           '  %unorderedtruth = icmp uge i32 %a2, 8',
+           '  %result = select i1 %unordered, i1 %unorderedtruth, i1 %ordered']
+    if e['constrained']:
+        invalid='%unordered'
+        if e['op']=='cmp':
+            for i in (0,1):
+                ir += [f'  %quiet{i} = and {C} %a{i}, {1<<(fraction-1)}',
+                       f'  %quietclear{i} = icmp eq {C} %quiet{i}, 0',
+                       f'  %snan{i} = and i1 %nan{i}, %quietclear{i}']
+            ir += ['  %invalid = or i1 %snan0, %snan1'];invalid='%invalid'
+        ir += [f'  %flags = zext i1 {invalid} to i32',
+               '  %env = getelementptr { i32, i32 }, ptr @__bennett_rt_fenv, i32 0, i32 1',
+               '  %old = load i32, ptr %env, align 4',
+               '  %new = or i32 %old, %flags',
+               '  store i32 %new, ptr %env, align 4']
+    return ir+['  ret i1 %result','}']
 
 def powi_entries(widths):
     for fi,(suffix,bits,fmt) in enumerate(FORMATS):
@@ -141,7 +191,10 @@ def generate(dest, widths=POWI_WIDTHS):
         if (e['fi']==6 and e['op']=='fma') or (e['op']=='convert' and e['extra']==6):
             e.update(status='legacy-106-bit-pending-canonical-pair',bead='bennett-arith-4yg')
         ret, params, op = e['result'], e['params'], e['op']
-        if 'exponent_bits' in e:
+        if op in ('cmp','cmps') and e['fi'] in IEEE_COMPARE:
+            e['comparison_implementation']='format-specific-integer-ir'
+            ir += ieee_compare_wrapper(e)
+        elif 'exponent_bits' in e:
             ir += powi_wrapper(e)
         else:
             ir += [f"define {ret} @{e['name']}({', '.join(t+' %a'+str(i) for i,t in enumerate(params))}) {{",
@@ -264,6 +317,10 @@ def generate(dest, widths=POWI_WIDTHS):
     manifest['numerical_accuracy'] = dict(contract='0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
         pending_bead='bennett-arith-wvh',
         claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=224,
+        proven_paths=[dict(operation='exp_ppcf128',domain='finite |x| <= 2^-538',
+            method='exact high+low rounding with a strict positive Taylor correction below 2^-1076',
+            guarantee='correct canonical pair in all five modes; zero is exact, otherwise only inexact',
+            test='tests/test_ppc_exp.py',bead='bennett-arith-wvh.1')],
         payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')
     manifest['ppc_semantics'] = dict(oracle='independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations', high_component_carrier_bits='0..63',
         both_majors='exact high+low outgoing FP/integer conversions; full-width integer inputs; canonical-pair integral rounding and sqrt',
@@ -276,6 +333,8 @@ def generate(dest, widths=POWI_WIDTHS):
         question='At a zero-low transition, both adjacent nearest canonical pairs can have odd significands under the published high fallback. Specify parity or a deterministic equal-parity rule.')]
     manifest['comparison_semantics']=dict(quiet='cmp_B_rm: invalid only on signaling NaN',
         signaling='cmps_B_rm: invalid on any NaN, including false/true predicates',
+        specialized_formats=[FORMATS[i][0] for i in IEEE_COMPARE],
+        specialization='direct integer IR; no arithmetic evaluator, private helpers or scratch slots',
         predicate_range=[0,15],rounding_operand=0,flags='sticky invalid only; plain cmp_B has no fenv access')
     (dest/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 
