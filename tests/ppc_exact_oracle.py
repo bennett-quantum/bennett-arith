@@ -62,3 +62,53 @@ def convert(raw,dest,rm=0):
     v,sign,sn=decode(raw)
     value,flags=e.encode(v,dest,rm,sign)
     return value,flags|int(sn)
+
+def _near_low(bits):
+    if not bits or bits==1<<63:return (0,1,(1<<63)|1)
+    return (bits-1,bits,bits+1)
+
+def integer_to_pair(n,rm=0):
+    """Search nearby canonical pairs; compare exact distances to the integer."""
+    if not n:return 0,0
+    negative=n<0;v=e.Q(abs(n));mode=({1:2,2:1}.get(rm,rm) if negative else rm)
+    hmax=e.decode(0x7fefffffffffffff,F)[0]
+    lmax=e.decode(0x7c8fffffffffffff,F)[0];maximum=hmax+lmax
+    boundary=hmax+e.power(970)
+    overflow=(v>=(maximum+boundary)/2 if mode in (0,4) else v>maximum if mode==2 else v>=boundary)
+    maxbits=0x7fefffffffffffff|(0x7c8fffffffffffff<<64)
+    def signed(bits):
+        return bits^((1<<63)|((1<<127) if bits>>64 else 0)) if negative else bits
+    if overflow:
+        return signed(e.infinity(F) if mode in (0,2,4) else maxbits),20
+    if v>maximum:return signed(maxbits),16
+    high=e.encode(v,F)[0];candidates={}
+    for hb in (high-1,high,high+1):
+        if hb<0:continue
+        hv=e.decode(hb,F)[0]
+        if isinstance(hv,str):continue
+        previous=e.decode(hb-1,F)[0] if hb else -e.power(-1074)
+        following=e.decode(hb+1,F)[0]
+        if following=='inf':following=e.power(1024)
+        probes=[v-hv,(previous-hv)/2,(following-hv)/2]
+        for probe in probes:
+            for direction in (1,2):
+                for lb in _near_low(e.encode(probe,F,direction)[0]):
+                    lv=e.decode(lb,F)[0]
+                    if isinstance(lv,str):continue
+                    total=hv+lv
+                    if total<0 or e.encode(total,F)[0]!=hb:continue
+                    raw=hb|((lb if lv else 0)<<64)
+                    candidates[raw]=total
+    below=[(x,b) for b,x in candidates.items() if x<=v]
+    above=[(x,b) for b,x in candidates.items() if x>=v]
+    low,lb=max(below);up,ub=min(above)
+    if mode in (1,3):chosen,raw=low,lb
+    elif mode==2:chosen,raw=up,ub
+    elif v-low<up-v:chosen,raw=low,lb
+    elif v-low>up-v:chosen,raw=up,ub
+    elif mode==4:chosen,raw=up,ub
+    else:
+        even=lambda b:not (((b>>64) if b>>64 else b&MASK64)&1)
+        assert even(lb) or even(ub),'unexpected zero-low parity ambiguity in an integer conversion'
+        chosen,raw=(low,lb) if even(lb) else (up,ub)
+    return signed(raw),int(chosen!=v)*16

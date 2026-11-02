@@ -70,6 +70,23 @@ def run(major,root=ROOT):
                     assert int.from_bytes(slot.read(),'little')==want%(1<<bits),(major,op,bits,rm)
                     assert edge.env[1]==32|flags,(major,op,bits,rm,'flags',edge.env[1],flags)
                     edge.count+=1
+    for bits in (1,8,64,128,129,193,257,513,1025):
+        numbers=[0,1,(1<<(bits-1))-1,1<<(bits-1),(1<<bits)-1]
+        if bits>110:
+            numbers += [(1<<(bits-2))+1,(1<<(bits-2))-(1<<(bits-70))-1]
+        if bits==1025:
+            maximum=o.decode(0x7fefffffffffffff|(0x7c8fffffffffffff<<64))[0]
+            numbers += [int(maximum),int(maximum)+1,int(maximum)+int(e.power(916))]
+        for unsigned in numbers:
+            slot=e.Aligned(8*((bits+63)//64));slot.put(unsigned.to_bytes(slot.size,'little'))
+            for signed,op in ((False,'uitofp'),(True,'sitofp')):
+                n=unsigned-(1<<bits) if signed and unsigned>>(bits-1) else unsigned
+                for rm in range(5):
+                    want,flags=o.integer_to_pair(n,rm)
+                    edge.check(op+'_ppcf128_wide_rm',[slot.addr,bits,rm],want,flags)
+                    if bits<=128:
+                        carrier=n&e.MASK128 if signed else unsigned
+                        edge.check(op+'_ppcf128_rm',[carrier,rm],want,flags)
     print(f'LLVM {major}: {edge.count} exact-sum conversion/integral/narrow/wide checks',flush=True)
 
 if __name__=='__main__':

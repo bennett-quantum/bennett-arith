@@ -56,20 +56,53 @@ static U sum_overflow(int sign,int mode,int *flags) {
     }
     return infbits(formats[3],sign);
 }
-static U sum_integer_pair(SumBits n,int sign,int mode,int *flags) {
-    if(!n)return (U)sign<<63;
-    PairSum exact={n<<1074,sign,FINITE,0};int ignored=0;
+static PairSum sum_difference(PairSum a,PairSum b) { b.sign^=1;return sum_add(a,b); }
+static U sum_round_pair(PairSum exact,int mode,int *flags) {
+    if(!exact.mag)return (U)exact.sign<<63;
+    int ignored=0;
     U hi=pack(sum_value(exact),formats[3],0,&ignored);
     V h=unpack(hi,formats[3]);
-    if(h.kind==INF)return sum_overflow(sign,mode,flags);
+    if(h.kind==INF)return sum_overflow(exact.sign,mode,flags);
     h.sign^=1;
     PairSum residual=sum_add(exact,sum_scalar(h));
-    U lo=pack(sum_value(residual),formats[3],0,&ignored);
+    V rv=sum_value(residual);U lo;
+    if(mode==4) {
+        U down=pack(rv,formats[3],1,&ignored),up=pack(rv,formats[3],2,&ignored);
+        PairSum de=sum_difference(residual,sum_scalar(unpack(down,formats[3])));
+        PairSum ue=sum_difference(sum_scalar(unpack(up,formats[3])),residual);
+        lo=de.mag<ue.mag ? down:de.mag>ue.mag ? up:exact.sign ? down:up;
+    } else {
+        int lm=mode==3 ? (exact.sign ? 2:1):mode;
+        lo=pack(rv,formats[3],lm,&ignored);
+    }
     if(!residual.mag)lo=0;
+    PairSum rounded=sum_add(sum_scalar(unpack(hi,formats[3])),sum_scalar(unpack(lo,formats[3])));
+    hi=pack(sum_value(rounded),formats[3],0,&ignored);h=unpack(hi,formats[3]);
+    if(h.kind==INF)return sum_overflow(exact.sign,mode,flags);
+    PairSum tail=sum_difference(rounded,sum_scalar(h));
+    lo=tail.mag ? pack(sum_value(tail),formats[3],0,&ignored):0;
     U result=hi|(lo<<64);
     PairSum actual=sum_read(result);
-    if(actual.mag!=exact.mag || actual.sign!=exact.sign)*flags|=16;
+    if(actual.mag!=exact.mag || actual.sign!=exact.sign) {
+        *flags|=16;
+        if(actual.mag<((SumBits)1<<52))*flags|=8;
+    }
     return result;
+}
+static U sum_integer_pair(SumBits n,int sign,int mode,int *flags) {
+    return sum_round_pair((PairSum){n<<1074,sign,FINITE,0},mode,flags);
+}
+static U ppc_sum_fromwide(const unsigned char *src,int bits,int sign,int rm,int *flags) {
+    if(bits<1)__builtin_trap();
+    V leading=fromwide(src,bits,sign);
+    if(leading.mag && width(leading.mag)+leading.exp>1024)return sum_overflow(leading.sign,rm,flags);
+    SumBits n=0;unsigned carry=leading.sign;
+    for(int i=0;i<(bits+7)/8;++i) {
+        unsigned v=(src[i]^(leading.sign ? 255:0))+carry;carry=v>>8;v&=255;
+        if(bits-8*i<8)v&=(1u<<(bits-8*i))-1;
+        if(8*i<2176)n|=(SumBits)v<<(8*i);
+    }
+    return sum_integer_pair(n,leading.sign,rm,flags);
 }
 static U ppc_sum_integral(U x,int op,int rm,int *flags) {
     PairSum a=sum_read(x);

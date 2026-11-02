@@ -139,6 +139,11 @@ static void ppc_eval(U *out,int op,const U *in,int extra,int rm) {
     if(op>=FLOOR && op<=NEARBYINT) {
         out[0]=ppc_sum_integral(x,op,rm,&flags);out[2]=flags;return;
     }
+    if(op==SITOFP || op==UITOFP) {
+        unsigned char bytes[16];
+        for(int i=0;i<16;++i)bytes[i]=(unsigned char)(x>>(8*i));
+        out[0]=ppc_sum_fromwide(bytes,128,op==SITOFP,rm,&flags);out[2]=flags;return;
+    }
     if(op==MODF) {
         int cat=ddcat(x);U hi=low64(x),lo=x>>64;
         if(cat==NANV){out[0]=out[1]=nanbits(formats[3]);return;}

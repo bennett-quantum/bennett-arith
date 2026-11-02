@@ -208,7 +208,7 @@ static void towide(unsigned char *p,V a,int bits,int sign,int rm,int *flags) {
 static U ppc_pack(V,int,int *);
 static V ppc_unpack(U);
 static void ppc_sum_towide(unsigned char *,U,int,int,int,int,int *);
-static U ppc_fromwide23(const unsigned char *,int,int,int,int *);
+static U ppc_sum_fromwide(const unsigned char *,int,int,int,int *);
 static void ppc_eval(U *,int,const U *,int,int);
 static void trans_eval(U *,int,int,const U *,int);
 static int comparison_nan(U x,int fi) {
@@ -347,12 +347,8 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
 void bennett_sf_wide(U *out,int fi,int op,void *slot,int bits,const U *in,int rm) {
     int flags=0; out[0]=out[1]=out[2]=0;
     if(op==SITOFP || op==UITOFP) {
-        V a=fromwide(slot,bits,op==SITOFP);
-#if BENNETT_LLVM_MAJOR >= 23
-        if(fi==6) out[0]=ppc_fromwide23(slot,bits,op==SITOFP,rm,&flags);
-        else
-#endif
-        out[0]=fi==6 ? ppc_pack(a,rm,&flags):pack(a,formats[fi],rm,&flags);
+        if(fi==6)out[0]=ppc_sum_fromwide(slot,bits,op==SITOFP,rm,&flags);
+        else out[0]=pack(fromwide(slot,bits,op==SITOFP),formats[fi],rm,&flags);
     }
     else if(fi==6)
         ppc_sum_towide(slot,in[0],bits,op!=FPTOUI,op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm,
