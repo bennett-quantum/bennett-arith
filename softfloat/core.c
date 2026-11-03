@@ -206,6 +206,7 @@ static void towide(unsigned char *p,V a,int bits,int sign,int rm,int *flags) {
     for(int i=(bits+7)/8;i<8*((bits+63)/64);++i) p[i]=0;
 }
 static U ppc_pack(V,int,int *);
+static U ppc_round(V,int,int *);
 static V ppc_unpack(U);
 static void ppc_sum_towide(unsigned char *,U,int,int,int,int,int *);
 static U ppc_sum_fromwide(const unsigned char *,int,int,int,int *);
@@ -251,7 +252,7 @@ void bennett_sf_eval(U *out,int fi,int op,const U *in,int extra,int rm) {
             !a.mag ? (a.sign?5:6):width(a.mag)<f.p ? (a.sign?4:7):(a.sign?3:8);
         out[0]=(extra>>cls)&1; return;
     } else if(op==CONVERT) {
-        out[0]=extra==6 ? ppc_pack(a,rm,&flags):pack(a,formats[extra],rm,&flags); out[2]=flags; return;
+        out[0]=extra==6 ? ppc_round(a,rm,&flags):pack(a,formats[extra],rm,&flags); out[2]=flags; return;
     } else if(op==CANONICALIZE) {
         out[0]=a.kind==NANV ? nanbits(f):in[0]; return;
     } else if(op>=MINNUM && op<=MAXIMUMNUM) {

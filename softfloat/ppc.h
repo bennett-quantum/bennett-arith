@@ -103,6 +103,9 @@ static void ppc_eval(U *out,int op,const U *in,int extra,int rm) {
     if(op==CONVERT) {
         out[0]=pack(sum_value(sum_read(x)),formats[extra],rm,&flags);out[2]=flags;return;
     }
+    if(op==FMA) {
+        out[0]=ppc_fma(x,y,in[2],rm,&flags);out[2]=flags;return;
+    }
     if(op==FPTOSI || op==FPTOUI || (op>=LROUND && op<=LLRINT)) {
         int mode=op==FPTOSI || op==FPTOUI ? 3:op<=LLROUND ? 4:rm;
         out[0]=ppc_sum_integer(x,extra,op!=FPTOUI,mode,op!=LROUND && op!=LLROUND,&flags);

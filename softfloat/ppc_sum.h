@@ -126,6 +126,7 @@ static int square_width(SquareBits x) {
     if(x>>512){x>>=512;n+=512;}
     return n+width((Big)x);
 }
+#include "ppc_round.h"
 static U ppc_sum_sqrt(U x,int rm,int *flags) {
     PairSum a=sum_read(x);
     if(a.kind==NANV){if(a.snan)*flags|=1;return nanbits(formats[3]);}
