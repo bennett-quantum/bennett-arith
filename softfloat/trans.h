@@ -205,6 +205,7 @@ static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
         if(fi!=6)out[0]=pack((V){mask(480),-480,a.sign,FINITE,0},f,rm,&flags);
         else {
             V x=a;x.sign=0;
+            /* e^3>16 proves this tail is below half a PPC quantum. */
             if(compare(x,ti(512))>=0)
                 out[0]=ppc_round_exact(((SquareBits)1<<2148)-1,-2148,a.sign,rm,&flags);
             else {

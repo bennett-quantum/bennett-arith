@@ -5,6 +5,7 @@ R=pathlib.Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location('edge',R/'tests/test_edge.py');e=importlib.util.module_from_spec(s);s.loader.exec_module(e)
 f=e.FORMATS['f64'];mask=(1<<128)-1
 s=importlib.util.spec_from_file_location('ppc_exact_oracle',R/'tests/ppc_exact_oracle.py');o=importlib.util.module_from_spec(s);s.loader.exec_module(o)
+s=importlib.util.spec_from_file_location('review_numeric',R/'tests/test_review_numeric.py');review=importlib.util.module_from_spec(s);s.loader.exec_module(review)
 
 parser=argparse.ArgumentParser()
 parser.add_argument('majors',type=int,nargs='*',default=[18,23])
@@ -70,3 +71,4 @@ for major in options.majors:
         edge.check(name[13:],args,want)
         if row['wide'] and op not in ('sitofp','uitofp'):assert int.from_bytes(buf.read(),'little')==1;edge.count+=1
     print(f'LLVM {major}: {edge.count} additional boundary/signature checks',flush=True)
+    review.run(major,options.root,'all')

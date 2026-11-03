@@ -8,6 +8,23 @@ ROOT=Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location('oracle',ROOT/'tests/ppc_exact_oracle.py')
 o=importlib.util.module_from_spec(s);s.loader.exec_module(o);e=o.e
 
+def tanh_bounds(x):
+    spec=importlib.util.spec_from_file_location('mpfr',ROOT/'tests/test_trans.py')
+    t=importlib.util.module_from_spec(spec);spec.loader.exec_module(t)
+    oracle=t.Oracle();t.m.mpfr_clear(t.C.byref(oracle.r));t.m.mpfr_init2(t.C.byref(oracle.r),2048)
+    try:
+        oracle.put(oracle.a,x);bounds=[]
+        for direction in (3,2): # MPFR downward/upward
+            t.m.mpfr_tanh(t.C.byref(oracle.r),t.C.byref(oracle.a),direction)
+            exponent=t.C.c_long()
+            p=t.m.mpfr_get_str(None,t.C.byref(exponent),2,0,t.C.byref(oracle.r),0)
+            digits=t.C.string_at(p).decode();t.m.mpfr_free_str(p)
+            sign=-1 if digits.startswith('-') else 1;digits=digits.lstrip('-')
+            bounds.append(sign*int(digits,2)*e.power(exponent.value-len(digits)))
+        return bounds
+    finally:
+        for item in (oracle.a,oracle.b,oracle.r):t.m.mpfr_clear(t.C.byref(item))
+
 def run(major,root,case):
     edge=e.Edge(major,root);f=e.FORMATS['f64'];one=e.encode(e.Q(1),f)[0]
     if case in ('all','ppc'):
@@ -44,6 +61,17 @@ def run(major,root,case):
                 for rm in range(5):
                     inward=rm==3 or rm==(1 if sign>0 else 2)
                     edge.check(f'tanh_{name}_rm',[x,rm],near if inward else far,16)
+                if name!='ppcf128':
+                    x=e.encode(e.Q(sign*256),f)[0]
+                    for rm in range(5):
+                        inward=rm==3 or rm==(1 if sign>0 else 2)
+                        edge.check(f'tanh_{name}_rm',[x,rm],near if inward else far,16)
+        for sign in (1,-1):
+            lo,hi=tanh_bounds(e.Q(sign*256))
+            for rm in range(5):
+                want,_=o.to_pair(lo,rm)
+                assert want==o.to_pair(hi,rm)[0],'MPFR interval must prove canonical selection'
+                edge.check('tanh_ppcf128_rm',[e.encode(e.Q(sign*256),e.FORMATS['f64'])[0],rm],want,16)
     if case in ('all','exact'):
         for sign in (1,-1):
             odd=o.pair(sign*e.power(1000),e.Q(sign))
@@ -52,6 +80,16 @@ def run(major,root,case):
         for name,f in [*e.FORMATS.items(),('ppcf128',e.FORMATS['f64'])]:
             enc=lambda q:e.encode(e.Q(q),f)[0]
             for rm in range(5):
+                one=enc(1);qnan=e.nan(f);snan=e.infinity(f)|1;negativezero=1<<(f[0]-1)
+                for x,sv,cv in ((e.Q(1,2),1,0),(1,0,-1),(e.Q(3,2),-1,0),(2,0,1),
+                                (e.Q(-1,2),-1,0),(-1,0,-1),(e.Q(-3,2),1,0),(-2,0,1)):
+                    sine=negativezero if not sv and x<0 else enc(sv)
+                    edge.check(f'sincospi_{name}_rm',[enc(x),rm],(sine,enc(cv)),0)
+                for a,b,want,flags in ((qnan,0,one,0),(snan,0,one,1),
+                    (one,qnan,one,0),(one,snan,one,1),
+                    (negativezero,enc(3),negativezero,0),(negativezero,enc(2),0,0),
+                    (0,enc(-3),e.infinity(f),2)):
+                    edge.check(f'pow_{name}_rm',[a,b,rm],want,flags)
                 for a,b,c in ((2,3,8),(4,e.Q(1,2),2),(2,-3,e.Q(1,8)),(-2,3,-8),
                               (9,e.Q(1,2),3),(81,e.Q(1,4),3),(-1,16384,1)):
                     edge.check(f'pow_{name}_rm',[enc(a),enc(b),rm],enc(c),0)

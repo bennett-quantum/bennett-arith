@@ -102,7 +102,7 @@ it does not run or modify the sibling plugin.
 
 PPC high double occupies carrier bits 0..63 and low double bits 64..127. Add and
 multiply use the same component operation sequence as LLVM DoubleAPFloat, with
-integer-only binary64 operations. Divide, fmod and FMA use LLVM's legacy 106-bit
+integer-only binary64 operations. Divide and fmod use LLVM's legacy 106-bit
 fallback (minimum normal exponent −969, subnormal quantum 2^-1074). Comparison is lexicographic high,
 then low. Canonical NaN is high 0x7ff8000000000000, low +0.
 
@@ -119,14 +119,13 @@ result affects its flags; no intermediate binary64 underflow is reported.
 Independent Fraction tests cover exact-value conversions, integer saturation,
 canonical neighbours and hard square-root midpoints on both majors.
 
-Incoming IEEE conversion and FMA still use legacy 106-bit rounding and remain in
-**bennett-arith-4yg**. **bennett-arith-4yg.1** records a published tie-rule
-ambiguity: at a zero-low transition both nearest neighbours can have odd parity
-under the stated high-significand fallback. The exact witness is
-`tests/ppc_zero_low_witness.py`. No arbitrary tie policy is claimed as contract
-conformance. Same-major APFloat matching alone does not establish the explicit
-canonical-pair guarantees. The separate named-format generator converts using
-both PPC components.
+Incoming IEEE conversion preserves its exact dyadic value until final pair
+selection. FMA forms the exact product and sum in 4352 integer bits at quantum
+2^-2148, including cancellation, then rounds once. Intermediate component
+operations contribute no flags. Independent Fraction tests replace APFloat
+expectations for these explicit guarantees. The current publication retains
+the 0.2.12 tie interpretation; the published 0.2.13 total tie policy is scheduled
+for implementation after the review fixes, tracked in **bennett-arith-4yg.1**.
 
 Dialect 0.2.12 §13.4 requires a full-domain one-local-ulp envelope, correctly
 rounded constrained selection, and exact mathematical flags. The current
@@ -138,6 +137,17 @@ error-bound or correct-rounding proof. No float/long-double host ABI is used.
 Constrained wrappers preserve sticky flags; full-domain accuracy and exact-flag
 implementation evidence remains in **bennett-arith-wvh**. Aggregate order and
 signed zeros are tested separately.
+
+Exact dyadic powers and decimal/binary logarithm identities use normalized
+integer significands, perfect roots and integer exponentiation before one
+target rounding. This derives flags from representability, including exact
+roots, reciprocal powers of two, overflow and underflow. Half-integer
+sincospi arguments use the full input's quadrant, preserving sparse integer
+parity. Exponentials retain strict positivity below all subnormal ranges;
+finite saturated tanh values retain the side of their limiting value, including
+the PPC low-component tail. These fixes do not establish the remaining global
+libm accuracy proof. `tests/test_review_numeric.py` contains independent exact
+identities, strict bounds and a directed MPFR interval for the PPC tanh tail.
 
 The PPC exponential has a separate exact path for finite |x| <= 2^-112.
 The exact input sum is first split into canonical h+l, including overlapping
