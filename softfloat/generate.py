@@ -189,7 +189,7 @@ def generate(dest, widths=POWI_WIDTHS):
         e['signature'] = f"{e['result']} ({', '.join(e['params'])})"
         e['status'] = 'deterministic-integer-libm-v1' if e['op']!='cmps' and OPS.index(e['op'])>=OPS.index('sin') else 'exact' if e['op'] != 'powi' else 'deterministic-repeated-squaring'
         if (e['fi']==6 and e['op']=='fma') or (e['op']=='convert' and e['extra']==6):
-            e.update(status='legacy-106-bit-pending-canonical-pair',bead='bennett-arith-4yg')
+            e.update(status='canonical-pair-pending-parity-migration',bead='bennett-arith-4yg')
         ret, params, op = e['result'], e['params'], e['op']
         if op in ('cmp','cmps') and e['fi'] in IEEE_COMPARE:
             e['comparison_implementation']='format-specific-integer-ir'
@@ -323,14 +323,14 @@ def generate(dest, widths=POWI_WIDTHS):
             test='tests/test_ppc_exp.py',bead='bennett-arith-wvh.1')],
         payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')
     manifest['ppc_semantics'] = dict(oracle='independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations', high_component_carrier_bits='0..63',
-        both_majors='exact high+low outgoing FP/integer conversions; full-width integer inputs; canonical-pair integral rounding and sqrt',
+        both_majors='exact high+low conversions, full-width integer inputs, canonical-pair integral rounding, sqrt and one-rounding exact FMA',
         exact_sum_quantum='2^-1074',exact_sum_bits=2176,sqrt_comparison_bits=4352,
-        llvm18='component add/mul; legacy 106-bit divide/remainder/FMA and incoming IEEE conversion',
+        llvm18='component add/mul; legacy 106-bit divide/remainder operation conventions',
         llvm23='same operations as LLVM18, including explicit 0.2.12 exact-value overrides',
         pending_bead='bennett-arith-4yg',
-        implementation_gaps='incoming IEEE conversion and FMA retain legacy 106-bit rounding; zero-low FMA tie parity requires the 4yg.1 contract decision')
+        implementation_gaps='0.2.13 nearest-even parity migration follows review round 2; the current publication retains the 0.2.12 parity interpretation')
     manifest['contract_questions']=[dict(bead='bennett-arith-4yg.1',section='13.1',
-        question='At a zero-low transition, both adjacent nearest canonical pairs can have odd significands under the published high fallback. Specify parity or a deterministic equal-parity rule.')]
+        question='Published 0.2.13 resolves the 0.2.12 zero-low parity question; implementation migration is sequenced after review round 2.')]
     manifest['comparison_semantics']=dict(quiet='cmp_B_rm: invalid only on signaling NaN',
         signaling='cmps_B_rm: invalid on any NaN, including false/true predicates',
         specialized_formats=[FORMATS[i][0] for i in IEEE_COMPARE],

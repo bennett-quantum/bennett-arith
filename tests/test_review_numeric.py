@@ -21,6 +21,15 @@ def run(major,root,case):
                 x=sign*(1+e.power(p));raw=e.encode(x,e.FORMATS[name])[0]
                 want=o.pair(e.Q(sign),sign*e.power(p))
                 for rm in range(5):edge.check(f'fptrunc_{name}_ppcf128_rm',[raw,rm],want,0)
+        for x in (e.power(-16494),e.power(-1075),-e.power(-1075),e.power(1024)):
+            raw=e.encode(x,e.FORMATS['f128'])[0]
+            for rm in range(5):edge.check('fptrunc_f128_ppcf128_rm',[raw,rm],*o.incoming(raw,e.FORMATS['f128'],rm))
+        triples=[(o.pair(e.Q(1),e.power(-200)),o.pair(e.Q(1),-e.power(-200)),o.pair(e.Q(-1))),
+                 (o.pair(e.power(1023)),o.pair(e.Q(2)),o.pair(-e.decode(0x7fefffffffffffff,f)[0])),
+                 (1,1,0),((1<<63)|1,1,0),
+                 (0,e.infinity(f),e.nan(f)),(0,e.infinity(f),e.infinity(f)|1)]
+        for a,b,c in triples:
+            for rm in range(5):edge.check('fma_ppcf128_rm',[a,b,c,rm],*o.fma(a,b,c,rm))
     if case in ('all','limits'):
         for name,f in [*e.FORMATS.items(),('ppcf128',e.FORMATS['f64'])]:
             x=e.encode(e.Q(-65504 if name=='f16' else -100000),f)[0]
@@ -36,14 +45,25 @@ def run(major,root,case):
                     inward=rm==3 or rm==(1 if sign>0 else 2)
                     edge.check(f'tanh_{name}_rm',[x,rm],near if inward else far,16)
     if case in ('all','exact'):
+        for sign in (1,-1):
+            odd=o.pair(sign*e.power(1000),e.Q(sign))
+            for rm in range(5):
+                edge.check('sincospi_ppcf128_rm',[odd,rm],((1<<63) if sign<0 else 0,e.encode(e.Q(-1),e.FORMATS['f64'])[0]),0)
         for name,f in [*e.FORMATS.items(),('ppcf128',e.FORMATS['f64'])]:
             enc=lambda q:e.encode(e.Q(q),f)[0]
             for rm in range(5):
-                for a,b,c in ((2,3,8),(4,e.Q(1,2),2),(2,-3,e.Q(1,8)),(-2,3,-8)):
+                for a,b,c in ((2,3,8),(4,e.Q(1,2),2),(2,-3,e.Q(1,8)),(-2,3,-8),
+                              (9,e.Q(1,2),3),(81,e.Q(1,4),3),(-1,16384,1)):
                     edge.check(f'pow_{name}_rm',[enc(a),enc(b),rm],enc(c),0)
                 for n in (0,1,2):
                     edge.check(f'exp10_{name}_rm',[enc(n),rm],enc(10**n),0)
                     edge.check(f'log10_{name}_rm',[enc(10**n),rm],enc(n),0)
+            for base in (e.Q(3,2),e.Q(5,4),e.Q(-3,2)):
+                for n in range(-4,9):
+                    for rm in range(5):
+                        exact=base**n
+                        want,flags=o.to_pair(exact,rm) if name=='ppcf128' else e.encode(exact,f,rm)
+                        edge.check(f'pow_{name}_rm',[enc(base),enc(n),rm],want,flags)
     print(f'LLVM {major}: {edge.count} review {case} exact identity/bound checks',flush=True)
 
 if __name__=='__main__':

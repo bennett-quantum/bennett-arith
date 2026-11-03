@@ -65,8 +65,10 @@ for major in options.majors:
         apfloat=expected;flags=None
         # 0.2.12 explicitly overrides APFloat for these operations. Keep every
         # existing input and use an independent mathematical oracle instead.
-        if op==6:expected,flags=o.integral(a,'rint',rm)
+        if op==5:expected,flags=o.fma(a,b,c,rm)
+        elif op==6:expected,flags=o.integral(a,'rint',rm)
         elif op==7:expected,flags=o.convert(a,e.FORMATS['f128'],rm)
+        elif op==8:expected,flags=o.incoming(a,e.FORMATS['f128'],rm)
         elif op in (10,11):
             n=a-(1<<128) if op==10 and a>>127 else a
             expected,flags=o.integer_to_pair(n,rm)

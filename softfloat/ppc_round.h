@@ -65,10 +65,10 @@ static U ppc_round(V a,int rm,int *flags) {
 static U ppc_fma(U x,U y,U z,int rm,int *flags) {
     PairSum a=sum_read(x),b=sum_read(y),c=sum_read(z);
     if(a.snan || b.snan || c.snan)*flags|=1;
+    if(a.kind==NANV || b.kind==NANV || c.kind==NANV)return nanbits(formats[3]);
     int invalid=(a.kind==INF && b.kind==FINITE && !b.mag) ||
                 (b.kind==INF && a.kind==FINITE && !a.mag);
-    if(invalid)*flags|=1;
-    if(invalid || a.kind==NANV || b.kind==NANV || c.kind==NANV)return nanbits(formats[3]);
+    if(invalid){*flags|=1;return nanbits(formats[3]);}
     int sign=a.sign^b.sign;
     if(a.kind==INF || b.kind==INF) {
         if(c.kind==INF && c.sign!=sign){*flags|=1;return nanbits(formats[3]);}

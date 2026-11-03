@@ -85,7 +85,9 @@ static V tlog(V a) {
 static V texp(V a) {
     if(a.kind==NANV)return nanv();
     if(a.kind==INF)return a.sign ? ti(0):a;
-    if(a.mag && width(a.mag)+a.exp>16)return a.sign ? ti(0):(V){1,100000,0,FINITE,0};
+    /* Preserve strict positivity below every carrier's half-minimum quantum;
+     * final packing must still select the upward neighbour and raise flags. */
+    if(a.mag && width(a.mag)+a.exp>16)return (V){1,a.sign ? -100000:100000,0,FINITE,0};
     V v=td(a,tc_ln2());int ignored=0;V rounded=integral(v,0,&ignored);
     int n=(int)toint(rounded,32,1,3,&ignored);
     V r=ta(a,tneg(tm(ti(n),tc_ln2()))),term=ti(1),sum=term;
@@ -172,7 +174,22 @@ static V trans_unpack(U x,int fi) {
     if(hi.kind!=FINITE || !hi.mag)return hi;
     return ta(hi,unpack(x>>64,formats[3]));
 }
+#include "trans_exact.h"
 static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
+    if(op==SINCOSPI) {
+        ExactReal a=trans_input(in[0],fi),s,c;
+        if(trans_exact_sincospi(a,&s,&c)) {
+            int flags=0;out[0]=trans_pack_exact(s,fi,rm,&flags);
+            out[1]=trans_pack_exact(c,fi,rm,&flags);out[2]=flags;return;
+        }
+    }
+    if(op==POW || op==EXP2 || op==EXP10 || op==LOG2 || op==LOG10) {
+        ExactReal a=trans_input(in[0],fi),b=trans_input(in[1],fi),result;
+        if(trans_exact_math(op,a,b,&result)) {
+            int flags=a.snan || (op==POW && b.snan);
+            out[0]=trans_pack_exact(result,fi,rm,&flags);out[1]=0;out[2]=flags;return;
+        }
+    }
     if(fi==6 && op==EXP) {
         PairSum exact=sum_read(in[0]);
         if(exact.kind==FINITE && exact.mag<=((SumBits)1<<962)) {
@@ -182,6 +199,24 @@ static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
     }
     Format f=formats[fi];V a=trans_unpack(in[0],fi),b=trans_unpack(in[1],fi),r=nanv(),c=ti(0);
     int flags=a.snan || ((op==ATAN2 || op==POW) && b.snan),pair=0;
+    if(op==TANH && a.kind==FINITE && a.mag && width(a.mag)+a.exp>8) {
+        /* The finite limit is strict. Ordinary IEEE formats cannot resolve
+         * the tail at |x|>=256; PPC can, until it falls below 2^-1075. */
+        if(fi!=6)out[0]=pack((V){mask(480),-480,a.sign,FINITE,0},f,rm,&flags);
+        else {
+            V x=a;x.sign=0;
+            if(compare(x,ti(512))>=0)
+                out[0]=ppc_round_exact(((SquareBits)1<<2148)-1,-2148,a.sign,rm,&flags);
+            else {
+                ++x.exp;x.sign=1;
+                V q=texp(x),tail=td(tm(ti(2),q),ta(ti(1),q));
+                /* Here -tail.exp lies between 900 and 1800. */
+                SquareBits value=((SquareBits)1<<-tail.exp)-(SquareBits)tail.mag;
+                out[0]=ppc_round_exact(value,tail.exp,a.sign,rm,&flags);
+            }
+        }
+        out[1]=0;out[2]=flags|16;return;
+    }
     if(op==SIN || op==COS || op==TAN || op==SINCOS || op==SINCOSPI){
         V s;tsc(a,op==SINCOSPI,&s,&c);r=op==COS ? c:op==TAN ? td(s,c):s;pair=op==SINCOS || op==SINCOSPI;
     }else if(op==ATAN)r=tatan(a);
@@ -197,7 +232,7 @@ static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
     else if(op==POW)r=tpow(a,b);
     else if(op==SINH || op==COSH || op==TANH){
         V x=a;x.sign=0;
-        if(op==TANH && (x.kind==INF || (x.kind==FINITE && x.mag && width(x.mag)+x.exp>8)))r=ti(a.sign ? -1:1);
+        if(op==TANH && x.kind==INF)r=ti(a.sign ? -1:1);
         else if(x.kind==FINITE && (!x.mag || width(x.mag)+x.exp< -4)) {
             V term=op==COSH ? ti(1):a,sum=term,xx=tm(a,a);
             for(int n=1;n<=90;++n){term=td(tm(term,xx),ti(op==COSH ? (2*n-1)*(2*n):(2*n)*(2*n+1)));sum=ta(sum,term);if(tinyterm(term,sum))break;}
@@ -209,20 +244,16 @@ static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
     if((op==LOG || op==LOG2 || op==LOG10) && a.kind==FINITE && !a.mag)flags|=2;
     if(op==POW && a.kind==FINITE && !a.mag && b.sign && (b.mag || b.kind==INF))flags|=2;
     /* Exact elementary cases do not spuriously raise inexact. */
-    int exact=(!a.mag && a.kind==FINITE && op!=POW && op!=ATAN2) ||
-        ((op==LOG || op==LOG2 || op==LOG10) && a.kind==FINITE && compare(a,ti(1))==0) ||
-        (op==POW && b.kind==FINITE && !b.mag);
+    int exact=(!a.mag && a.kind==FINITE &&
+        (op==SIN || op==COS || op==TAN || op==ASIN || op==ATAN ||
+         op==SINH || op==COSH || op==TANH || op==EXP || op==SINCOS)) ||
+        (op==LOG && a.kind==FINITE && compare(a,ti(1))==0);
     if(op==ACOS && a.kind==FINITE && compare(a,ti(1))==0)exact=1;
-    if(op==POW && a.kind==FINITE && (!a.mag || compare(a,ti(1))==0))exact=1;
-    if(a.kind==INF && r.kind!=NANV)exact=1;
-    if((op==LOG2 || op==EXP2) && a.kind==FINITE) {
-        int ignored=0;V whole=integral(a,3,&ignored);
-        if(op==EXP2 && compare(a,whole)==0 && r.kind==FINITE)exact=1;
-        if(op==LOG2 && a.mag && !(a.mag&(a.mag-1)))exact=1;
-    }
-    if(op==SINCOSPI && a.kind==FINITE) {int ignored=0;V twice=a;++twice.exp;V n=integral(twice,3,&ignored);if(compare(twice,n)==0)exact=1;}
+    if(a.kind==INF && (op==EXP || op==EXP2 || op==EXP10 || op==TANH))exact=1;
+    if(op==POW && (a.kind==INF || b.kind==INF))exact=1;
+    if(op==ATAN2 && r.kind==FINITE && !r.mag)exact=1;
     if(r.kind==FINITE && !exact)flags|=16;
     if((op==EXP || op==EXP2 || op==EXP10 || op==POW) && !r.mag && r.kind==FINITE && a.kind==FINITE && a.mag && !exact)flags|=24;
-    out[0]=fi==6 ? ppc_pack(r,rm,&flags):pack(r,f,rm,&flags);
-    out[1]=pair ? (fi==6 ? ppc_pack(c,rm,&flags):pack(c,f,rm,&flags)):0;out[2]=flags;
+    out[0]=fi==6 ? ppc_round(r,rm,&flags):pack(r,f,rm,&flags);
+    out[1]=pair ? (fi==6 ? ppc_round(c,rm,&flags):pack(c,f,rm,&flags)):0;out[2]=flags;
 }

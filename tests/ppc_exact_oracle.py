@@ -97,9 +97,9 @@ def neighbours(raw):
             min((x,b) for b,x in candidates.items() if x>v))
 
 @lru_cache(maxsize=8192)
-def integer_to_pair(n,rm=0):
-    """Search nearby canonical pairs; compare exact distances to the integer."""
-    if not n:return 0,0
+def to_pair(n,rm=0,zero_sign=0):
+    """Search canonical neighbours and compare exact rational distances."""
+    if not n:return zero_sign<<63,0
     negative=n<0;v=e.Q(abs(n));mode=({1:2,2:1}.get(rm,rm) if negative else rm)
     hmax=e.decode(0x7fefffffffffffff,F)[0]
     lmax=e.decode(0x7c8fffffffffffff,F)[0];maximum=hmax+lmax
@@ -123,6 +123,30 @@ def integer_to_pair(n,rm=0):
     elif mode==4:chosen,raw=up,ub
     else:
         even=lambda b:not (((b>>64) if b>>64 else b&MASK64)&1)
-        assert even(lb) or even(ub),'unexpected zero-low parity ambiguity in an integer conversion'
-        chosen,raw=(low,lb) if even(lb) else (up,ub)
-    return signed(raw),int(chosen!=v)*16
+        chosen,raw=(low,lb) if even(lb) or not even(ub) else (up,ub)
+    flags=int(chosen!=v)*16
+    if flags and chosen<e.power(-1022):flags|=8
+    return signed(raw),flags
+
+def integer_to_pair(n,rm=0):return to_pair(n,rm)
+
+def incoming(raw,fmt,rm=0):
+    value,sign,sn=e.decode(raw,fmt)
+    if isinstance(value,str):return (e.nan(F) if value=='nan' else e.infinity(F,sign)),int(sn)
+    return to_pair(value,rm,sign)
+
+def fma(a,b,c,rm=0):
+    av,sa,an=decode(a);bv,sb,bn=decode(b);cv,sc,cn=decode(c)
+    flags=int(an or bn or cn)
+    if 'nan' in (av,bv,cv):return e.nan(F),flags
+    invalid=(av=='inf' and bv==0) or (bv=='inf' and av==0)
+    if invalid:return e.nan(F),1
+    sign=sa^sb
+    if av=='inf' or bv=='inf':
+        if cv=='inf' and sc!=sign:return e.nan(F),1
+        return e.infinity(F,sign),flags
+    if cv=='inf':return e.infinity(F,sc),flags
+    exact=av*bv+cv
+    zero_sign=sign if (av==0 or bv==0) and cv==0 and sign==sc else int(rm==1)
+    value,raised=to_pair(exact,rm,zero_sign)
+    return value,flags|raised
