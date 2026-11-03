@@ -28,3 +28,37 @@ Focused checks passed: `softfloat/test_cmps.py` (135,532/major), `tests/test_ppc
 **Coverage:** closely read all soft-float numeric sources, wrappers/instantiation, circuit construction/emission/certificates, build/gate scripts and numerical/publication tests; skimmed remaining test details, generated object bodies/manifests, hooks/configuration and administrative documentation. Ordinary bitcode preserves the native/mixed-fat-object route.
 
 **Provenance / R14:** gpt-6.1-sol xhigh review under R14; the orchestrator queues the Claude cross-check of Codex-marked work. Codex markers (`codex job` in messages; these also carry Claude trailers): `de98e29 e9edebb aab308f 4d0147c 5244842 d4e9e9e 4058b05 dbdd10c 5b42dd0 335acd1 f7ff63d 95d70b4 ba74850 bb8a648 2e13940 5e9b450`. Claude-only trailers: `d0db037 d64f797 a02afbc 200d858 d4ac4a5 00dfcc3 2dc607e 7a52334 18858d3 1129cf9 2bb9a27 b5010bb`. The other 13 commits are unmarked; no authorship is inferred.
+
+## Round 2 check (Claude Sonnet 5.5, 2026-11-03T11:40Z)
+
+Scope: sol-arith-softfloat fixes in `a4fa23e..31c110d` for the three numeric P0s. rn8, gdg and rhn are not fixed yet and were not checked. I read the diff of `softfloat/{core.c,ppc.h,ppc_round.h,ppc_sum.h,trans.h,trans_exact.h,generate.py}` and `tests/`, not the commit messages. Dist matches the recorded hash (`c37b7520…`, LLVM18).
+
+- **bennett-arith-8re: RESOLVED.**
+  - Evidence: `ppc_round.h:44-83` (`ppc_fma` and `ppc_round`) forms the exact product and sum in 4352 bits at quantum 2^-2148 and rounds once to the adjacent canonical pairs. Incoming conversion (`core.c:255`) keeps the source exponent.
+  - It handles cancellation, zero sign, NaN/Inf/invalid, overflow and the subnormal flag.
+  - Beyond the repro I ran `.tmp/sonnet-r2check-arith/probe.py` with fresh seeds. It checks FMA on random sparse and dense pairs, exact-cancellation and near-cancellation addends, and f128/f80 incoming conversions near 1+2^-k and across the exponent range, all in 5 rounding modes. Result: 3815 checks on LLVM18 and 18800 on LLVM23, 0 failures.
+  - Expected values come from `tests/ppc_exact_oracle.py` (`fma`, `incoming`, `to_pair`). They use Fractions and a canonical-neighbour search, with no call into the C code. The test expectations are not computed by the code under test.
+  - Caveat: the oracle's zero-low tie rule is the 0.2.12 interpretation. It replaced the earlier assertion of "unexpected parity ambiguity". This is the already-open 4yg.1 migration, so I am not filing it. The oracle and the C code are only independent on this one point.
+- **bennett-arith-57g: RESOLVED.**
+  - Evidence: `trans.h:88` (`texp` keeps ±1·2^±100000 instead of returning zero, so final packing sees a strictly positive tail) and `trans.h:203-220` (tanh limit branch).
+  - Upward exp, exp2 and exp10 at -100000 give the least positive subnormal with flags 24, and the other modes give 0. My probe `probe2.py` covers 5 modes, 6 formats plus ppcf128, and x from -17 to -65535, wherever the result is below half the least subnormal. Result: 0 failures on both majors.
+  - tanh outside the IEEE formats: the finite limit is 1-2^-480 before packing, which lies far inside half an ulp for every IEEE format. Directed modes pick the correct side, in both signs, at x=256 and 1024.
+  - ppcf128 tanh at 21 hand-picked x in [256,600] plus 25 random x in [256,512), both signs, 5 modes (`probe3.py`): each compared against an MPFR-2048 interval, with the lower and upper bound required to select the same canonical pair. 460 checks on each major, 0 failures. This includes the 372.5–373 band where the tail crosses half the least PPC quantum.
+- **bennett-arith-l95: RESOLVED.**
+  - Evidence: `trans_exact.h:50-107` identifies exact dyadic pow, exp2, exp10, log2, log10 and half-integer sincospi results and rounds once. The old `exact` flag chain in `trans.h:246` is now keyed by operation. It also corrects the old always-exact acos(0), atan(inf) and atan2 with infinite arguments, which are now inexact.
+  - Reasoning, not just the repro:
+    - A square root removes one factor of 2 from the exponent's denominator, so a failed integer root proves the result is not dyadic.
+    - A significand wider than 2176 bits cannot be exact in any carrier.
+    - The sign and zero rules are IEEE-correct.
+  - Probes: exp2(k), exp10(0..3), log10(10^k), log2(2^k) and pow with exact integer, half and quarter exponents, negative bases, odd and even powers, on all 6 formats plus ppcf128, 5 modes, flags 0 required (`probe2.py`). 1485 checks on each major, 0 failures. The inexact neighbours still raise 16 in the review's own checks.
+  - I found no special-casing of the repro.
+
+**Re-run:**
+- `timeout 600 python3 -u -I tests/test_extended.py 18 23`: exit 0. Each major shows 527 original boundary/signature checks and 2718 review checks.
+- `timeout 900 python3 -u -I tests/test_ppc.py 18 23`: exit 0. Each major shows 792786 PPC component/exact-value checks, 25491 exact-sum conversion/integral/integer/sqrt checks and 15 comparison closures.
+
+Expected values in `tests/test_review_numeric.py` come from the independent Python encoder, the Fraction oracle and MPFR (ctypes). The tests were not weakened, skipped or replaced by tolerance. The only oracle relaxation is the zero-low tie assertion described above.
+
+**New P0/P1: none. Beads filed: none.**
+
+**Verdict: CLEAR for 8re, 57g and l95.** The overall batch stays BLOCK until rn8, gdg and rhn are fixed and checked.
