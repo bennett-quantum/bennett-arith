@@ -107,7 +107,9 @@ def main(argv):
     if argv[1] == "one":
         if len(argv) < 3 or argv[2] not in FAMILIES:
             raise SystemExit(f"family must be one of {sorted(FAMILIES)}")
-        args = [tuple(int(w, 0) for w in a.split(",")) if "," in a else int(a, 0) for a in argv[3:]]
+        args = [tuple(int(w, 0) for w in a.split(","))
+                if i == 0 and argv[2] in {"qrom", "qrom.select_swap", "qrom.select_swap_dirty"}
+                else int(a, 0) for i, a in enumerate(argv[3:])]
         sys.stdout.write(FAMILIES[argv[2]](*args).text())
         return
     files = build()
