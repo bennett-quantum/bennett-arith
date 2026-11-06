@@ -62,7 +62,13 @@ stay outside the bounded default measurement.
 The core integer zero returns represent specified results: zero bit width and
 invalid conversion accompanied by the invalid flag, respectively. They are not
 quiet error fallbacks. Basic-operation oracle checks include negative square roots,
-NaNs and exact zeros with sticky flags. The full gate retains the larger edge suite.
+NaNs and exact zeros with sticky flags. A focused test also checks all six IEEE
+formats, both integer conversion kinds and all five modes: a NaN conversion
+returns zero **and** the invalid flag (60 checks passed), so the sentinel cannot
+hide an invalid conversion. `pack` receives operation-local flags, not the fenv
+sticky word; retaining mathematical inexact from the transcendental phase is
+intentional for tininess-after-rounding. No public reproducer justified changing
+that policy. The full gate retains the larger edge suite.
 
 All tracked sources currently have no semantics-bearing function over 300 lines.
 The elementary evaluator now has named domain, core and packing phases, and

@@ -45,6 +45,14 @@ class SmallCircuits(unittest.TestCase):
             verify(self,parse(obj.text())[0][obj.root],lambda v:{"t":v["t"]^data[v["idx"]]},None)
 
 class Numeric(unittest.TestCase):
+    def test_invalid_integer_conversion_is_observable(self):
+        e=module("test_edge");edge=e.Edge(18)
+        for suffix,f in e.FORMATS.items():
+            for op in ("fptosi","fptoui"):
+                for rm in range(5):
+                    edge.check(op+"_"+suffix+"_rm",[e.nan(f),64,rm],0,1)
+        self.assertEqual(edge.count,60)
+
     def test_basic_operations(self):
         e=module("test_edge");edge=e.Edge(18)
         for suffix,f in e.FORMATS.items():
