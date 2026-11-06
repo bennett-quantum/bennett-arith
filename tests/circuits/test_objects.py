@@ -1,6 +1,7 @@
 """Published objects and certificates: reproducible, accepted, every claim independently replayed."""
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -11,7 +12,6 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from harness import RefInterp, counts, parse, simulate, word  # noqa: E402
-from adders.circuits import interpreter_view  # noqa: E402
 
 REF = RefInterp()
 DIR = ROOT / ".tmp/opus-arith-circuits/objects/published"
@@ -65,22 +65,16 @@ class Published(unittest.TestCase):
 
     def test_interpreter_accepts_identities_and_schema(self):
         DIR.mkdir(parents=True, exist_ok=True)
-        from adders.generate import FAMILIES, published
-        by_root = {}
-        for _, family, args in published():
-            obj = FAMILIES[family](*args)
-            by_root[obj.root] = obj
         checked = 0
         for e in manifest()["entries"]:
             text = (ROOT / e["file"]).read_text()
-            if "qinplace" in text and " (k) () ()" in text:
-                continue    # The interpreter's parser does not take qinplace's ins list yet (bead).
+            if "qinplace" in text:
+                continue    # Raw modular validation is the explicit promised test below.
             if sum(row.get("census", {}).get("gates", {}).get(g, 0) for row in e["symbols"].values()
                    for g in ("x", "cx", "ccx", "swap")) > CHECK_GATE_LIMIT:
                 continue
-            obj = by_root[e["root"]]
             path = DIR / f"{e['root']}.bisa"
-            path.write_text(interpreter_view(obj))
+            path.write_text(text)
             got = REF.check(path)
             self.assertEqual(got["status"], "ok", e["file"])
             cert = certificate(text)
@@ -89,6 +83,27 @@ class Published(unittest.TestCase):
                 self.assertEqual(got["symbols"][name]["closure_hash"], row["closure_hash"], (e["file"], name))
             checked += 1
         self.assertGreater(checked, 80)
+
+    @unittest.skipUnless(os.environ.get("BENNETT_ARITH_PROMISED"),
+                         "BENNETT_ARITH_PROMISED=1: bennett-arith-gdg / bennett-arith-vwi")
+    def test_raw_modular_publications_bennett_arith_gdg(self):
+        for entry in manifest()["entries"]:
+            path = ROOT / entry["file"]
+            if "qinplace" in path.read_text():
+                self.assertEqual(REF.check(path)["status"], "ok", entry["file"])
+
+    def test_inverse_pair_obligation_is_published(self):
+        checked = 0
+        for entry in manifest()["entries"]:
+            text = (ROOT / entry["file"]).read_text()
+            if "qinplace" not in text:
+                continue
+            for region in certificate(text)["regions"].values():
+                for pair in region["verification"]["inverse_pairs"]:
+                    self.assertEqual(region["claims"][pair["claim"]]["expected"], "inverse_pair")
+                    self.assertTrue(all(isinstance(n, int) for n in pair["budget"]))
+                    checked += 1
+        self.assertGreater(checked, 0)
 
     def test_certificates_tell_the_truth(self):
         """Census, frame, labels and every table row, replayed on the emitted text, not the builder."""

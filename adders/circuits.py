@@ -340,7 +340,7 @@ class Object:
         return {"ancillae": [], "borrow": borrow, "history": [], "scratch": scratch, "slots": slots}
 
     def _inverse_pair_claim(self, c, hashes):
-        token = [str(c.budget), "0", "0", "0"]
+        token = [_meta(c.budget), 0, 0, 0]
         names = c.g.inputs
         domain = {"borrowed": [], "bundles": [{"hi": _meta((1 << w) - 1), "lo": 0, "name": n, "width": w}
                                               for n, w in names], "regions": []}
