@@ -122,7 +122,8 @@ def to_pair(n,rm=0,zero_sign=0):
     elif v-low>up-v:chosen,raw=up,ub
     elif mode==4:chosen,raw=up,ub
     else:
-        even=lambda b:not (((b>>64) if b>>64 else b&MASK64)&1)
+        use_low=bool((lb>>64) or (ub>>64))
+        even=lambda b:not (((b>>64) if use_low else b&MASK64)&1)
         chosen,raw=(low,lb) if even(lb) or not even(ub) else (up,ub)
     flags=int(chosen!=v)*16
     if flags and chosen<e.power(-1022):flags|=8

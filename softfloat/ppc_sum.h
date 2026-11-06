@@ -153,13 +153,7 @@ static U ppc_sum_sqrt(U x,int rm,int *flags) {
         SquareBits squared=mid*mid,scaled=rad<<2;
         if(scaled<squared)result=lower;
         else if(scaled>squared || rm==4)result=upper;
-        else {
-            U low=lower>>64;
-            /* At a zero-low transition an odd/odd pair midpoint has a half
-             * grid unit, whose square cannot be a binary64-pair input. Thus
-             * the unresolved 4yg.1 FMA tie is unreachable for sqrt. */
-            result=!((low ? low:low64(lower))&1) ? lower:upper;
-        }
+        else result=ppc_even_neighbour(lower,upper);
     }
     PairSum r=sum_read(result);
     if((SquareBits)r.mag*r.mag!=rad) {

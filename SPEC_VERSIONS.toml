@@ -1,11 +1,11 @@
 status = "softfloat-v2-concrete-published-parametric-contracts-open"
 
 [specs.bennett-dialect-spec]
-version = "0.2.10"
-commit = "023f5a7"
+version = "0.2.13"
+commit = "95a4b8d06933018a07fef3516296a25fd582fcde"
 path = "spec/Bennett-Dialect-Spec.md"
 
 [specs.bennett-isa-spec]
-version = "0.8"
-commit = "f88b32fd3e3a9eb3f400aba68bd6fd4cec6e8202"
-path = "spec/Bennett-ISA-Spec.md"
+version = "0.9"
+commit = "ecaaac060c44e317d1181345fa6b8e38c096c099"
+path = "spec/Bennett-ISA-Spec-0.9.md"

@@ -36,6 +36,11 @@ def run(major, quick=False):
                 for rm in range(5):
                     expected=oracle.rounded(op,a,sa,b,f=f,rm=rm)
                     edge.check(op+"_"+suffix+"_rm",[*args,rm],expected)
+            for pair, components in (("sincos",("sin","cos")),
+                                     ("sincospi",("sinpi","cospi"))):
+                for rm in range(5):
+                    expected=tuple(oracle.rounded(op,a,sa,f=f,rm=rm) for op in components)
+                    edge.check(pair+"_"+suffix+"_rm",[raw,rm],expected)
         print(f"LLVM {major} {suffix}: {edge.count} exact directed checks",flush=True)
     assert not oracle.inconclusive
 

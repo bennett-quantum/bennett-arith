@@ -11,7 +11,7 @@ m=C.CDLL('libmpfr.so.6')
 for name,args,ret in [('init2',[C.POINTER(MP),C.c_long],None),('clear',[C.POINTER(MP)],None),('set_str',[C.POINTER(MP),C.c_char_p,C.c_int,C.c_int],C.c_int),('mul_2si',[C.POINTER(MP),C.POINTER(MP),C.c_long,C.c_int],C.c_int),('get_str',[C.c_void_p,C.POINTER(C.c_long),C.c_int,C.c_size_t,C.POINTER(MP),C.c_int],C.c_void_p),('free_str',[C.c_void_p],None)]:
     f=getattr(m,'mpfr_'+name);f.argtypes=args;f.restype=ret
 ops='sin cos tan asin acos atan sinh cosh tanh exp exp2 exp10 log log2 log10 atan2 pow'.split()
-for op in ops:
+for op in ops+['sinpi','cospi']:
     fn=getattr(m,'mpfr_'+op);fn.argtypes=[C.POINTER(MP)]*(4 if op in ('atan2','pow') else 3) # last is rounding, corrected below
     fn.argtypes=[C.POINTER(MP)]*(3 if op in ('atan2','pow') else 2)+[C.c_int]
     fn.restype=C.c_int

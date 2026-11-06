@@ -12,6 +12,15 @@ static int dyadic_compare(SquareBits a,int ae,SquareBits b,int be) {
 static U pair_sign(U x,int sign) {
     return sign ? x^((U)1<<63)^(x>>64 ? (U)1<<127:0):x;
 }
+static U ppc_even_neighbour(U lower,U upper) {
+    /* Dialect 13.1: compare low significands, including zero, whenever
+     * either is nonzero; only two zero lows use the high significands.
+     * Equal parity selects the smaller magnitude (toward zero). */
+    U ll=lower>>64,ul=upper>>64;
+    int low=ll || ul;
+    int le=!((low ? ll:low64(lower))&1),ue=!((low ? ul:low64(upper))&1);
+    return le || !ue ? lower:upper;
+}
 static U ppc_round_exact(SquareBits mag,int exp,int sign,int rm,int *flags) {
     if(!mag)return (U)sign<<63;
     int mode=sign ? (rm==1 ? 2:rm==2 ? 1:rm):rm;
@@ -45,11 +54,7 @@ static U ppc_round_exact(SquareBits mag,int exp,int sign,int rm,int *flags) {
         int midpoint=dyadic_compare(mag,exp+1,(SquareBits)l.mag+u.mag,-1074);
         if(midpoint<0)result=lower;
         else if(midpoint>0 || mode==4)result=upper;
-        else {
-            U ll=lower>>64,ul=upper>>64;
-            int le=!((ll ? ll:low64(lower))&1),ue=!((ul ? ul:low64(upper))&1);
-            result=le || !ue ? lower:upper;
-        }
+        else result=ppc_even_neighbour(lower,upper);
     }
     PairSum rounded=sum_read(result);
     if(dyadic_compare(mag,exp,(SquareBits)rounded.mag,-1074)) {

@@ -189,7 +189,7 @@ def generate(dest, widths=POWI_WIDTHS):
         e['signature'] = f"{e['result']} ({', '.join(e['params'])})"
         e['status'] = 'deterministic-integer-libm-v1' if e['op']!='cmps' and OPS.index(e['op'])>=OPS.index('sin') else 'exact' if e['op'] != 'powi' else 'deterministic-repeated-squaring'
         if (e['fi']==6 and e['op']=='fma') or (e['op']=='convert' and e['extra']==6):
-            e.update(status='canonical-pair-pending-parity-migration',bead='bennett-arith-4yg')
+            e.update(status='canonical-pair-exact',bead='bennett-arith-4yg')
         ret, params, op = e['result'], e['params'], e['op']
         if op in ('cmp','cmps') and e['fi'] in IEEE_COMPARE:
             e['comparison_implementation']='format-specific-integer-ir'
@@ -290,7 +290,7 @@ def generate(dest, widths=POWI_WIDTHS):
     (dest/'wrappers.ll').write_text('\n'.join(ir)+'\n')
     (dest/'bridge.ll').write_text('\n'.join(bridge)+'\n')
     (dest/'exports.txt').write_text('\n'.join(e['name'] for e in rows)+'\n__bennett_rt_fenv\n')
-    manifest = dict(dialect='0.2.12', isa='0.8',
+    manifest = dict(dialect='0.2.13', isa='0.8',
                     conformance_pending=['bennett-arith-4yg','bennett-arith-wvh'],
                     instance_generator=dict(command='python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY',
                         request_schema='bennett-arith-instantiations-1',manifest_schema='bennett-arith-instances-1'),
@@ -314,7 +314,7 @@ def generate(dest, widths=POWI_WIDTHS):
             e['signature']=f"{e['result']} ({', '.join(e['params'])})"
             e.update(status='staged', bead='bennett-arith-r3d', section='13.1/13.3/13.5')
             manifest['staged_exports'].append(e)
-    manifest['numerical_accuracy'] = dict(contract='0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
+    manifest['numerical_accuracy'] = dict(contract='0.2.13 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
         pending_bead='bennett-arith-wvh',
         claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=240,
         exact_dyadic_families=['pow','exp2','exp10','log2','log10','half-integer sincospi'],
@@ -330,9 +330,8 @@ def generate(dest, widths=POWI_WIDTHS):
         llvm18='component add/mul; legacy 106-bit divide/remainder operation conventions',
         llvm23='same operations as LLVM18, including explicit 0.2.12 exact-value overrides',
         pending_bead='bennett-arith-4yg',
-        implementation_gaps='0.2.13 nearest-even parity migration follows review round 2; the current publication retains the 0.2.12 parity interpretation')
-    manifest['contract_questions']=[dict(bead='bennett-arith-4yg.1',section='13.1',
-        question='Published 0.2.13 resolves the 0.2.12 zero-low parity question; implementation migration is sequenced after review round 2.')]
+        implementation_gaps='legacy component add/mul and divide/remainder conventions remain versioned')
+    manifest['contract_questions']=[]
     manifest['comparison_semantics']=dict(quiet='cmp_B_rm: invalid only on signaling NaN',
         signaling='cmps_B_rm: invalid on any NaN, including false/true predicates',
         specialized_formats=[FORMATS[i][0] for i in IEEE_COMPARE],

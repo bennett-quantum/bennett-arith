@@ -65,12 +65,12 @@ for major in map(int,sys.argv[1:] or (18,23)):
         if name in staged:
             assert row['bead'].startswith('bennett-arith-') and row['status']=='staged'
     assert len(data['parametric_families'])==3
-    assert [q['bead'] for q in data['contract_questions']]==['bennett-arith-4yg.1']
+    assert data['contract_questions']==[]
     assert {'bennett-arith-4yg','bennett-arith-wvh'}<=set(data['conformance_pending'])
     assert 'bennett-arith-chn.1' not in data['conformance_pending']
     for row in allrows.values():
         if (row['fi']==6 and row['op']=='fma') or (row['op']=='convert' and row['extra']==6):
-            assert row['status']=='canonical-pair-pending-parity-migration' and row['bead']=='bennett-arith-4yg'
+            assert row['status']=='canonical-pair-exact' and row['bead']=='bennett-arith-4yg'
     assert data['comparison_semantics']['predicate_range']==[0,15]
     assert data['comparison_semantics']['rounding_operand']==0
     print(f'LLVM {major}: manifest accounts for {len(expected)} concrete signatures and 3 parametric families')

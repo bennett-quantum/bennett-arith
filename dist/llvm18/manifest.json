@@ -1,5 +1,5 @@
 {
-  "dialect": "0.2.12",
+  "dialect": "0.2.13",
   "isa": "0.8",
   "conformance_pending": [
     "bennett-arith-4yg",
@@ -2576,7 +2576,7 @@
       "constrained": false,
       "id": 141,
       "signature": "i128 (i16)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -2595,7 +2595,7 @@
       "constrained": true,
       "id": 142,
       "signature": "i128 (i16, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -2613,7 +2613,7 @@
       "constrained": false,
       "id": 143,
       "signature": "i128 (i16)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -2632,7 +2632,7 @@
       "constrained": true,
       "id": 144,
       "signature": "i128 (i16, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -5200,7 +5200,7 @@
       "constrained": false,
       "id": 286,
       "signature": "i128 (i16)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -5219,7 +5219,7 @@
       "constrained": true,
       "id": 287,
       "signature": "i128 (i16, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -5237,7 +5237,7 @@
       "constrained": false,
       "id": 288,
       "signature": "i128 (i16)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -5256,7 +5256,7 @@
       "constrained": true,
       "id": 289,
       "signature": "i128 (i16, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -7824,7 +7824,7 @@
       "constrained": false,
       "id": 431,
       "signature": "i128 (i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -7843,7 +7843,7 @@
       "constrained": true,
       "id": 432,
       "signature": "i128 (i32, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -7861,7 +7861,7 @@
       "constrained": false,
       "id": 433,
       "signature": "i128 (i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -7880,7 +7880,7 @@
       "constrained": true,
       "id": 434,
       "signature": "i128 (i32, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -10448,7 +10448,7 @@
       "constrained": false,
       "id": 576,
       "signature": "i128 (i64)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -10467,7 +10467,7 @@
       "constrained": true,
       "id": 577,
       "signature": "i128 (i64, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -10485,7 +10485,7 @@
       "constrained": false,
       "id": 578,
       "signature": "i128 (i64)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -10504,7 +10504,7 @@
       "constrained": true,
       "id": 579,
       "signature": "i128 (i64, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -13069,7 +13069,7 @@
       "constrained": false,
       "id": 721,
       "signature": "i128 (i80)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -13088,7 +13088,7 @@
       "constrained": true,
       "id": 722,
       "signature": "i128 (i80, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -13106,7 +13106,7 @@
       "constrained": false,
       "id": 723,
       "signature": "i128 (i80)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -13125,7 +13125,7 @@
       "constrained": true,
       "id": 724,
       "signature": "i128 (i80, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -15693,7 +15693,7 @@
       "constrained": false,
       "id": 866,
       "signature": "i128 (i128)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -15712,7 +15712,7 @@
       "constrained": true,
       "id": 867,
       "signature": "i128 (i128, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -15730,7 +15730,7 @@
       "constrained": false,
       "id": 868,
       "signature": "i128 (i128)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -15749,7 +15749,7 @@
       "constrained": true,
       "id": 869,
       "signature": "i128 (i128, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -16808,7 +16808,7 @@
       "constrained": false,
       "id": 927,
       "signature": "i128 (i128, i128, i128)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.1"
     },
@@ -16829,7 +16829,7 @@
       "constrained": true,
       "id": 928,
       "signature": "i128 (i128, i128, i128, i32)",
-      "status": "canonical-pair-pending-parity-migration",
+      "status": "canonical-pair-exact",
       "bead": "bennett-arith-4yg",
       "section": "13.5"
     },
@@ -20883,7 +20883,7 @@
     }
   ],
   "numerical_accuracy": {
-    "contract": "0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags",
+    "contract": "0.2.13 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags",
     "pending_bead": "bennett-arith-wvh",
     "claim": "deterministic approximation; no global correct-rounding or ulp-bound proof",
     "working_significand_bits": 240,
@@ -20919,15 +20919,9 @@
     "llvm18": "component add/mul; legacy 106-bit divide/remainder operation conventions",
     "llvm23": "same operations as LLVM18, including explicit 0.2.12 exact-value overrides",
     "pending_bead": "bennett-arith-4yg",
-    "implementation_gaps": "0.2.13 nearest-even parity migration follows review round 2; the current publication retains the 0.2.12 parity interpretation"
+    "implementation_gaps": "legacy component add/mul and divide/remainder conventions remain versioned"
   },
-  "contract_questions": [
-    {
-      "bead": "bennett-arith-4yg.1",
-      "section": "13.1",
-      "question": "Published 0.2.13 resolves the 0.2.12 zero-low parity question; implementation migration is sequenced after review round 2."
-    }
-  ],
+  "contract_questions": [],
   "comparison_semantics": {
     "quiet": "cmp_B_rm: invalid only on signaling NaN",
     "signaling": "cmps_B_rm: invalid on any NaN, including false/true predicates",
@@ -20947,7 +20941,7 @@
     "flags": "sticky invalid only; plain cmp_B has no fenv access"
   },
   "llvm_major": 18,
-  "bitcode_sha256": "823d727f82654c76bc2468f26dec0990494a0357fc086becd17a3193ea891674",
+  "bitcode_sha256": "5900a6deae230b984d70fdc2e0fda69946c6644cb884b18b20f814ee8edb609f",
   "tool_versions": {
     "clang": "Ubuntu clang version 18.1.3 (1ubuntu1)",
     "llvm-as": "Ubuntu LLVM version 18.1.3",
@@ -20972,8 +20966,8 @@
       "git_blob_sha1": "d292a70d55cd81e270fe12791fced101fd6b84ed"
     },
     "softfloat/generate.py": {
-      "sha256": "b8172d4cd1eb320d772e809564cd402822eb2606296abcf9f3c357f4869a8ba1",
-      "git_blob_sha1": "f2681c07245f1ada8bd7fc272cf3175abc897d3b"
+      "sha256": "50de51874a2c7f177f40cf2cbb43a6eb67a618989e78d6182cb5863b2f9e5aba",
+      "git_blob_sha1": "438ad2f4ba4e252ce48010f9c876cef9a9815b99"
     },
     "softfloat/instantiate.py": {
       "sha256": "0b406a951a090a23fc24f3d0eb8b364d5de0d988938e3cc3f49b72d164875ba0",
@@ -20988,12 +20982,12 @@
       "git_blob_sha1": "ef171eb0b28cd31352ca8af9b4e2235c87016539"
     },
     "softfloat/ppc_round.h": {
-      "sha256": "650bb656299da06528281092866eb8b469122217c1ea4a4435234ac749e9b4f2",
-      "git_blob_sha1": "e9afda5e1875792e6c5a7a801b457361bb28204d"
+      "sha256": "5b0673ec86359586f9c4a97bf9d2410a40dcb4ffa41d4e7c6f1418e9483cf89d",
+      "git_blob_sha1": "b00563ec4eb723f4b21b8cf4b0c7dccdbe485ad0"
     },
     "softfloat/ppc_sum.h": {
-      "sha256": "6331d37405f5c7fbeb5c4b2fc620fe9deb72b050de7ddc16205cb0734e35f40d",
-      "git_blob_sha1": "b4ef10fe47e22c0d2607ba1e02aac8c1f6aa8e90"
+      "sha256": "eba161097c818d4528c7f0e1bda2a9ba5caa8d33308e823715f84dd7644483d6",
+      "git_blob_sha1": "0a45a4d5bac227bd333d497d06b7d798d6748dbd"
     },
     "softfloat/test_cmps.py": {
       "sha256": "87031e689c53bf5c90ef67ed143ddeb4f6965b6cfcbdb2d41cb9a37f008d13f0",
@@ -21008,8 +21002,8 @@
       "git_blob_sha1": "b0ab7480adbcabed534d263abec2ce8800607d23"
     },
     "softfloat/test_publication.py": {
-      "sha256": "96485566f7c7447ed4635240cbfdfbf700572caa0ad7fcb57ee6bc6982716823",
-      "git_blob_sha1": "638ec82402da8ad274622db39fbc7334884d9915"
+      "sha256": "4609f7926b3c446dbdf76664e6fd776cef70f82042d4a23ed7a5e1672780519e",
+      "git_blob_sha1": "b1cdfabbea7538643af35af8ad8a8e9091345dec"
     },
     "softfloat/trans.h": {
       "sha256": "0165765c2a66359af07c3da14982acc8c7c7715c6610ade6bd91c6bac9c88917",
