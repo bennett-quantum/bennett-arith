@@ -13,6 +13,7 @@ import os
 import random
 import re
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -20,28 +21,16 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTOR_ABOVE = 1 << 17  # Specs run per lane up to here, as numpy expressions above it.
-
-
-def main_checkout():
-    """The main checkout, also from the detached worktree scripts/pre-push uses."""
-    common = subprocess.run(
-        ["git", "-C", str(ROOT), "rev-parse", "--git-common-dir"],
-        check=True, capture_output=True, text=True,
-    ).stdout.strip()
-    path = Path(common)
-    if not path.is_absolute():
-        path = ROOT / path
-    return path.resolve().parent
+sys.path.insert(0, str(ROOT / "scripts"))
+from pinned_sibling import resolve_sibling  # noqa: E402
 
 
 def ref_binary():
-    """Debug build: the release binary in that crate still accepts only ISA 0.8."""
-    configured = os.environ.get("BENNETT_ISA_REF")
-    path = Path(configured) if configured else (
-        main_checkout().parent / "bennett-isa-spec/reference-interpreter/target/debug/bennett-isa-ref"
-    )
+    """Use the debug build from the pinned ISA checkout (release only accepts 0.8)."""
+    path = resolve_sibling("bennett-isa-spec") / "reference-interpreter/target/debug/bennett-isa-ref"
     if not path.is_file():
-        raise SystemExit(f"reference interpreter binary not found at {path}; set BENNETT_ISA_REF")
+        raise SystemExit(f"reference interpreter binary not found at {path}; "
+                         "materialise with gate_run.py verify --repo bennett-arith --sha HEAD")
     return path
 
 

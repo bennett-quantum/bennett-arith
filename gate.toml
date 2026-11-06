@@ -4,9 +4,6 @@ repo = "bennett-arith"
 tool_sha = "01c0314c9aaa4a37313ab530da2134efafe9cbd5"
 timeout_s = 28800
 
-[env]
-BENNETT_ISA_REF = "{sibling:bennett-isa-spec}/reference-interpreter/target/debug/bennett-isa-ref"
-
 [[check]]
 name = "arith gate"
 argv = ["scripts/gate"]

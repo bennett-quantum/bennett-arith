@@ -19,3 +19,10 @@ Manifest.toml
 
 # Local build, oracle runners and detached gate worktrees
 .tmp/
+
+# Python bytecode and local diagnostic / Beads artefacts
+__pycache__/
+*.pyc
+*.log
+.beads/**/LOCK
+*.darc
