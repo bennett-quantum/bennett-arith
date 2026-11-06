@@ -2,16 +2,42 @@
 
 ## Default and exhaustive checks
 
-Default: `timeout 180s scripts/test`, **35 tests passed in 63.02 s wall time**,
-including a missing-bridge build from the published LLVM18 bitcode (test body
-31.897 s). The reviewed ISA pin is
+Default: `timeout 180s scripts/test`, **35 tests passed in 176.90 s wall time**,
+including regeneration after all bridge/support outputs were moved aside (test
+body 112.773 s, shared host under load). The reviewed ISA pin is
 `ecaaac060c44e317d1181345fa6b8e38c096c099`; the published dialect pin is
 `95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both were materialised
 and verified with the pinned gate tool's `verify` command against commit 5c98c3a.
 The cold bridge build does not regenerate or mutate the published bitcode.
+Every default invocation regenerates ABI support files and constants, then
+relinks the bridge from the current publication before loading any numerical
+test. Existing outputs do not bypass preparation; a generation or compiler
+failure stops the run before the suite can load the previous library.
 Exhaustive vectors, LLVM23 numeric sweeps and offline instantiation limits
 remain in `scripts/gate`. No full eight-hour gate was run by this job;
 merge validation belongs to the orchestrator.
+
+`tests/test_default_cache.py` exercises the real runner in an isolated fixture
+whose suite body is a single exact `tanh_f16_rm(0x54e0, 1)` probe. It changes
+the published function between two default invocations, updates the publication
+hashes, and requires the second invocation to observe the deliberately wrong
+`0x3c00` result and fail. It also changes both generator sources, damages or
+removes generated support, and verifies repair; invalid bitcode must stop
+before the previous library reaches the probe. Both regressions failed against
+the existence-only reuse rule. The multiple real rebuilds run under a 600 s
+timeout in `scripts/gate`, outside the bounded default suite. Verified with
+`timeout 600s python3 -B -I tests/test_default_cache.py`: two tests passed in
+255.13 s wall time (254.816 s test body).
+
+Cache audit: `scripts/build` already regenerates every softfloat build output
+for each major before gate tests load it. Phase/overflow executables, APFloat
+oracles, comparison closures, circuit fixtures and offline instances are
+rebuilt unconditionally on their default/gate paths. The offline tests' optional
+`--reuse` switch is never supplied by the gate. Python rational-oracle caches
+are process-local. The sibling checkout cache resolves the `gate.toml` SHA and
+rejects a mismatched HEAD (covered by `tests/circuits/test_pins.py`); the gate
+tool itself is addressed by `tool_sha`. No other existence-only reuse of locally
+generated test outputs was found on these paths.
 
 ## Measured coverage
 
@@ -110,6 +136,9 @@ nonignored source files; the sole quality check in `gate.toml` compares them
 with the baseline below. Any per-file numeric increase, or increase in litter
 or process-identifier count, rejects the push. Deliberate growth requires an
 explicit baseline update for review. Deletions may improve the metric.
+The baseline adds only the new runner-regression file: four test/fixture
+functions, maximum 24 lines, cognitive mass 3, and one shared subprocess helper.
+Existing per-file limits are unchanged.
 
 Lengths are physical function lines. Distribution columns count functions
 longer than 25, 50, 100, 200 and 300 lines (cumulative). Cognitive mass is a local
@@ -166,6 +195,7 @@ tracked/nonignored files for pycache, pyc, logs, locks, backups and progress fil
 | tests/test_compare_closure.py | 1 | 22 | 0 / 0 / 0 / 0 / 0 | 11 | 0 |
 | tests/test_contract.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
 | tests/test_default.py | 15 | 12 | 0 / 0 / 0 / 0 / 0 | 41 | 5 |
+| tests/test_default_cache.py | 4 | 24 | 0 / 0 / 0 / 0 / 0 | 3 | 1 |
 | tests/test_directed.py | 2 | 34 | 1 / 0 / 0 / 0 / 0 | 56 | 0 |
 | tests/test_edge.py | 16 | 229 | 2 / 2 / 1 / 1 / 0 | 842 | 2 |
 | tests/test_extended.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
@@ -226,6 +256,7 @@ Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 "tests/test_compare_closure.py":{"cognitive_mass":11,"functions":1,"max_lines":22,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_contract.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_default.py":{"cognitive_mass":41,"functions":15,"max_lines":12,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":5},
+"tests/test_default_cache.py":{"cognitive_mass":3,"functions":4,"max_lines":24,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
 "tests/test_directed.py":{"cognitive_mass":56,"functions":2,"max_lines":34,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_edge.py":{"cognitive_mass":842,"functions":16,"max_lines":229,"over_100":1,"over_200":1,"over_25":2,"over_300":0,"over_50":2,"trivial_wrappers":2},
 "tests/test_extended.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},

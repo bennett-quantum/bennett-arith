@@ -4,6 +4,8 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_
 root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
 export TMPDIR="${TMPDIR:-$root/.tmp}"
 mkdir -p "$TMPDIR"
+# Multiple real bridge rebuilds stay outside the bounded numerical suite.
+timeout 600s python3 -B -I "$root/tests/test_default_cache.py"
 # Fail if checked-in publications differ from a fresh build (including the path).
 for major in 18 23; do
   dir="$root/dist/llvm$major"
