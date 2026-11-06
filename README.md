@@ -7,9 +7,9 @@ ISA **0.8** (see `SPEC_VERSIONS.toml`).
 - [LLVM 18 bitcode](dist/llvm18/bennett-arith.bc) · [entry-point manifest](dist/llvm18/manifest.json)
 - [LLVM 23 bitcode](dist/llvm23/bennett-arith.bc) · [entry-point manifest](dist/llvm23/manifest.json)
 - [Linking, signatures, exactness and staged scope](softfloat/README.md)
-- [Current handoff](HANDOFF.md)
+- [Current handoff](../bennett/HANDOFF.md)
 
-Run `scripts/test` for bounded default checks; `scripts/gate` to reproduce both checked-in publications and execute the
+Run `scripts/test` for bounded default checks and `scripts/gate` to reproduce both checked-in publications and execute the
 independent integer/rational, same-major APFloat, and MPFR oracle suites.
 PPCDoubleDouble and all seven own-format libm families are published; arbitrary
 metadata formats are delivered by the offline instance generator, and signaling comparison is published. `scripts/pre-push` tests a detached,
