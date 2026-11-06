@@ -583,7 +583,7 @@ def mulmod_const(W, k, m):
         raise ValueError(f"mulmod needs gcd(k, m) = 1, got k={k} m={m}")
     kinv = pow(k, -1, m) if m > 1 else 0
     tag = f"w{W}.k{k:x}.m{m:x}"
-    return _named_pair(_mulmod_oracle(f"arith.ref.mulmodk.{tag}", W, m, k),
+    return _named_pair(_mulmod_oracle(f"arith.ref.mulmodk.{tag}", W, m, k % m),
                        _mulmod_oracle(f"arith.ref.mulmodk_inv.{tag}", W, m, kinv),
                        f"arith.bij.mulmodk.{tag}", f"arith.bij.mulmodk_inv.{tag}", ("x", W), [],
                        lambda a: {"x": (a["x"] * k) % m if a["x"] < m else a["x"]},
