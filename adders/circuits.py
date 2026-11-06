@@ -268,8 +268,8 @@ def _vectors(c):
 def _invocation(c):
     if isinstance(c, QinplaceAction):
         token = [str(c.budget), "0", "0", "0"]
-        return {"args": [token], "budget": token}
-    return {"args": [], "budget": ["0", "0", "0", "0"]}
+        return {"args": [token], "budget": token, "token_aliases": [0]}
+    return {"args": [], "budget": ["0", "0", "0", "0"], "token_aliases": []}
 
 
 def _claim(c, closure):
@@ -346,7 +346,8 @@ class Object:
                                               for n, w in names], "regions": []}
         return {"domain": domain, "expected": "inverse_pair", "kind": "exhaustive",
                 "subject": {"closure_hash": hashes[c.g.name], "inherited_controls": 0, "variant": "forward"}}, {
-            "budget": token, "claim": 1, "g": hashes[c.g.name], "ginv": hashes[c.ginv.name]}
+            "budget": token, "claim": 1, "g": hashes[c.g.name], "ginv": hashes[c.ginv.name],
+            "token_aliases": [0]}
 
     def _region(self, c, closure, position):
         if isinstance(c, QinplaceAction):
@@ -372,7 +373,7 @@ class Object:
         claims = [_claim(c, closure)]
         if self.inverse == c.name:
             # The published g/ginv pair: this symbol is the literal section 5.3 adjoint of the root.
-            claims.append({"invocation": {"args": "all", "budget": "all"}, "kind": "structural",
+            claims.append({"invocation": {"args": "all", "budget": "all", "token_aliases": "all"}, "kind": "structural",
                            "label": "proof", "rule": "adjoint_table", "subclaims": [], "witness": {}})
         return {"bounds": [], "claims": claims, "cleanup": {}, "definedness_assumptions": [], "error": {},
                 "frame": self._frame(c), "gates_used": gates, "kind": c.kind,
@@ -429,19 +430,21 @@ def census(c):
 
 
 def interpreter_view(obj):
-    """Object text with each K4 inverse-pair record removed, for the reference interpreter.
+    """Diagnostic execution view for the pre-K4/K91 pinned interpreter.
 
-    The certificate is published to the ISA 0.9 text (expected "inverse_pair", entry budget); the
-    interpreter's 0.9 schema does not admit those two records yet (bead in docs/circuits-port.md).
-    It decides qinplace by re-execution anyway, so the view loses no check it would have made.
+    This view cannot establish release compatibility: raw validation is kept
+    separately under BENNETT_ARITH_PROMISED until the interpreter supports it.
     """
     text = obj.text()
     if "section certificate\n" not in text:
         return text
     head, _, line = text.rpartition("section certificate\n")
     cert = json.loads(line)
+    cert["bindings"]["invocation"].pop("token_aliases")
     for region in cert["regions"].values():
         region["claims"] = [c for c in region["claims"] if c.get("expected") != "inverse_pair"]
+        for claim in region["claims"]:
+            claim["invocation"].pop("token_aliases")
         region["verification"]["inverse_pairs"] = []
     return f"{head}section certificate\n{jcs(cert)}\n"
 

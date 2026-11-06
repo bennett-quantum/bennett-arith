@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from harness import RefInterp, counts, parse, simulate, word  # noqa: E402
+from adders.circuits import interpreter_view  # noqa: E402
 
 REF = RefInterp()
 DIR = ROOT / ".tmp/opus-arith-circuits/objects/published"
@@ -51,6 +52,19 @@ def xoshiro(seed):
 
 
 class Published(unittest.TestCase):
+    def test_token_aliases(self):
+        from adders import constructions as c
+        for obj, aliases in ((c.cuccaro(2), []), (c.mulmod_const(4, 5, 11), [0])):
+            cert = certificate(obj.text())
+            self.assertEqual(cert["bindings"]["invocation"]["token_aliases"], aliases)
+            for region in cert["regions"].values():
+                for claim in region["claims"]:
+                    if "invocation" in claim:
+                        inv = claim["invocation"]
+                        self.assertEqual(inv["token_aliases"], "all" if inv["args"] == "all" else aliases)
+                for entry in region["verification"]["inverse_pairs"]:
+                    self.assertEqual(entry["token_aliases"], [0])
+
     def test_reproduces_byte_for_byte(self):
         done = subprocess.run([sys.executable, "-I", str(ROOT / "adders/generate.py"), "check"],
                               capture_output=True, text=True)
@@ -63,8 +77,11 @@ class Published(unittest.TestCase):
         for e in m["entries"]:
             self.assertEqual(hashlib.sha256((ROOT / e["file"]).read_bytes()).hexdigest(), e["sha256"], e["file"])
 
-    def test_interpreter_accepts_identities_and_schema(self):
+    def test_pinned_interpreter_diagnostic_view(self):
         DIR.mkdir(parents=True, exist_ok=True)
+        from adders.generate import FAMILIES, published
+        by_root = {obj.root: obj for _, family, args in published()
+                   for obj in [FAMILIES[family](*args)]}
         checked = 0
         for e in manifest()["entries"]:
             text = (ROOT / e["file"]).read_text()
@@ -74,7 +91,7 @@ class Published(unittest.TestCase):
                    for g in ("x", "cx", "ccx", "swap")) > CHECK_GATE_LIMIT:
                 continue
             path = DIR / f"{e['root']}.bisa"
-            path.write_text(text)
+            path.write_text(interpreter_view(by_root[e["root"]]))
             got = REF.check(path)
             self.assertEqual(got["status"], "ok", e["file"])
             cert = certificate(text)
