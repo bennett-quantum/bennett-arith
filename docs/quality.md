@@ -15,8 +15,8 @@ merge validation belongs to the orchestrator.
 
 ## Measured coverage
 
-Python production statement coverage: **43.87%**
-(684/1559 statements). This measures Python
+Python production statement coverage: **45.98%**
+(755/1642 statements). This measures Python
 production sources; the integer C core is exercised by black-box numerical tests,
 not included in this Python percentage. It is a measurement, not a gate threshold.
 
@@ -29,6 +29,9 @@ export COVERAGE_FILE="$PWD/.tmp/quality-arith/covdata/.coverage"
 timeout 180s python3 -B -m coverage run --source=adders,multipliers,qrom,softfloat,scripts tests/test_default.py
 python3 -m coverage report --omit='*/test_*.py'
 ```
+
+The final coverage-instrumented default run passed all 35 tests in 42.30 s wall
+time (41.445 s test body).
 
 The five least-covered production modules are all 0% in the default in-process
 measurement: `adders/generate.py`, `scripts/provenance.py`,
@@ -47,13 +50,17 @@ stay outside the bounded default measurement.
   removed too. LLVM18 nearest sweep: 130464 checks passed; boundary sweep: 14655.
 * Directed sweep covers all 19 elementary scalar/pair entry points, five modes,
   tiny, large and near-one inputs. Quick IEEE sweep: 11970 checks on LLVM18.
-* Named overflow: 112 independent LLVM23 APFloat comparisons passed. PPC
+* Named overflow: 112 independent LLVM23 APFloat comparisons passed. An
+  additional focused request generated all seven affected f32 conversion
+  exports through `softfloat/instantiate.py`; loading that actual bitcode
+  and comparing the same 112 overflow cases against APFloat also passed. PPC
   zero-low parity: 12 hand-derived value/flag checks and 25491 exact-sum checks
   passed on each major after migration to dialect 0.2.13.
 * `BENNETT_ARITH_PROMISED=1` exposes exact sparse-PPC libm failures
   (`bennett-arith-wvh`) and raw modular release validation
   (`bennett-arith-gdg`, `bennett-arith-vwi`). They remain red, with no restored
-  tolerances. The pinned interpreter lacks K4 inverse-pair schema admission.
+  tolerances. The pinned interpreter lacks K4 inverse-pair schema admission and K91 metadata;
+  the final raw-byte check fails first on `unknown field token_aliases`.
 * K91 certificate partitions have unit tests against published ISA 0.9 text.
   No reviewed interpreter commit supporting them was available: the differential
   stays at ecaaac0, using an explicitly labelled diagnostic compatibility view.
@@ -239,3 +246,13 @@ Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 },"litter":[],"process_identifiers":[]}
 ```
 <!-- /quality-baseline -->
+
+The local HANDOFF.md is retired; README links to the ecosystem handoff.
+
+Final promised checks were re-run after all implementation changes:
+`BENNETT_ARITH_PROMISED=1 timeout 120s python3 -B -I tests/test_directed.py 18 --quick`
+fails on the recorded sparse PPC sine witness after all 11970 IEEE checks pass;
+`BENNETT_ARITH_PROMISED=1 timeout 30s python3 -B -I tests/circuits/test_objects.py
+Published.test_raw_modular_publications_bennett_arith_gdg` fails on the pinned
+reader's unsupported K91 field. These are open obligations, not green tests.
+A council review is required for soft-float rounding before any CLEAR claim.
