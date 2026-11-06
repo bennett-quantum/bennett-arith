@@ -14,6 +14,8 @@ from test_qrom import Qrom
 from adders import constructions as A
 from multipliers import constructions as M
 from qrom import constructions as Q
+sys.path.insert(0,str(ROOT/"tests"))
+from test_quality import Quality
 
 def module(name):
     spec=importlib.util.spec_from_file_location(name,ROOT/"tests"/(name+".py"))
@@ -82,7 +84,7 @@ class Numeric(unittest.TestCase):
 
 def suite():
     out=unittest.TestSuite()
-    for cls in (SmallCircuits,Numeric,Pins):
+    for cls in (SmallCircuits,Numeric,Pins,Quality):
         out.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
     for name in ("test_manifest_is_current","test_reproduces_byte_for_byte",
                  "test_inverse_pair_obligation_is_published","test_token_aliases"):

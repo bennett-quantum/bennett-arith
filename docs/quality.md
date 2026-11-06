@@ -2,12 +2,16 @@
 
 ## Default and exhaustive checks
 
-Default: `timeout 180s scripts/test`, 27 tests passed in 64.697 s on this
-worktree with the reviewed ISA pin `ecaaac060c44e317d1181345fa6b8e38c096c099`.
-The coverage-instrumented run passed the same 27 tests in 60.72 s wall time.
-A missing LLVM18 bridge is built once by `scripts/test`; exhaustive vectors,
-LLVM23 numeric sweeps and offline instantiation limits remain in `scripts/gate`.
-No full eight-hour gate was run by this job; merge validation belongs to the orchestrator.
+Default: `timeout 180s scripts/test`, **35 tests passed in 63.02 s wall time**,
+including a missing-bridge build from the published LLVM18 bitcode (test body
+31.897 s). The reviewed ISA pin is
+`ecaaac060c44e317d1181345fa6b8e38c096c099`; the published dialect pin is
+`95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both were materialised
+and verified with the pinned gate tool's `verify` command against commit 5c98c3a.
+The cold bridge build does not regenerate or mutate the published bitcode.
+Exhaustive vectors, LLVM23 numeric sweeps and offline instantiation limits
+remain in `scripts/gate`. No full eight-hour gate was run by this job;
+merge validation belongs to the orchestrator.
 
 ## Measured coverage
 
@@ -91,3 +95,147 @@ failed on ten occurrences, then passed after cleanup. No tracked pycache,
 logs, lock, backup or progress files remain. Existing ignore rules cover
 `__pycache__/`, `*.pyc`, `*.log`, `.beads/**/LOCK` and `*.darc`.
 README counts, dialect version and helper documentation now match publication.
+
+## Quality back pressure
+
+`python3 -B -I scripts/quality_metrics.py --report` measures tracked and
+nonignored source files; the sole quality check in `gate.toml` compares them
+with the baseline below. Any per-file numeric increase, or increase in litter
+or process-identifier count, rejects the push. Deliberate growth requires an
+explicit baseline update for review. Deletions may improve the metric.
+
+Lengths are physical function lines. Distribution columns count functions
+longer than 25, 50, 100, 200 and 300 lines (cumulative). Cognitive mass is a local
+syntax metric: Python control decisions add 1 plus decision nesting, Boolean
+operators add one per extra operand; C control/conditional tokens add 1 plus
+brace nesting, Boolean operators add one. This is a reproducible approximation,
+not a claim of Sonar compatibility. Per-file totals include test sources.
+Trivial wrappers count single call-only function bodies; ratcheting them alongside
+complexity prevents replacing branches with a growing collection of forwarding
+functions. The script's regression tests cover nested branches, wrappers, new
+files, litter and process identifiers; the missing-baseline check was red first.
+
+The production identifier grep is
+`\bbennett-arith-[a-z0-9]{3}(?:\.[0-9]+)?\b` plus job/shift/round labels;
+test names and test files may retain issue identifiers. Litter checks all
+tracked/nonignored files for pycache, pyc, logs, locks, backups and progress files.
+
+| file | functions | max lines | >25 / >50 / >100 / >200 / >300 | cognitive mass | wrappers |
+|---|---:|---:|---|---:|---:|
+| adders/circuits.py | 50 | 37 | 1 / 0 / 0 / 0 / 0 | 111 | 11 |
+| adders/constructions.py | 46 | 50 | 4 / 0 / 0 / 0 / 0 | 163 | 0 |
+| adders/generate.py | 3 | 31 | 3 / 0 / 0 / 0 / 0 | 59 | 0 |
+| multipliers/constructions.py | 25 | 52 | 1 / 1 / 0 / 0 / 0 | 65 | 1 |
+| qrom/constructions.py | 13 | 39 | 1 / 0 / 0 / 0 / 0 | 42 | 0 |
+| scripts/pinned_sibling.py | 2 | 15 | 0 / 0 / 0 / 0 / 0 | 6 | 0 |
+| scripts/provenance.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| scripts/quality_metrics.py | 6 | 19 | 0 / 0 / 0 / 0 / 0 | 75 | 0 |
+| softfloat/constants.py | 1 | 19 | 0 / 0 / 0 / 0 / 0 | 7 | 0 |
+| softfloat/core.c | 23 | 128 | 1 / 1 / 1 / 0 / 0 | 424 | 0 |
+| softfloat/generate.py | 5 | 163 | 4 / 1 / 1 / 0 / 0 | 260 | 0 |
+| softfloat/instantiate.py | 10 | 88 | 1 / 1 / 0 / 0 / 0 | 89 | 4 |
+| softfloat/named.c | 4 | 28 | 1 / 0 / 0 / 0 / 0 | 80 | 0 |
+| softfloat/ppc.h | 8 | 104 | 2 / 1 / 1 / 0 / 0 | 205 | 0 |
+| softfloat/ppc_round.h | 7 | 41 | 1 / 0 / 0 / 0 / 0 | 71 | 0 |
+| softfloat/ppc_sum.h | 18 | 35 | 3 / 0 / 0 / 0 / 0 | 164 | 0 |
+| softfloat/test_cmps.py | 2 | 7 | 0 / 0 / 0 / 0 / 0 | 10 | 0 |
+| softfloat/test_instance_limits.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| softfloat/test_instances.py | 6 | 28 | 1 / 0 / 0 / 0 / 0 | 69 | 1 |
+| softfloat/test_publication.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| softfloat/trans.h | 26 | 57 | 3 / 1 / 0 / 0 / 0 | 365 | 2 |
+| softfloat/trans_exact.h | 9 | 67 | 1 / 1 / 0 / 0 / 0 | 129 | 0 |
+| tests/build_stage.py | 2 | 3 | 0 / 0 / 0 / 0 / 0 | 1 | 1 |
+| tests/circuits/harness.py | 24 | 40 | 2 / 0 / 0 / 0 / 0 | 145 | 0 |
+| tests/circuits/test_adders.py | 55 | 36 | 1 / 0 / 0 / 0 / 0 | 235 | 1 |
+| tests/circuits/test_multipliers.py | 19 | 25 | 0 / 0 / 0 / 0 / 0 | 70 | 1 |
+| tests/circuits/test_objects.py | 16 | 47 | 1 / 0 / 0 / 0 / 0 | 150 | 2 |
+| tests/circuits/test_pins.py | 19 | 18 | 0 / 0 / 0 / 0 / 0 | 2 | 1 |
+| tests/circuits/test_qrom.py | 17 | 18 | 0 / 0 / 0 / 0 / 0 | 37 | 1 |
+| tests/named_oracle.cpp | 1 | 21 | 0 / 0 / 0 / 0 / 0 | 4 | 0 |
+| tests/ppc_exact_oracle.py | 14 | 31 | 1 / 0 / 0 / 0 / 0 | 138 | 1 |
+| tests/ppc_exp_sparse_witness.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/ppc_oracle.cpp | 1 | 34 | 1 / 0 / 0 / 0 / 0 | 50 | 0 |
+| tests/ppc_zero_low_witness.py | 2 | 4 | 0 / 0 / 0 / 0 / 0 | 2 | 0 |
+| tests/test_compare_closure.py | 1 | 22 | 0 / 0 / 0 / 0 / 0 | 11 | 0 |
+| tests/test_contract.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/test_default.py | 15 | 12 | 0 / 0 / 0 / 0 / 0 | 41 | 5 |
+| tests/test_directed.py | 2 | 34 | 1 / 0 / 0 / 0 / 0 | 56 | 0 |
+| tests/test_edge.py | 16 | 229 | 2 / 2 / 1 / 1 / 0 | 842 | 2 |
+| tests/test_extended.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/test_named_overflow.py | 1 | 21 | 0 / 0 / 0 / 0 / 0 | 9 | 0 |
+| tests/test_pair_parity.py | 1 | 19 | 0 / 0 / 0 / 0 / 0 | 13 | 0 |
+| tests/test_powi.py | 1 | 7 | 0 / 0 / 0 / 0 / 0 | 6 | 0 |
+| tests/test_powi_limit.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/test_ppc.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/test_ppc_exact.py | 1 | 111 | 1 / 1 / 1 / 0 / 0 | 152 | 0 |
+| tests/test_ppc_exp.py | 2 | 51 | 1 / 1 / 0 / 0 / 0 | 28 | 0 |
+| tests/test_quality.py | 6 | 6 | 0 / 0 / 0 / 0 / 0 | 2 | 2 |
+| tests/test_review_numeric.py | 2 | 78 | 1 / 1 / 0 / 0 / 0 | 151 | 0 |
+| tests/test_trans.py | 9 | 21 | 0 / 0 / 0 / 0 / 0 | 36 | 0 |
+| tests/test_trans_boundaries.py | 0 | 0 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/test_trans_extra.py | 2 | 9 | 0 / 0 / 0 / 0 / 0 | 7 | 0 |
+| tests/test_trans_phases.py | 1 | 10 | 0 / 0 / 0 / 0 / 0 | 0 | 0 |
+| tests/trans_phases.c | 6 | 15 | 0 / 0 / 0 / 0 / 0 | 7 | 0 |
+
+Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
+
+<!-- quality-baseline -->
+```json
+{"files":{
+"adders/circuits.py":{"cognitive_mass":111,"functions":50,"max_lines":37,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":11},
+"adders/constructions.py":{"cognitive_mass":163,"functions":46,"max_lines":50,"over_100":0,"over_200":0,"over_25":4,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"adders/generate.py":{"cognitive_mass":59,"functions":3,"max_lines":31,"over_100":0,"over_200":0,"over_25":3,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"multipliers/constructions.py":{"cognitive_mass":65,"functions":25,"max_lines":52,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":1},
+"qrom/constructions.py":{"cognitive_mass":42,"functions":13,"max_lines":39,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/pinned_sibling.py":{"cognitive_mass":6,"functions":2,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/provenance.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/quality_metrics.py":{"cognitive_mass":75,"functions":6,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/constants.py":{"cognitive_mass":7,"functions":1,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/core.c":{"cognitive_mass":424,"functions":23,"max_lines":128,"over_100":1,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"softfloat/generate.py":{"cognitive_mass":260,"functions":5,"max_lines":163,"over_100":1,"over_200":0,"over_25":4,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"softfloat/instantiate.py":{"cognitive_mass":89,"functions":10,"max_lines":88,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":4},
+"softfloat/named.c":{"cognitive_mass":80,"functions":4,"max_lines":28,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/ppc.h":{"cognitive_mass":205,"functions":8,"max_lines":104,"over_100":1,"over_200":0,"over_25":2,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"softfloat/ppc_round.h":{"cognitive_mass":71,"functions":7,"max_lines":41,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/ppc_sum.h":{"cognitive_mass":164,"functions":18,"max_lines":35,"over_100":0,"over_200":0,"over_25":3,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/test_cmps.py":{"cognitive_mass":10,"functions":2,"max_lines":7,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/test_instance_limits.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/test_instances.py":{"cognitive_mass":69,"functions":6,"max_lines":28,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"softfloat/test_publication.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"softfloat/trans.h":{"cognitive_mass":365,"functions":26,"max_lines":57,"over_100":0,"over_200":0,"over_25":3,"over_300":0,"over_50":1,"trivial_wrappers":2},
+"softfloat/trans_exact.h":{"cognitive_mass":129,"functions":9,"max_lines":67,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"tests/build_stage.py":{"cognitive_mass":1,"functions":2,"max_lines":3,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"tests/circuits/harness.py":{"cognitive_mass":145,"functions":24,"max_lines":40,"over_100":0,"over_200":0,"over_25":2,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/circuits/test_adders.py":{"cognitive_mass":235,"functions":55,"max_lines":36,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"tests/circuits/test_multipliers.py":{"cognitive_mass":70,"functions":19,"max_lines":25,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"tests/circuits/test_objects.py":{"cognitive_mass":150,"functions":16,"max_lines":47,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":2},
+"tests/circuits/test_pins.py":{"cognitive_mass":2,"functions":19,"max_lines":18,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"tests/circuits/test_qrom.py":{"cognitive_mass":37,"functions":17,"max_lines":18,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"tests/named_oracle.cpp":{"cognitive_mass":4,"functions":1,"max_lines":21,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/ppc_exact_oracle.py":{"cognitive_mass":138,"functions":14,"max_lines":31,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":1},
+"tests/ppc_exp_sparse_witness.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/ppc_oracle.cpp":{"cognitive_mass":50,"functions":1,"max_lines":34,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/ppc_zero_low_witness.py":{"cognitive_mass":2,"functions":2,"max_lines":4,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_compare_closure.py":{"cognitive_mass":11,"functions":1,"max_lines":22,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_contract.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_default.py":{"cognitive_mass":41,"functions":15,"max_lines":12,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":5},
+"tests/test_directed.py":{"cognitive_mass":56,"functions":2,"max_lines":34,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_edge.py":{"cognitive_mass":842,"functions":16,"max_lines":229,"over_100":1,"over_200":1,"over_25":2,"over_300":0,"over_50":2,"trivial_wrappers":2},
+"tests/test_extended.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_named_overflow.py":{"cognitive_mass":9,"functions":1,"max_lines":21,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_pair_parity.py":{"cognitive_mass":13,"functions":1,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_powi.py":{"cognitive_mass":6,"functions":1,"max_lines":7,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_powi_limit.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_ppc.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_ppc_exact.py":{"cognitive_mass":152,"functions":1,"max_lines":111,"over_100":1,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"tests/test_ppc_exp.py":{"cognitive_mass":28,"functions":2,"max_lines":51,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"tests/test_quality.py":{"cognitive_mass":2,"functions":6,"max_lines":6,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":2},
+"tests/test_review_numeric.py":{"cognitive_mass":151,"functions":2,"max_lines":78,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"tests/test_trans.py":{"cognitive_mass":36,"functions":9,"max_lines":21,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_trans_boundaries.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_trans_extra.py":{"cognitive_mass":7,"functions":2,"max_lines":9,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_trans_phases.py":{"cognitive_mass":0,"functions":1,"max_lines":10,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/trans_phases.c":{"cognitive_mass":7,"functions":6,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0}
+},"litter":[],"process_identifiers":[]}
+```
+<!-- /quality-baseline -->

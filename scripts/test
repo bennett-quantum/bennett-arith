@@ -7,6 +7,12 @@ export TMPDIR="${TMPDIR:-$root/.tmp/tests}"
 export PYTHONDONTWRITEBYTECODE=1
 mkdir -p "$TMPDIR"
 if ! test -f "$root/.tmp/llvm18/oracle.so"; then
-  timeout 180s "$root/scripts/build" 18
+  work="$root/.tmp/llvm18"
+  mkdir -p "$work"
+  python3 -B -I "$root/softfloat/generate.py" "$work"
+  python3 -B -I "$root/softfloat/constants.py" "$work"
+  timeout 90s /usr/lib/llvm-18/bin/clang -shared -fPIC \
+    "$root/dist/llvm18/bennett-arith.bc" "$work/bridge.ll" -o "$work/oracle-new.so"
+  mv -f "$work/oracle-new.so" "$work/oracle.so"
 fi
 exec python3 -B -I "$root/tests/test_default.py" "$@"
