@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Bounded default suite; scripts/gate retains exhaustive checks on both majors.
+set -euo pipefail
+unset DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
+root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+export TMPDIR="${TMPDIR:-$root/.tmp/tests}"
+export PYTHONDONTWRITEBYTECODE=1
+mkdir -p "$TMPDIR"
+if ! test -f "$root/.tmp/llvm18/oracle.so"; then
+  timeout 180s "$root/scripts/build" 18
+fi
+exec python3 -B -I "$root/tests/test_default.py" "$@"

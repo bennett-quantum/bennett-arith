@@ -2,12 +2,12 @@
 set -euo pipefail
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE DISPLAY WAYLAND_DISPLAY DBUS_SESSION_BUS_ADDRESS BROWSER
 root="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
-export TMPDIR="$root/.tmp"
+export TMPDIR="${TMPDIR:-$root/.tmp}"
 mkdir -p "$TMPDIR"
 major="${1:?usage: scripts/build 18|23}"
 case "$major" in 18|23) ;; *) echo 'only LLVM 18 and 23 are pinned' >&2; exit 1;; esac
 llvm="/usr/lib/llvm-$major/bin"
-build="$TMPDIR/llvm$major"
+build="$root/.tmp/llvm$major"
 dist="$root/dist/llvm$major"
 mkdir -p "$build" "$dist"
 python3 -I "$root/softfloat/generate.py" "$build" "${@:2}"

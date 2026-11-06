@@ -13,7 +13,7 @@ LLVM=Path("/usr/lib/llvm-23/bin")
 def run():
     flags=subprocess.check_output([str(LLVM/"llvm-config"),"--cxxflags","--ldflags","--libs","support","--system-libs"],text=True).split()
     subprocess.run([str(LLVM/"clang++"),str(ROOT/"tests/named_oracle.cpp"),*flags,"-o",str(WORK/"oracle")],check=True,timeout=60)
-    subprocess.run([str(LLVM/"clang"),"-std=c2x","-O1","-shared","-fPIC","-DBENNETT_LLVM_MAJOR=23",
+    subprocess.run([str(LLVM/"clang"),"-std=c2x","-O0","-shared","-fPIC","-DBENNETT_LLVM_MAJOR=23",
                     "-I",str(ROOT/".tmp/llvm18"),str(ROOT/"softfloat/named.c"),"-o",str(WORK/"named.so")],check=True,timeout=90)
     lib=ctypes.CDLL(str(WORK/"named.so"))
     call=lib.bennett_sf_named
