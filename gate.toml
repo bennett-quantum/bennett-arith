@@ -27,3 +27,7 @@ argv = ["cargo", "build", "--offline"]
 outputs = ["reference-interpreter/target/debug/bennett-isa-ref"]
 env = { CARGO_BUILD_JOBS = "4" }
 
+[siblings."bennett-dialect-spec"]
+sha = "95a4b8d06933018a07fef3516296a25fd582fcde"
+note = "Published 0.2.13: total PPC nearest-even tie parity"
+

@@ -19,6 +19,6 @@ for major in (18,23):
     assert to['signature']=='iN (C_B, i32 R, i1 Sat)'
     assert fr['signature']=='C_B (iN)'
     assert to['status']==fr['status']=='available-offline'
-    assert {'bennett-arith-4yg','bennett-arith-wvh'}<=set(m['conformance_pending'])
-    assert m['numerical_accuracy']['pending_bead']=='bennett-arith-wvh'
+    assert {'ppc-full-domain-arithmetic','elementary-full-domain-accuracy'}<=set(m['conformance_pending'])
+    assert m['numerical_accuracy']['pending_obligation']=='elementary-full-domain-accuracy'
     print(f'LLVM {major}: 0.2.13 request protocol, exact signatures and pending numerical obligations recorded')

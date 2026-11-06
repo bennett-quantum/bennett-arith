@@ -18,7 +18,8 @@ from adders.circuits import OracleFn, QinplaceAction, census, jcs  # noqa: E402
 from multipliers import constructions as M  # noqa: E402
 from qrom import constructions as Q  # noqa: E402
 
-ISA_SPEC_COMMIT = "5513d7822edc7cfc54aeda37092bfb3f2fec7581"
+ISA_SPEC_COMMIT = "ecaaac060c44e317d1181345fa6b8e38c096c099"
+CERTIFICATE_EXTENSION_SPEC_COMMIT = "be109bd27889ea91e3c0ad78a30e5e4d71d3d0d3"
 MANIFEST = ROOT / "adders/objects/manifest.json"
 SOURCES = ["adders/circuits.py", "adders/constructions.py", "adders/generate.py", "adders/target-unit.json",
            "multipliers/constructions.py", "qrom/constructions.py"]
@@ -95,6 +96,7 @@ def build():
                         "file": path, "inverse": obj.inverse, "root": obj.root,
                         "sha256": hashlib.sha256(text.encode()).hexdigest(), "symbols": symbols})
     manifest = {"entries": entries, "isa": "0.9", "isa_spec_commit": ISA_SPEC_COMMIT,
+                "certificate_extensions": {"K91": CERTIFICATE_EXTENSION_SPEC_COMMIT},
                 "sources": {s: hashlib.sha256((ROOT / s).read_bytes()).hexdigest() for s in SOURCES},
                 "target_sha256": hashlib.sha256((ROOT / "adders/target-unit.json").read_bytes()).hexdigest()}
     files[str(MANIFEST.relative_to(ROOT))] = jcs(manifest) + "\n"

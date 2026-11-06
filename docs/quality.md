@@ -80,3 +80,14 @@ That scratch comparison is evidence, not a committed fixture or numerical oracle
 The full IEEE directed sweep passed 18810 scalar/pair checks:
 `timeout 180s python3 -B -I tests/test_directed.py 18`.
 `tests/test_trans_phases.py` remains in both the default and exhaustive suites.
+
+## Source and publication hygiene
+
+The fail-fast audit found specified zero results, not swallowed errors; the
+invalid-conversion regression checks the required flag. Process identifiers
+were removed from generator metadata and emitted manifests; outstanding
+capabilities use descriptive obligation names. The product-source grep first
+failed on ten occurrences, then passed after cleanup. No tracked pycache,
+logs, lock, backup or progress files remain. Existing ignore rules cover
+`__pycache__/`, `*.pyc`, `*.log`, `.beads/**/LOCK` and `*.darc`.
+README counts, dialect version and helper documentation now match publication.
