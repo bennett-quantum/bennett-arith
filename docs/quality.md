@@ -65,4 +65,12 @@ quiet error fallbacks. Basic-operation oracle checks include negative square roo
 NaNs and exact zeros with sticky flags. The full gate retains the larger edge suite.
 
 All tracked sources currently have no semantics-bearing function over 300 lines.
-The phase refactor and quality ratchet are recorded below when verified.
+The elementary evaluator now has named domain, core and packing phases, and
+a per-operation exact-case table. The phase/table unit test was red against the
+pre-refactor source, then passed. `timeout 120s python3 -B -I
+.tmp/quality-arith/refactor-differential.py` compared 13965 calls with a saved
+pre-refactor LLVM18 bridge: all result-pair bytes and sticky flags were identical.
+That scratch comparison is evidence, not a committed fixture or numerical oracle.
+The full IEEE directed sweep passed 18810 scalar/pair checks:
+`timeout 180s python3 -B -I tests/test_directed.py 18`.
+`tests/test_trans_phases.py` remains in both the default and exhaustive suites.

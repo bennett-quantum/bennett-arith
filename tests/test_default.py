@@ -63,6 +63,8 @@ class Numeric(unittest.TestCase):
         module("test_review_numeric").run(18,ROOT,"all")
     def test_pair_parity(self):
         module("test_pair_parity").run(18)
+    def test_trans_phases(self):
+        module("test_trans_phases").run()
     def test_named_overflow(self):
         module("test_named_overflow").run()
     def test_contract(self):

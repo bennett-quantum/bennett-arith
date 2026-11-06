@@ -178,98 +178,185 @@ static V trans_unpack(U x,int fi) {
     return ta(hi,unpack(x>>64,formats[3]));
 }
 #include "trans_exact.h"
-static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
+enum TransPath { TRANS_CORE, TRANS_EXACT, TRANS_PPC_EXP, TRANS_TANH_LIMIT, TRANS_LINEAR };
+typedef struct {
+    enum TransPath path;
+    V a, b, r, c;
+    ExactReal exact[2];
+    PairSum sum;
+    int flags, pair;
+} TransState;
+
+static TransState trans_domain(int fi,int op,const U *in) {
+    TransState s={.path=TRANS_CORE,.pair=op==SINCOS || op==SINCOSPI};
     if(op==SINCOSPI) {
-        ExactReal a=trans_input(in[0],fi),s,c;
-        if(trans_exact_sincospi(a,&s,&c)) {
-            int flags=0;out[0]=trans_pack_exact(s,fi,rm,&flags);
-            out[1]=trans_pack_exact(c,fi,rm,&flags);out[2]=flags;return;
+        ExactReal a=trans_input(in[0],fi);
+        if(trans_exact_sincospi(a,&s.exact[0],&s.exact[1])) {
+            s.path=TRANS_EXACT;
+            return s;
         }
     }
     if(op==POW || op==EXP2 || op==EXP10 || op==LOG2 || op==LOG10) {
-        ExactReal a=trans_input(in[0],fi),b=trans_input(in[1],fi),result;
-        if(trans_exact_math(op,a,b,&result)) {
-            int flags=a.snan || (op==POW && b.snan);
-            out[0]=trans_pack_exact(result,fi,rm,&flags);out[1]=0;out[2]=flags;return;
+        ExactReal a=trans_input(in[0],fi),b=trans_input(in[1],fi);
+        if(trans_exact_math(op,a,b,&s.exact[0])) {
+            s.path=TRANS_EXACT;
+            s.flags=a.snan || (op==POW && b.snan);
+            return s;
         }
     }
     if(fi==6 && op==EXP) {
-        PairSum exact=sum_read(in[0]);
-        if(exact.kind==FINITE && exact.mag<=((SumBits)1<<962)) {
-            int flags=0;out[0]=ppc_exp_near_zero(exact,rm,&flags);
-            out[1]=0;out[2]=flags;return;
+        s.sum=sum_read(in[0]);
+        if(s.sum.kind==FINITE && s.sum.mag<=((SumBits)1<<962)) {
+            s.path=TRANS_PPC_EXP;
+            return s;
         }
     }
-    Format f=formats[fi];V a=trans_unpack(in[0],fi),b=trans_unpack(in[1],fi),r=nanv(),c=ti(0);
-    int flags=a.snan || ((op==ATAN2 || op==POW) && b.snan),pair=0;
-    if(op==TANH && a.kind==FINITE && a.mag && width(a.mag)+a.exp>6) {
-        /* The finite limit is strict. Ordinary IEEE formats cannot resolve
-         * the tail at |x|>=64; PPC can, until it falls below 2^-1075. */
-        if(fi!=6)out[0]=pack((V){mask(480),-480,a.sign,FINITE,0},f,rm,&flags);
-        else {
-            V x=a;x.sign=0;
-            /* e^3>16 proves this tail is below half a PPC quantum. */
-            if(compare(x,ti(512))>=0)
-                out[0]=ppc_round_exact(((SquareBits)1<<2148)-1,-2148,a.sign,rm,&flags);
-            else {
-                ++x.exp;x.sign=1;
-                V q=texp(x),tail=td(tm(ti(2),q),ta(ti(1),q));
-                /* The tail exponent fits the exact pair accumulator. */
-                SquareBits value=((SquareBits)1<<-tail.exp)-(SquareBits)tail.mag;
-                out[0]=ppc_round_exact(value,tail.exp,a.sign,rm,&flags);
-            }
-        }
-        out[1]=0;out[2]=flags|16;return;
+    s.a=trans_unpack(in[0],fi);
+    s.b=trans_unpack(in[1],fi);
+    s.r=nanv();s.c=ti(0);
+    s.flags=s.a.snan || ((op==ATAN2 || op==POW) && s.b.snan);
+    if(op==TANH && s.a.kind==FINITE && s.a.mag && width(s.a.mag)+s.a.exp>6) {
+        s.path=TRANS_TANH_LIMIT;
+        return s;
     }
-    /* For |x|<2^-112, tan/asin exceed |x| by O(x^3), while tanh is
-     * strictly smaller. The correction is below half the finest carrier
-     * ulp, but its sign decides every directed mode. Preserve that sign
-     * before packing instead of dividing independently jammed series. */
-    if(fi!=6 && (op==TAN || op==ASIN || op==TANH) && a.kind==FINITE && a.mag &&
-       width(a.mag)+a.exp<=-112) {
-        int shift=480-width(a.mag);
-        r=a;r.mag<<=shift;r.exp-=shift;
-        if(op==TANH)--r.mag;else ++r.mag;
-        out[0]=fi==6 ? ppc_round(r,rm,&flags):pack(r,f,rm,&flags);
-        out[1]=0;out[2]=flags|16;return;
+    /* Below 2^-112 the cubic correction is less than half an IEEE
+     * carrier ulp, while its strict sign still selects directed neighbours.
+     * PPC sparse residuals require their own full-precision treatment. */
+    if(fi!=6 && (op==TAN || op==ASIN || op==TANH) &&
+       s.a.kind==FINITE && s.a.mag && width(s.a.mag)+s.a.exp<=-112) {
+        int shift=480-width(s.a.mag);
+        s.r=s.a;s.r.mag<<=shift;s.r.exp-=shift;
+        if(op==TANH)--s.r.mag;else ++s.r.mag;
+        s.path=TRANS_LINEAR;
     }
-    if(op==SIN || op==COS || op==TAN || op==SINCOS || op==SINCOSPI){
-        V s;tsc(a,op==SINCOSPI,&s,&c);r=op==COS ? c:op==TAN ? td(s,c):s;pair=op==SINCOS || op==SINCOSPI;
-    }else if(op==ATAN)r=tatan(a);
-    else if(op==ATAN2)r=tatan2(a,b);
-    else if(op==ASIN || op==ACOS){
+    return s;
+}
+
+static void trans_core(TransState *s,int op) {
+    V a=s->a,b=s->b,r=nanv(),c=ti(0);
+    switch(op) {
+    case SIN: case COS: case TAN: case SINCOS: case SINCOSPI: {
+        V sine;tsc(a,op==SINCOSPI,&sine,&c);
+        r=op==COS ? c:op==TAN ? td(sine,c):sine;
+        break;
+    }
+    case ATAN: r=tatan(a);break;
+    case ATAN2: r=tatan2(a,b);break;
+    case ASIN: case ACOS: {
         V x=a;x.sign=0;
         if(a.kind!=NANV && compare(x,ti(1))<=0) {
             V root=tsqrt(tm(ta(ti(1),tneg(x)),ta(ti(1),x)));
             r=op==ASIN ? tatan2(a,root):tatan2(root,a);
         }
-    }else if(op==LOG || op==LOG2 || op==LOG10){r=tlog(a);if(op!=LOG)r=td(r,op==LOG2 ? tc_ln2():tc_ln10());}
-    else if(op==EXP || op==EXP2 || op==EXP10){r=texp(op==EXP ? a:tm(a,op==EXP2 ? tc_ln2():tc_ln10()));}
-    else if(op==POW)r=tpow(a,b);
-    else if(op==SINH || op==COSH || op==TANH){
+        break;
+    }
+    case LOG: case LOG2: case LOG10:
+        r=tlog(a);
+        if(op!=LOG)r=td(r,op==LOG2 ? tc_ln2():tc_ln10());
+        break;
+    case EXP: case EXP2: case EXP10:
+        r=texp(op==EXP ? a:tm(a,op==EXP2 ? tc_ln2():tc_ln10()));
+        break;
+    case POW: r=tpow(a,b);break;
+    case SINH: case COSH: case TANH: {
         V x=a;x.sign=0;
         if(op==TANH && x.kind==INF)r=ti(a.sign ? -1:1);
         else if(x.kind==FINITE && (!x.mag || width(x.mag)+x.exp< -4)) {
             V term=op==COSH ? ti(1):a,sum=term,xx=tm(a,a);
-            for(int n=1;n<=90;++n){term=td(tm(term,xx),ti(op==COSH ? (2*n-1)*(2*n):(2*n)*(2*n+1)));sum=ta(sum,term);if(tinyterm(term,sum))break;}
-            if(op==TANH){V sh=sum,ch=ti(1),t=ch;for(int n=1;n<=90;++n){t=td(tm(t,xx),ti((2*n-1)*(2*n)));ch=ta(ch,t);}sum=td(sh,ch);}r=sum;
-        }else {V ex=texp(x),inv=td(ti(1),ex);r=op==COSH ? ta(ex,inv):ta(ex,tneg(inv));
-            if(op==TANH)r=td(r,ta(ex,inv));else --r.exp;if(op!=COSH)r.sign=a.sign;}
+            for(int n=1;n<=90;++n) {
+                term=td(tm(term,xx),ti(op==COSH ? (2*n-1)*(2*n):(2*n)*(2*n+1)));
+                sum=ta(sum,term);
+                if(tinyterm(term,sum))break;
+            }
+            if(op==TANH) {
+                V sh=sum,ch=ti(1),t=ch;
+                for(int n=1;n<=90;++n) {
+                    t=td(tm(t,xx),ti((2*n-1)*(2*n)));
+                    ch=ta(ch,t);
+                }
+                sum=td(sh,ch);
+            }
+            r=sum;
+        } else {
+            V ex=texp(x),inv=td(ti(1),ex);
+            r=op==COSH ? ta(ex,inv):ta(ex,tneg(inv));
+            if(op==TANH)r=td(r,ta(ex,inv));else --r.exp;
+            if(op!=COSH)r.sign=a.sign;
+        }
+        break;
     }
-    if(r.kind==NANV && a.kind!=NANV && (op!=POW && op!=ATAN2 || b.kind!=NANV))flags|=1;
-    if((op==LOG || op==LOG2 || op==LOG10) && a.kind==FINITE && !a.mag)flags|=2;
-    if(op==POW && a.kind==FINITE && !a.mag && b.sign && (b.mag || b.kind==INF))flags|=2;
-    /* Exact elementary cases do not spuriously raise inexact. */
-    int exact=(!a.mag && a.kind==FINITE &&
-        (op==SIN || op==COS || op==TAN || op==ASIN || op==ATAN ||
-         op==SINH || op==COSH || op==TANH || op==EXP || op==SINCOS)) ||
-        (op==LOG && a.kind==FINITE && compare(a,ti(1))==0);
-    if(op==ACOS && a.kind==FINITE && compare(a,ti(1))==0)exact=1;
-    if(a.kind==INF && (op==EXP || op==EXP2 || op==EXP10 || op==TANH))exact=1;
-    if(op==POW && (a.kind==INF || b.kind==INF))exact=1;
-    if(op==ATAN2 && r.kind==FINITE && !r.mag)exact=1;
-    if(r.kind==FINITE && !exact)flags|=16;
-    if((op==EXP || op==EXP2 || op==EXP10 || op==POW) && !r.mag && r.kind==FINITE && a.kind==FINITE && a.mag && !exact)flags|=24;
-    out[0]=fi==6 ? ppc_round(r,rm,&flags):pack(r,f,rm,&flags);
-    out[1]=pair ? (fi==6 ? ppc_round(c,rm,&flags):pack(c,f,rm,&flags)):0;out[2]=flags;
+    default: __builtin_trap();
+    }
+    s->r=r;s->c=c;
+}
+
+enum ExactDomain { EXACT_ZERO=1, EXACT_ONE=2, EXACT_INFINITY=4,
+                   EXACT_OTHER_INFINITY=8, EXACT_ZERO_RESULT=16 };
+static const unsigned trans_exact_domains[SINCOSPI+1]={
+    [SIN]=EXACT_ZERO, [COS]=EXACT_ZERO, [TAN]=EXACT_ZERO,
+    [ASIN]=EXACT_ZERO, [ACOS]=EXACT_ONE, [ATAN]=EXACT_ZERO,
+    [ATAN2]=EXACT_ZERO_RESULT, [SINH]=EXACT_ZERO, [COSH]=EXACT_ZERO,
+    [TANH]=EXACT_ZERO|EXACT_INFINITY, [EXP]=EXACT_ZERO|EXACT_INFINITY,
+    [EXP2]=EXACT_INFINITY, [EXP10]=EXACT_INFINITY, [LOG]=EXACT_ONE,
+    [POW]=EXACT_INFINITY|EXACT_OTHER_INFINITY, [SINCOS]=EXACT_ZERO
+};
+
+static int trans_is_exact(int op,V a,V b,V r) {
+    unsigned domains=trans_exact_domains[op];
+    return ((domains&EXACT_ZERO) && a.kind==FINITE && !a.mag) ||
+           ((domains&EXACT_ONE) && a.kind==FINITE && compare(a,ti(1))==0) ||
+           ((domains&EXACT_INFINITY) && a.kind==INF) ||
+           ((domains&EXACT_OTHER_INFINITY) && b.kind==INF) ||
+           ((domains&EXACT_ZERO_RESULT) && r.kind==FINITE && !r.mag);
+}
+
+static U trans_tanh_limit(V a,int fi,int rm,int *flags) {
+    /* The finite limit is strict. IEEE formats cannot resolve the tail at
+     * |x|>=64; PPC can until it falls below half its least quantum. */
+    if(fi!=6)return pack((V){mask(480),-480,a.sign,FINITE,0},formats[fi],rm,flags);
+    V x=a;x.sign=0;
+    /* e^3>16 bounds this tail below half a PPC quantum. */
+    if(compare(x,ti(512))>=0)
+        return ppc_round_exact(((SquareBits)1<<2148)-1,-2148,a.sign,rm,flags);
+    ++x.exp;x.sign=1;
+    V q=texp(x),tail=td(tm(ti(2),q),ta(ti(1),q));
+    SquareBits value=((SquareBits)1<<-tail.exp)-(SquareBits)tail.mag;
+    return ppc_round_exact(value,tail.exp,a.sign,rm,flags);
+}
+
+static void trans_pack(U *out,int fi,int op,int rm,TransState s) {
+    switch(s.path) {
+    case TRANS_EXACT:
+        out[0]=trans_pack_exact(s.exact[0],fi,rm,&s.flags);
+        out[1]=s.pair ? trans_pack_exact(s.exact[1],fi,rm,&s.flags):0;
+        out[2]=s.flags;
+        return;
+    case TRANS_PPC_EXP:
+        out[0]=ppc_exp_near_zero(s.sum,rm,&s.flags);
+        out[1]=0;out[2]=s.flags;
+        return;
+    case TRANS_TANH_LIMIT:
+        out[0]=trans_tanh_limit(s.a,fi,rm,&s.flags);
+        out[1]=0;out[2]=s.flags|16;
+        return;
+    case TRANS_CORE: case TRANS_LINEAR:
+        break;
+    }
+    V a=s.a,b=s.b,r=s.r,c=s.c;
+    if(r.kind==NANV && a.kind!=NANV && ((op!=POW && op!=ATAN2) || b.kind!=NANV))s.flags|=1;
+    if((op==LOG || op==LOG2 || op==LOG10) && a.kind==FINITE && !a.mag)s.flags|=2;
+    if(op==POW && a.kind==FINITE && !a.mag && b.sign && (b.mag || b.kind==INF))s.flags|=2;
+    int exact=trans_is_exact(op,a,b,r);
+    if(r.kind==FINITE && !exact)s.flags|=16;
+    if((op==EXP || op==EXP2 || op==EXP10 || op==POW) && !r.mag &&
+       r.kind==FINITE && a.kind==FINITE && a.mag && !exact)s.flags|=24;
+    out[0]=fi==6 ? ppc_round(r,rm,&s.flags):pack(r,formats[fi],rm,&s.flags);
+    out[1]=s.pair ? (fi==6 ? ppc_round(c,rm,&s.flags):pack(c,formats[fi],rm,&s.flags)):0;
+    out[2]=s.flags;
+}
+
+static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
+    TransState s=trans_domain(fi,op,in);
+    if(s.path==TRANS_CORE)trans_core(&s,op);
+    trans_pack(out,fi,op,rm,s);
 }
