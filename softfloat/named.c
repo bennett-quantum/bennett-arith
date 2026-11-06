@@ -51,7 +51,8 @@ static U named_pack(V a,Named n,int rm,int sat) {
             return sign|((U)(a.exp+f.p-1+f.bias)<<(f.p-1))|((U)a.mag & (U)mask(f.p-1));
         }
     }
-    if(sat) return sign|max;
+    if(sat || (a.kind==FINITE && (rm==3 || (rm==1 && !a.sign) || (rm==2 && a.sign))))
+        return sign|max;
     return kind==NI ? infbits(f,a.sign):0;
 }
 void bennett_sf_named(U *out,int fi,int ni,int to,const U *in,int rm,int sat) {

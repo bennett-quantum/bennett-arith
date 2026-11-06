@@ -16,29 +16,66 @@ for op in ops:
     fn.argtypes=[C.POINTER(MP)]*(3 if op in ('atan2','pow') else 2)+[C.c_int]
     fn.restype=C.c_int
 class Oracle:
-    def __init__(self):
+    """Directed MPFR intervals, refined until both ends choose the same carrier."""
+    def __init__(self, precision=384):
+        self.precision=precision
         self.a=MP();self.b=MP();self.r=MP()
-        for x in (self.a,self.b,self.r):m.mpfr_init2(C.byref(x),384)
+        for x in (self.a,self.b,self.r):m.mpfr_init2(C.byref(x),precision)
+        self.inconclusive=0
+    def __del__(self):
+        for x in (self.a,self.b,self.r):m.mpfr_clear(C.byref(x))
+    def resize(self,precision):
+        if precision==self.precision:return
+        for x in (self.a,self.b,self.r):
+            m.mpfr_clear(C.byref(x));m.mpfr_init2(C.byref(x),precision)
+        self.precision=precision
     def put(self,x,v,sign=0):
-        if isinstance(v,str):s=('-' if sign else '')+('nan' if v=='nan' else 'inf');m.mpfr_set_str(C.byref(x),s.encode(),10,0);return
+        if isinstance(v,str):
+            s=('-' if sign else '')+('nan' if v=='nan' else 'inf')
+            m.mpfr_set_str(C.byref(x),s.encode(),10,0)
+            return
         n=v.numerator;d=v.denominator
         s=('-' if n<0 or not n and sign else '')+bin(abs(n))[2:]
         assert m.mpfr_set_str(C.byref(x),s.encode(),2,0)==0
         m.mpfr_mul_2si(C.byref(x),C.byref(x),-(d.bit_length()-1),0)
     def get(self):
-        exp=C.c_long();p=m.mpfr_get_str(None,C.byref(exp),2,384,C.byref(self.r),0)
+        exp=C.c_long();p=m.mpfr_get_str(None,C.byref(exp),2,self.precision,C.byref(self.r),0)
         s=C.string_at(p).decode();m.mpfr_free_str(p)
         if '@NaN@' in s:return 'nan',0
         if '@Inf@' in s:return 'inf',int(s.startswith('-'))
         sign=int(s.startswith('-'));s=s.lstrip('-')
-        if abs(exp.value)>20000:return (-1 if sign else 1)*e.power(20000 if exp.value>0 else -20000),sign
+        if abs(exp.value)>20000:
+            return (-1 if sign else 1)*e.power(20000 if exp.value>0 else -20000),sign
         return (-1 if sign else 1)*int(s,2)*e.power(exp.value-len(s)),sign
-    def call(self,op,a,sa,b=0,sb=0):
+    def call(self,op,a,sa,b=0,sb=0,direction=0):
         self.put(self.a,a,sa);self.put(self.b,b,sb)
         fn=getattr(m,'mpfr_'+op)
-        if op in ('atan2','pow'):fn(C.byref(self.r),C.byref(self.a),C.byref(self.b),0)
-        else:fn(C.byref(self.r),C.byref(self.a),0)
+        args=[C.byref(self.r),C.byref(self.a)]
+        if op in ('atan2','pow'):args.append(C.byref(self.b))
+        fn(*args,direction)
         return self.get()
+    def rounded(self,op,a,sa,b=0,sb=0,f=None,rm=0):
+        if f is None:
+            if not hasattr(self,'pairs'):
+                spec=importlib.util.spec_from_file_location('pairs',R/'tests/ppc_exact_oracle.py')
+                self.pairs=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.pairs)
+            def encode(v,sign):
+                if isinstance(v,str):return e.nan(self.pairs.F) if v=='nan' else e.infinity(self.pairs.F,sign)
+                return self.pairs.to_pair(v,rm,sign)[0]
+        else:
+            def encode(v,sign):return e.encode(v,f,rm,sign)[0]
+        input_bits=max((v.numerator.bit_length() for v in (a,b) if not isinstance(v,str)),default=0)
+        precision=max(384,input_bits)
+        while precision<=65536:
+            self.resize(precision)
+            lower,ls=self.call(op,a,sa,b,sb,direction=3)
+            upper,us=self.call(op,a,sa,b,sb,direction=2)
+            lo,hi=encode(lower,ls),encode(upper,us)
+            if lo==hi:return lo
+            precision*=2
+        self.inconclusive+=1
+        raise AssertionError((op,a,b,rm,'MPFR bracket inconclusive at 65536 bits'))
+
 if __name__=='__main__':
     for major in map(int,sys.argv[1:] or [18,23]):
         edge=e.Edge(major)
@@ -67,7 +104,7 @@ if __name__=='__main__':
                     rb=e.encode(b,f)[0]
                     want,ws=oracle.call(op,a,sa,b)
                     args=[raw,rb] if op in ('pow','atan2') else [raw]
-                    expected=e.encode(want,f,zero_sign=ws)[0]
+                    expected=oracle.rounded(op,a,sa,b,f=f)
                     actual=edge.call(op+'_'+suffix,*args)[0]
                     av,_,_=e.decode(actual,f)
                     if isinstance(want,str) or isinstance(av,str) or not want or not av:
@@ -75,7 +112,7 @@ if __name__=='__main__':
                     else:
                         step=max(e.log2q(abs(want)),1-bias)-(p-1)
                         ulps=abs(av-want)/e.power(step)
-                        assert ulps<=4,(major,suffix,op,hex(raw),float(ulps))
+                        assert actual==expected,(major,suffix,op,hex(raw),hex(actual),hex(expected))
                         worst[op]=max(worst.get(op,e.Q(0)),ulps)
                     edge.count+=1
                 # Pair order and scalar consistency, including signed zeros/NaNs.

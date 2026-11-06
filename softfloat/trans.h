@@ -1,10 +1,13 @@
-/* Versioned integer libm v1. 224 significant working bits; no host FP.
+/* Versioned integer libm v1. 240 significant working bits; no host FP.
  * Payne-Hanek reduction uses 17408 bits of 2/pi over the full binary128 range.
  * Results are deterministic approximations, NOT claimed correctly rounded.
  */
 #include "constants.h"
+/* Two 113-bit input significands plus guard bits for near-one powers;
+ * twice this precision still fits the 512-bit product accumulator. */
+enum { TRANS_BITS = 240 };
 static V tn(V a) {
-    if(a.kind==FINITE && width(a.mag)>224) {int s=width(a.mag)-224;a.mag=jam(a.mag,s);a.exp+=s;}
+    if(a.kind==FINITE && width(a.mag)>TRANS_BITS) {int s=width(a.mag)-TRANS_BITS;a.mag=jam(a.mag,s);a.exp+=s;}
     return a;
 }
 static V ti(int n) { return (V){n<0 ? (Big)(0u-(unsigned)n):(Big)n,0,n<0,FINITE,0}; }
@@ -199,9 +202,9 @@ static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
     }
     Format f=formats[fi];V a=trans_unpack(in[0],fi),b=trans_unpack(in[1],fi),r=nanv(),c=ti(0);
     int flags=a.snan || ((op==ATAN2 || op==POW) && b.snan),pair=0;
-    if(op==TANH && a.kind==FINITE && a.mag && width(a.mag)+a.exp>8) {
+    if(op==TANH && a.kind==FINITE && a.mag && width(a.mag)+a.exp>6) {
         /* The finite limit is strict. Ordinary IEEE formats cannot resolve
-         * the tail at |x|>=256; PPC can, until it falls below 2^-1075. */
+         * the tail at |x|>=64; PPC can, until it falls below 2^-1075. */
         if(fi!=6)out[0]=pack((V){mask(480),-480,a.sign,FINITE,0},f,rm,&flags);
         else {
             V x=a;x.sign=0;
@@ -211,11 +214,23 @@ static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
             else {
                 ++x.exp;x.sign=1;
                 V q=texp(x),tail=td(tm(ti(2),q),ta(ti(1),q));
-                /* Here -tail.exp lies between 900 and 1800. */
+                /* The tail exponent fits the exact pair accumulator. */
                 SquareBits value=((SquareBits)1<<-tail.exp)-(SquareBits)tail.mag;
                 out[0]=ppc_round_exact(value,tail.exp,a.sign,rm,&flags);
             }
         }
+        out[1]=0;out[2]=flags|16;return;
+    }
+    /* For |x|<2^-112, tan/asin exceed |x| by O(x^3), while tanh is
+     * strictly smaller. The correction is below half the finest carrier
+     * ulp, but its sign decides every directed mode. Preserve that sign
+     * before packing instead of dividing independently jammed series. */
+    if(fi!=6 && (op==TAN || op==ASIN || op==TANH) && a.kind==FINITE && a.mag &&
+       width(a.mag)+a.exp<=-112) {
+        int shift=480-width(a.mag);
+        r=a;r.mag<<=shift;r.exp-=shift;
+        if(op==TANH)--r.mag;else ++r.mag;
+        out[0]=fi==6 ? ppc_round(r,rm,&flags):pack(r,f,rm,&flags);
         out[1]=0;out[2]=flags|16;return;
     }
     if(op==SIN || op==COS || op==TAN || op==SINCOS || op==SINCOSPI){

@@ -20886,7 +20886,7 @@
     "contract": "0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags",
     "pending_bead": "bennett-arith-wvh",
     "claim": "deterministic approximation; no global correct-rounding or ulp-bound proof",
-    "working_significand_bits": 224,
+    "working_significand_bits": 240,
     "exact_dyadic_families": [
       "pow",
       "exp2",
@@ -20907,7 +20907,7 @@
       }
     ],
     "payne_hanek_constant_bits": 17408,
-    "verification": "tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp"
+    "verification": "tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with adaptive directed MPFR brackets and exact carrier selection; unresolved PPC cases use BENNETT_ARITH_PROMISED"
   },
   "ppc_semantics": {
     "oracle": "independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations",
@@ -20947,12 +20947,12 @@
     "flags": "sticky invalid only; plain cmp_B has no fenv access"
   },
   "llvm_major": 23,
-  "bitcode_sha256": "dfe0da8e1282e520c4dde7a843f25f268a022bd854a73e8f3c5b52009fbcae09",
+  "bitcode_sha256": "5c1011620bbdcd831e78e8c9013f99f51a961eb2707c916cddd639cfc772a2aa",
   "tool_versions": {
-    "clang": "Ubuntu clang version 23.1.5 (++20261028083854+a738f2737189-1~exp1~20261028203912.92)",
-    "llvm-as": "Ubuntu LLVM version 23.1.5",
-    "llvm-link": "Ubuntu LLVM version 23.1.5",
-    "opt": "Ubuntu LLVM version 23.1.5"
+    "clang": "Ubuntu clang version 23.1.6 (++20261103094202+2875c6073a7e-1~exp1~20261103214217.95)",
+    "llvm-as": "Ubuntu LLVM version 23.1.6",
+    "llvm-link": "Ubuntu LLVM version 23.1.6",
+    "opt": "Ubuntu LLVM version 23.1.6"
   },
   "sources": {
     "scripts/build": {
@@ -20972,16 +20972,16 @@
       "git_blob_sha1": "d292a70d55cd81e270fe12791fced101fd6b84ed"
     },
     "softfloat/generate.py": {
-      "sha256": "3a80f63e440c0ca64adf2fba24c023551d75ad2a2d84e7136e230acfe84ee5e0",
-      "git_blob_sha1": "55a986338660f891916f35fcda003e2b4cbb5e48"
+      "sha256": "b8172d4cd1eb320d772e809564cd402822eb2606296abcf9f3c357f4869a8ba1",
+      "git_blob_sha1": "f2681c07245f1ada8bd7fc272cf3175abc897d3b"
     },
     "softfloat/instantiate.py": {
       "sha256": "0b406a951a090a23fc24f3d0eb8b364d5de0d988938e3cc3f49b72d164875ba0",
       "git_blob_sha1": "66f14b00b67020b01e90ca6bcbd74ebb6d8b3695"
     },
     "softfloat/named.c": {
-      "sha256": "7256883acf65d744101feff594a7d6a008afd29ac22d5e9bdefc53c54f5ea1c2",
-      "git_blob_sha1": "07d3108d7a064aa6dc86041a1c1d3f9f2fef4bbe"
+      "sha256": "faf4ee9e90e08b9aadf1fd9090bd6b16e3438b1a0cddc2915aa6f037170da3e0",
+      "git_blob_sha1": "83d597d04376347a6d93c12da59cab729f6c5e0d"
     },
     "softfloat/ppc.h": {
       "sha256": "4ff05b6bb8872889b8f405c82baa915b0eea39cfe12c6c44789c8b3a08dcd40a",
@@ -21004,16 +21004,16 @@
       "git_blob_sha1": "5455f9c79c53e755e251cf4f18cd6147a380486e"
     },
     "softfloat/test_instances.py": {
-      "sha256": "e4d904f3d822854472725a8ec9f00960d6c1e0053b2119f484b4c07700e06d7a",
-      "git_blob_sha1": "3221d50a954994e34a9ebd819ae2fcda2fae39dd"
+      "sha256": "c86e6362993dd8c70876eca6bc42ffb0ea7edd463a31c2dc5110391ab334b10d",
+      "git_blob_sha1": "b0ab7480adbcabed534d263abec2ce8800607d23"
     },
     "softfloat/test_publication.py": {
       "sha256": "96485566f7c7447ed4635240cbfdfbf700572caa0ad7fcb57ee6bc6982716823",
       "git_blob_sha1": "638ec82402da8ad274622db39fbc7334884d9915"
     },
     "softfloat/trans.h": {
-      "sha256": "f33667ddf65c8a86e2d67070a6b5880d8692977c4137e4fef15fccaebaf51a32",
-      "git_blob_sha1": "c2c1ab2adcab497d3a2dc0434b73486557c39a2d"
+      "sha256": "0165765c2a66359af07c3da14982acc8c7c7715c6610ade6bd91c6bac9c88917",
+      "git_blob_sha1": "9f0931bbc5f9dcfad50dde6fef927fdfa3c28538"
     },
     "softfloat/trans_exact.h": {
       "sha256": "402ba4ae26241af7af91a5a0278390ae8fa7d9f0e38d4caa902e77c553207118",

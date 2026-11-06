@@ -316,14 +316,14 @@ def generate(dest, widths=POWI_WIDTHS):
             manifest['staged_exports'].append(e)
     manifest['numerical_accuracy'] = dict(contract='0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
         pending_bead='bennett-arith-wvh',
-        claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=224,
+        claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=240,
         exact_dyadic_families=['pow','exp2','exp10','log2','log10','half-integer sincospi'],
         exact_dyadic_method='normalized integer significands, perfect roots/powers and one final target rounding',
         proven_paths=[dict(operation='exp_ppcf128',domain='finite |x| <= 2^-112',
             method='exact high+low midpoint comparison; quadratic/cubic log(1+h) comparison for directed sides',
             guarantee='correct canonical pair in all five modes; zero is exact, otherwise only inexact',
             test='tests/test_ppc_exp.py',bead='bennett-arith-wvh.1')],
-        payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')
+        payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with adaptive directed MPFR brackets and exact carrier selection; unresolved PPC cases use BENNETT_ARITH_PROMISED')
     manifest['ppc_semantics'] = dict(oracle='independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations', high_component_carrier_bits='0..63',
         both_majors='exact high+low conversions, full-width integer inputs, canonical-pair integral rounding, sqrt and one-rounding exact FMA',
         exact_sum_quantum='2^-1074',exact_sum_bits=2176,sqrt_comparison_bits=4352,

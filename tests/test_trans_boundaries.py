@@ -16,11 +16,9 @@ for major in map(int,sys.argv[1:] or [18,23]):
                     raw=e.encode((n+delta)*scale,f)[0];a,sa,_=e.decode(raw,f)
                     want,ws=oracle.call(op,a,sa)
                     for rm in range(5):
-                        got=edge.call(op+'_'+suffix+'_rm',raw,rm)[0];av,_,_=e.decode(got,f);expected,more=e.encode(want,f,rm,ws)
-                        if isinstance(av,str) or isinstance(want,str) or more&4:assert got==expected,(suffix,op,n,rm)
-                        else:
-                            step=max(e.log2q(abs(want)),1-f[3])-(f[1]-1)
-                            assert abs(av-want)<=4*e.power(step),(suffix,op,n,rm)
+                        expected=oracle.rounded(op,a,sa,f=f,rm=rm)
+                        got=edge.call(op+'_'+suffix+'_rm',raw,rm)[0]
+                        assert got==expected,(suffix,op,n,rm,hex(got),hex(expected))
                         edge.count+=1
         # Exact powers, including exact tiny and rounded-underflow cases, flags.
         for n in [tiny-1,tiny,emin,0,1,f[3],f[3]+1]:
