@@ -1,7 +1,7 @@
-"""Fraction oracles for 0.2.12 exact-sum conversions and integral operations.
+"""Fraction oracles for 0.2.13 exact-sum conversions and integral operations.
 
 No arithmetic implementation source is imported. Pair results here are exact
-integer decompositions; this module does not choose an ambiguous pair midpoint.
+rational selections, including the total nearest-even pair midpoint selector.
 """
 import importlib.util
 from functools import lru_cache
