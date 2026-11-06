@@ -4,7 +4,9 @@
 
 Default: `timeout 180s scripts/test`, **35 tests passed in 176.90 s wall time**,
 including regeneration after all bridge/support outputs were moved aside (test
-body 112.773 s, shared host under load). The reviewed ISA pin is
+body 112.773 s, shared host under load). A subsequent warm run passed the same
+35 tests in **97.98 s wall time** (67.007 s test body), including regeneration
+and relinking despite existing outputs. The reviewed ISA pin is
 `ecaaac060c44e317d1181345fa6b8e38c096c099`; the published dialect pin is
 `95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both were materialised
 and verified with the pinned gate tool's `verify` command against commit 5c98c3a.
@@ -56,8 +58,8 @@ timeout 180s python3 -B -m coverage run --source=adders,multipliers,qrom,softflo
 python3 -m coverage report --omit='*/test_*.py'
 ```
 
-The final coverage-instrumented default run passed all 35 tests in 42.30 s wall
-time (41.445 s test body).
+The refreshed coverage-instrumented default run passed all 35 tests in 81.65 s
+wall time (80.067 s test body), retaining 755/1642 covered production statements.
 
 The five least-covered production modules are all 0% in the default in-process
 measurement: `adders/generate.py`, `scripts/provenance.py`,
