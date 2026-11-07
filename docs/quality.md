@@ -2,9 +2,9 @@
 
 ## Default and exhaustive checks
 
-Default: `timeout 1200 scripts/test`, **37 tests passed in 39.11 s wall time**
-(31.610 s test body), with all six bridge/support outputs moved aside first,
-after re-pinning the ISA reader. A prior warm run at
+Default at 94cf09f: `timeout 1200 scripts/test`, **37 tests passed in 72.07 s
+wall time** (62.121 s test body), with all six bridge/support outputs moved
+aside first, after the reader pin and owner-binding repairs. A prior warm run at
 e11bc94 passed its 35 tests in 97.98 s (67.007 s test body); both runs
 regenerate and relink support despite existing outputs. The reviewed ISA pin is
 `3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`; the published dialect pin is
@@ -184,6 +184,26 @@ this diagnostic replay and an independent four-tuple width-one Cuccaro
 assertion, including `[1,0] -> [1,1]` with phase exactly +1. The full circuits
 suite selects unconditional raw admission and claim replay and cannot pass
 until the structural reader blocker is resolved.
+
+The canonical `timeout 1200s python3 -B -I tests/circuits/test_objects.py
+Published.test_raw_publications_admitted` reached the width-32 Karatsuba
+publications and exited 124 at 1200 s. Its 37 structural failures and six
+pre-fix owner-binding failures are retained as failed evidence. A separate
+pinned-API suffix replay attempted manifest indices 119..128 so no publication
+was left unattempted; attempted admission is not a passing replay receipt.
+All four tree multipliers and all five QROM objects in that suffix pass raw
+admission and complete claim replay. The remaining width-32 Karatsuba
+multiplier's admission check timed out at 600 s: suffix 9/10 passed, all ten
+attempted, exit 1 in 600.37 s. Together with the interrupted serial Karatsuba
+publication and modular-adder timeout below, three receipts remain incomplete.
+
+Five corrected modular publications pass admission, all 20 stored claims and
+K92 applicability. The corrected width-eight modular adder admits, but its
+four-claim replay exceeded both 180 s and then the normal 600 s per-publication
+bound. Its receipt remains incomplete. These timeouts are failures, not
+proofs, and do not justify removing a domain element, claim or publication.
+The final quality ratchet passes for all 55 source files without increasing
+any baseline. No full gate was run.
 
 ## Audit disposition
 
