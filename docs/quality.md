@@ -211,7 +211,7 @@ one incomplete, exit 1 in **902.81 s**. Comparing both result arrays with the
 manifest confirms every one of the **129 entries attempted exactly once**,
 **126 complete receipts covering 215 claims**, and exactly the three
 incomplete receipts below. All 37 universal structural claims are proof;
-there are no rejected or Unverified claims at this pin. This is not a green
+no rejected or Unverified verdict was reported at this pin. This is not a green
 full-manifest receipt. The original K91/K94 rejection regressions
 (`bennett-arith-emu`, `bennett-arith-4ss`) are resolved; the incomplete
 performance receipts remain open in `bennett-arith-jn3`.
