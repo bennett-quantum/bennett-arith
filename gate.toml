@@ -21,8 +21,8 @@ name = "circuits"
 argv = ["tests/circuits/run"]
 
 [siblings."bennett-isa-spec"]
-sha = "3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1"
-note = "ISA main as gated by the 2026-11-02 push wave"
+sha = "62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc"
+note = "ISA 0.9 K94 adjoint_table side conditions and reference checks; local main, gated push pending"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"
