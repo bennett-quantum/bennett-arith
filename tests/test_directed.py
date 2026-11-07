@@ -3,22 +3,46 @@ import importlib.util
 from pathlib import Path
 import sys
 import os
+from itertools import product
 
 ROOT=Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location("trans",ROOT/"tests/test_trans.py")
 t=importlib.util.module_from_spec(s);s.loader.exec_module(t)
 e=t.e
 
+def tiny_ppc(edge, oracle, quick):
+    """MPFR brackets resolve corrections below the binary64 low quantum.
+
+    2^-359 through 2^-1074 covers the entire power-of-two underflow band
+    for every cubic correction, including both sides of the normal boundary.
+    """
+    exponents = (700,359,360,538,1022,1073,1074) if quick else range(359,1075)
+    for k, sign, op, rm in product(exponents, (-1,1),
+                                  ("sin","sinh","tan","atan","asin","tanh"), range(5)):
+        value = sign * e.power(-k)
+        expected = oracle.rounded(op, value, int(sign<0), rm=rm)
+        raw = oracle.pairs.to_pair(value)[0]
+        rounded = oracle.pairs.decode(expected)[0]
+        flags = 16 | (8 if abs(rounded)<e.power(-1022) else 0)
+        edge.check(op+"_ppcf128_rm", [raw,rm], expected, flags)
+    for sign, rm in product((-1,1), range(5)):
+        value = sign * e.power(-700)
+        expected = oracle.rounded("exp", value, int(sign<0), rm=rm)
+        edge.check("exp_ppcf128_rm", [oracle.pairs.to_pair(value)[0],rm], expected, 16)
+    assert not oracle.inconclusive
+    print(f"sparse PPC tiny family: {edge.count} checks passed", flush=True)
+
+
 def run(major, quick=False):
     edge=e.Edge(major);oracle=t.Oracle()
+    tiny_ppc(edge,oracle,quick)
     formats=list(e.FORMATS.items())
     if os.environ.get("BENNETT_ARITH_PROMISED"):
         formats.append(("ppcf128",None))
     else:
         print("PPC exact sweep: BENNETT_ARITH_PROMISED=1 (bennett-arith-wvh)",flush=True)
     for suffix,f in formats:
-        def enc(v):
-            return oracle.pairs.to_pair(v)[0] if f is None else e.encode(v,f)[0]
+        enc=lambda v: oracle.pairs.to_pair(v)[0] if f is None else e.encode(v,f)[0]
         if f is None:
             oracle.rounded("exp",e.Q(0),0)
         tiny=-1074 if f is None else 1-f[3]-(f[1]-1)
@@ -30,12 +54,11 @@ def run(major, quick=False):
             raw=enc(v)
             a,sa=(oracle.pairs.decode(raw)[:2] if f is None else e.decode(raw,f)[:2])
             if isinstance(a,str):continue
-            for op in t.ops:
+            for op, rm in product(t.ops, range(5)):
                 b=e.Q(3,2) if op=="pow" else e.Q(-3,4)
                 args=[raw,enc(b)] if op in ("pow","atan2") else [raw]
-                for rm in range(5):
-                    expected=oracle.rounded(op,a,sa,b,f=f,rm=rm)
-                    edge.check(op+"_"+suffix+"_rm",[*args,rm],expected)
+                expected=oracle.rounded(op,a,sa,b,f=f,rm=rm)
+                edge.check(op+"_"+suffix+"_rm",[*args,rm],expected)
             for pair, components in (("sincos",("sin","cos")),
                                      ("sincospi",("sinpi","cospi"))):
                 for rm in range(5):

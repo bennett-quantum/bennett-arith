@@ -5,7 +5,7 @@
 #include "constants.h"
 /* Two 113-bit input significands plus guard bits for near-one powers;
  * twice this precision still fits the 512-bit product accumulator. */
-enum { TRANS_BITS = 240 };
+enum { TRANS_BITS = 240, PPC_TINY_SUM_BIT = 715, PPC_TINY_EXP = -1076 };
 static V tn(V a) {
     if(a.kind==FINITE && width(a.mag)>TRANS_BITS) {int s=width(a.mag)-TRANS_BITS;a.mag=jam(a.mag,s);a.exp+=s;}
     return a;
@@ -187,6 +187,16 @@ typedef struct {
     int flags, pair;
 } TransState;
 
+/* For 0<|x|<=2^-359 all these cubic corrections have magnitude <2^-1076.
+ * Their strict signs settle directed rounding even below the low quantum.
+ * Dialect 13.4 requires neighbours in the exact canonical-pair ordering. */
+static const int trans_odd_correction[SINCOSPI+1]={
+    [SIN]=-1, [SINH]=1, [TAN]=1, [ATAN]=-1, [ASIN]=1, [TANH]=-1
+};
+static const unsigned char trans_exact_math_ops[SINCOSPI+1]={
+    [POW]=1, [EXP2]=1, [EXP10]=1, [LOG2]=1, [LOG10]=1
+};
+static const unsigned char trans_binary_ops[SINCOSPI+1]={[ATAN2]=1, [POW]=1};
 static TransState trans_domain(int fi,int op,const U *in) {
     TransState s={.path=TRANS_CORE,.pair=op==SINCOS || op==SINCOSPI};
     if(op==SINCOSPI) {
@@ -196,7 +206,7 @@ static TransState trans_domain(int fi,int op,const U *in) {
             return s;
         }
     }
-    if(op==POW || op==EXP2 || op==EXP10 || op==LOG2 || op==LOG10) {
+    if(trans_exact_math_ops[op]) {
         ExactReal a=trans_input(in[0],fi),b=trans_input(in[1],fi);
         if(trans_exact_math(op,a,b,&s.exact[0])) {
             s.path=TRANS_EXACT;
@@ -214,19 +224,20 @@ static TransState trans_domain(int fi,int op,const U *in) {
     s.a=trans_unpack(in[0],fi);
     s.b=trans_unpack(in[1],fi);
     s.r=nanv();s.c=ti(0);
-    s.flags=s.a.snan || ((op==ATAN2 || op==POW) && s.b.snan);
+    s.flags=s.a.snan || (trans_binary_ops[op] && s.b.snan);
     if(op==TANH && s.a.kind==FINITE && s.a.mag && width(s.a.mag)+s.a.exp>6) {
         s.path=TRANS_TANH_LIMIT;
         return s;
     }
-    /* Below 2^-112 the cubic correction is less than half an IEEE
-     * carrier ulp, while its strict sign still selects directed neighbours.
-     * PPC sparse residuals require their own full-precision treatment. */
-    if(fi!=6 && (op==TAN || op==ASIN || op==TANH) &&
-       s.a.kind==FINITE && s.a.mag && width(s.a.mag)+s.a.exp<=-112) {
+    int correction=trans_odd_correction[op];
+    if(fi==6) {
+        s.sum=sum_read(in[0]);
+        if(correction && s.sum.kind==FINITE && s.sum.mag &&
+           s.sum.mag<=((SumBits)1<<PPC_TINY_SUM_BIT))s.path=TRANS_LINEAR;
+    } else if(correction && s.a.kind==FINITE && s.a.mag &&
+              width(s.a.mag)+s.a.exp<=-112) {
         int shift=480-width(s.a.mag);
-        s.r=s.a;s.r.mag<<=shift;s.r.exp-=shift;
-        if(op==TANH)--s.r.mag;else ++s.r.mag;
+        s.r=s.a;s.r.mag=(s.r.mag<<shift)+correction;s.r.exp-=shift;
         s.path=TRANS_LINEAR;
     }
     return s;
@@ -339,11 +350,23 @@ static void trans_pack(U *out,int fi,int op,int rm,TransState s) {
         out[0]=trans_tanh_limit(s.a,fi,rm,&s.flags);
         out[1]=0;out[2]=s.flags|16;
         return;
-    case TRANS_CORE: case TRANS_LINEAR:
+    case TRANS_LINEAR:
+        if(fi==6) {
+            /* Exact input sums and all canonical midpoints are on the 2^-1075
+             * grid. A signed quarter-quantum perturbation selects precisely
+             * the same neighbours as the smaller, nonzero analytic residual,
+             * including when a noncanonical input lies on a midpoint. */
+            SquareBits mag=(SquareBits)s.sum.mag<<2;
+            mag=trans_odd_correction[op]>0 ? mag+1:mag-1;
+            out[0]=ppc_round_exact(mag,PPC_TINY_EXP,s.sum.sign,rm,&s.flags);
+            out[1]=0;out[2]=s.flags;
+            return;
+        }
         break;
+    case TRANS_CORE: break;
     }
     V a=s.a,b=s.b,r=s.r,c=s.c;
-    if(r.kind==NANV && a.kind!=NANV && ((op!=POW && op!=ATAN2) || b.kind!=NANV))s.flags|=1;
+    if(r.kind==NANV && a.kind!=NANV && (!trans_binary_ops[op] || b.kind!=NANV))s.flags|=1;
     if((op==LOG || op==LOG2 || op==LOG10) && a.kind==FINITE && !a.mag)s.flags|=2;
     if(op==POW && a.kind==FINITE && !a.mag && b.sign && (b.mag || b.kind==INF))s.flags|=2;
     int exact=trans_is_exact(op,a,b,r);
