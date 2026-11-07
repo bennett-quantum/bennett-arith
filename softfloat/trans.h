@@ -5,7 +5,7 @@
 #include "constants.h"
 /* Two 113-bit input significands plus guard bits for near-one powers;
  * twice this precision still fits the 512-bit product accumulator. */
-enum { TRANS_BITS = 240, PPC_TINY_SUM_BIT = 715, PPC_TINY_EXP = -1076 };
+enum { TRANS_BITS = 240, PPC_TINY_SUM_BIT = 716, PPC_TINY_EXP = -1076 };
 static V tn(V a) {
     if(a.kind==FINITE && width(a.mag)>TRANS_BITS) {int s=width(a.mag)-TRANS_BITS;a.mag=jam(a.mag,s);a.exp+=s;}
     return a;
@@ -187,7 +187,7 @@ typedef struct {
     int flags, pair;
 } TransState;
 
-/* For 0<|x|<=2^-359 all these cubic corrections have magnitude <2^-1076.
+/* For 0<|x|<=2^-358 all these cubic corrections have magnitude <2^-1075.
  * Their strict signs settle directed rounding even below the low quantum.
  * Dialect 13.4 requires neighbours in the exact canonical-pair ordering. */
 static const int trans_odd_correction[SINCOSPI+1]={
@@ -354,7 +354,7 @@ static void trans_pack(U *out,int fi,int op,int rm,TransState s) {
         if(fi==6) {
             /* Exact input sums and all canonical midpoints are on the 2^-1075
              * grid. A signed quarter-quantum perturbation selects precisely
-             * the same neighbours as the smaller, nonzero analytic residual,
+             * the same neighbours as the nonzero analytic residual (<2^-1075),
              * including when a noncanonical input lies on a midpoint. */
             SquareBits mag=(SquareBits)s.sum.mag<<2;
             mag=trans_odd_correction[op]>0 ? mag+1:mag-1;

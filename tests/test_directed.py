@@ -13,10 +13,10 @@ e=t.e
 def tiny_ppc(edge, oracle, quick):
     """MPFR brackets resolve corrections below the binary64 low quantum.
 
-    2^-359 through 2^-1074 covers the entire power-of-two underflow band
+    2^-358 through 2^-1074 covers the entire power-of-two underflow band
     for every cubic correction, including both sides of the normal boundary.
     """
-    exponents = (700,359,360,538,1022,1073,1074) if quick else range(359,1075)
+    exponents = (700,358,359,360,538,1022,1073,1074) if quick else range(358,1075)
     for k, sign, op, rm in product(exponents, (-1,1),
                                   ("sin","sinh","tan","atan","asin","tanh"), range(5)):
         value = sign * e.power(-k)
@@ -68,5 +68,8 @@ def run(major, quick=False):
     assert not oracle.inconclusive
 
 if __name__=="__main__":
-    for major in map(int,[a for a in sys.argv[1:] if a!="--quick"] or [18,23]):
-        run(major,"--quick" in sys.argv)
+    for major in map(int,[a for a in sys.argv[1:] if a not in ("--quick","--tiny-only")] or [18,23]):
+        if "--tiny-only" in sys.argv:
+            tiny_ppc(e.Edge(major),t.Oracle(),"--quick" in sys.argv)
+        else:
+            run(major,"--quick" in sys.argv)

@@ -2,11 +2,11 @@
 
 ## Default and exhaustive checks
 
-Default: `timeout 180s scripts/test`, **35 tests passed in 176.90 s wall time**,
-including regeneration after all bridge/support outputs were moved aside (test
-body 112.773 s, shared host under load). A subsequent warm run passed the same
-35 tests in **97.98 s wall time** (67.007 s test body), including regeneration
-and relinking despite existing outputs. The reviewed ISA pin is
+Default: `timeout 1200 scripts/test`, **37 tests passed in 45.18 s wall time**
+(38.028 s test body), with all six bridge/support outputs moved aside first,
+after the sparse-PPC and compatibility-replay repairs. A prior warm run at
+e11bc94 passed its 35 tests in 97.98 s (67.007 s test body); both runs
+regenerate and relink support despite existing outputs. The reviewed ISA pin is
 `ecaaac060c44e317d1181345fa6b8e38c096c099`; the published dialect pin is
 `95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both were materialised
 and verified with the pinned gate tool's `verify` command against commit 5c98c3a.
@@ -43,7 +43,7 @@ generated test outputs was found on these paths.
 
 ## Measured coverage
 
-Python production statement coverage: **45.98%**
+Python production statement coverage at e11bc94: **45.98%**
 (755/1642 statements). This measures Python
 production sources; the integer C core is exercised by black-box numerical tests,
 not included in this Python percentage. It is a measurement, not a gate threshold.
@@ -85,16 +85,77 @@ stay outside the bounded default measurement.
   zero-low parity: 12 hand-derived value/flag checks and 25491 exact-sum checks
   passed on each major after migration to dialect 0.2.13.
 * `BENNETT_ARITH_PROMISED=1` exposes exact sparse-PPC libm failures
-  (`bennett-arith-wvh`) and raw modular release validation
-  (`bennett-arith-gdg`, `bennett-arith-vwi`). They remain red, with no restored
-  tolerances. The pinned interpreter lacks K4 inverse-pair schema admission and K91 metadata;
-  the final raw-byte check fails first on `unknown field token_aliases`.
+  (`bennett-arith-wvh`). The mandatory circuits suite separately checks raw
+  release admission for **every** manifest entry and replays every certificate
+  claim/table through the pinned reader API, without an opt-in switch. These
+  raw checks remain red at ecaaac0, failing first on `unknown field token_aliases`
+  (`bennett-arith-emu`, also inherited `bennett-arith-gdg`/`bennett-arith-vwi`).
 * K91 certificate partitions have unit tests against published ISA 0.9 text.
-  No reviewed interpreter commit supporting them was available: the differential
-  stays at ecaaac0, using an explicitly labelled diagnostic compatibility view.
+  The supporting reviewed reader revision is
+  `704d21d7c59ec432b5d2498cfcd287c68541a156` (reviewed code head
+  `5b7120852f17e56063462d50f01fcf1da708ed1f`, ISA review
+  `docs/reviews/2026-11-07-isaspec-main-r2.md`). The orchestrator must move the
+  `gate.toml` pin from ecaaac0 and rerun raw admission/replay. Until that move,
+  the executable differential uses an explicitly labelled diagnostic view
+  derived from the stored publication bytes.
   It cannot establish raw release compatibility (`bennett-arith-4ss`).
 * Parity implementation is complete; `bennett-arith-4yg.1` remains open because
   its inherited release dependency on gdg prevents closure. No dependency override.
+
+## Sparse PPC and publication admission repair
+
+Dialect 0.2.13 §13.4 requires directed neighbours in the ordered canonical-pair
+set. At `x=2^-700`, `sin(x)` lies strictly between `(x,-2^-1074)` and `(x,+0)`.
+Its cubic correction is below their midpoint, so nearest/upward/nearest-away
+select `(x,+0)` and downward/towardzero select `(x,-2^-1074)`, with inexact.
+The 015b424 publication returned low `-2^-940` in all five modes; the new
+MPFR-bracket regression was run against that exact publication and failed.
+
+For `0<|x|<=2^-358`, the six odd functions sin/sinh/tan/atan/asin/tanh have
+strict cubic corrections smaller than `2^-1075`. Exact pair sums and canonical
+midpoints lie on the `2^-1075` grid. Rounding the exact sum perturbed by the
+correction's sign at `2^-1076` therefore selects the same neighbour as the
+analytic result, including noncanonical input sums. Existing exact packing
+sets inexact and tininess-after-rounding flags. The IEEE small-argument path
+now uses the same six-operation sign table. Both publications were rebuilt
+with `timeout 600s scripts/build 18` and `timeout 600s scripts/build 23`.
+
+`tests/test_directed.py` includes a default eight-exponent family (both signs,
+all five modes, all six operations) and the sparse exp witness, independently
+rounded from MPFR bounds. Its full form enumerates every exponent 358..1074:
+**43,030 exact value/flag checks passed on each LLVM major**, using
+`timeout 1200s python3 -B -I tests/test_directed.py 18 23 --tiny-only`.
+The `2^-358` endpoint was separately observed RED after the initial
+conservative cutoff, before extending that cutoff. Quick directed
+runs `timeout 240s python3 -B -I tests/test_directed.py 18 --quick` and the
+corresponding `23 --quick` passed **12,460 checks each**. No tolerance or
+baseline changed.
+
+ISA 0.9 K91 at be109bd §12.3 explicitly requires canonical `token_aliases` and
+states that closed-schema readers require its upgrade. Publications retain
+this required metadata. The unconditional
+`Published.test_raw_publications_admitted` checks all 129 unmodified files and
+then uses the pinned reader's public `Object::verify_certificate` API to
+replay every stored claim, accepting only proof or sampled evidence reports.
+A nonempty report set and exact claim count prevent vacuous success. The
+bridge links only to the library built beside the gate-pinned reader binary.
+It does not substitute the local ISA working tree or generator output. The
+CLI `check` only validates admission and identities; the Rust verifier is
+required because the documented public API performs full certificate replay,
+including borrowed-wire domains that CLI `run-action` cannot initialise.
+
+At the current ecaaac0 pin,
+`timeout 240s python3 -B -I tests/circuits/test_objects.py Published.test_raw_publications_admitted`
+is **RED: all 129 publications reject `token_aliases` before replay**. This is
+an open dependency, not release compatibility evidence. Separately, the
+compatibility table replay was RED on its first raw object before the fix,
+then GREEN after converting the stored bytes to the explicitly labelled
+pre-K91 diagnostic view. Five focused publication/compatibility tests passed
+in 32.795 s. The final cold default run passed 37 tests in 45.18 s (38.028 s test body).
+The bounded default suite now includes this replay and an
+independent four-tuple width-one Cuccaro assertion, including `[1,0] -> [1,1]`
+with phase exactly +1. The full circuits suite selects the unconditional raw
+check and will fail loudly until the orchestrator updates the pin.
 
 ## Audit disposition
 
