@@ -13,7 +13,9 @@ outputs. The ISA reader pin is
 `verify --repo MAIN --sha cf4af47` materialised both and built the ISA reader
 in 10.97 s under a 6 GiB systemd scope, with 24.19 GiB available and load1
 3.37. At adoption the ISA gated push was pending (`pushed=False`); the dialect
-was pushed. Publication metadata still identifies its governing base text
+was pushed. Final verification against head 2cd29d7 confirms both pins
+`pushed=True`; the ISA gated push completed during these checks.
+Publication metadata still identifies its governing base text
 and K91 extension separately; the gate pin selects the reader used to check it.
 The cold bridge build does not regenerate or mutate the published bitcode.
 Every default invocation regenerates ABI support files and constants, then

@@ -22,7 +22,7 @@ argv = ["tests/circuits/run"]
 
 [siblings."bennett-isa-spec"]
 sha = "62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc"
-note = "ISA 0.9 K94 adjoint_table side conditions and reference checks; local main, gated push pending"
+note = "ISA 0.9 K94 adjoint_table side conditions and reference checks; pushed main"
 
 [[siblings."bennett-isa-spec".build]]
 name = "reference interpreter (debug)"
