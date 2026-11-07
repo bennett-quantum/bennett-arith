@@ -206,6 +206,15 @@ and public pinned-reader verifier for every manifest entry, preserving the
 600 s bounds for admission and replay. The suffix at indices 118..128
 attempted all eleven publications: nine complete (all four tree multipliers
 and five QROM objects), two incomplete, exit 1 in **753.33 s** wall time.
+The prefix at indices 0..117 attempted all 118 publications: 117 complete,
+one incomplete, exit 1 in **902.81 s**. Comparing both result arrays with the
+manifest confirms every one of the **129 entries attempted exactly once**,
+**126 complete receipts covering 215 claims**, and exactly the three
+incomplete receipts below. All 37 universal structural claims are proof;
+there are no rejected or Unverified claims at this pin. This is not a green
+full-manifest receipt. The original K91/K94 rejection regressions
+(`bennett-arith-emu`, `bennett-arith-4ss`) are resolved; the incomplete
+performance receipts remain open in `bennett-arith-jn3`.
 
 The three previously incomplete receipts remain explicit P2 work in
 `bennett-arith-jn3`:
