@@ -188,7 +188,9 @@ class Published(unittest.TestCase):
                         "--extern", f"bennett_isa_ref={libraries[0]}", "-L", f"dependency={deps}",
                         "-o", str(verifier)], check=True, timeout=BRIDGE_HANG_GUARD_S)
         except subprocess.TimeoutExpired as error:
-            RAW_RECEIPTS.update((entry["file"], Receipt(ReceiptState.UNKNOWN, str(error), 0, 0.0))
+            message = f"UNKNOWN: certificate bridge compilation hang guard {error.timeout:.2f}s expired"
+            print(message, flush=True)
+            RAW_RECEIPTS.update((entry["file"], Receipt(ReceiptState.UNKNOWN, message, 0, 0.0))
                                 for entry in MANIFEST["entries"])
             return
         for entry in MANIFEST["entries"]:
