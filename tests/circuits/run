@@ -12,4 +12,4 @@ cd "$here"
 for t in test_pins test_adders test_multipliers test_qrom test_objects; do
   python3 -I "$t.py"
 done
-echo 'circuits: adders, multipliers, QROM and published certificates passed'
+echo 'circuits: checks finished; raw receipt summary distinguishes COMPLETE, UNKNOWN and FAILED'

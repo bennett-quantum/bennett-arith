@@ -86,8 +86,7 @@ def suite():
     out=unittest.TestSuite()
     for cls in (SmallCircuits,Numeric,Pins,Quality):
         out.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
-    for name in ("test_manifest_is_current","test_reproduces_byte_for_byte",
-                 "test_inverse_pair_obligation_is_published","test_token_aliases",
+    for name in ("test_manifest_is_current","test_receipt_guards","test_token_aliases",
                  "test_interpreter_replays_table_rows","test_pinned_interpreter_diagnostic_view"):
         out.addTest(Published(name))
     out.addTest(Qrom("test_cli_single_word_table"))

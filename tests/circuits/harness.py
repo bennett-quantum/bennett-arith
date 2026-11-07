@@ -21,6 +21,11 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTOR_ABOVE = 1 << 17  # Specs run per lane up to here, as numpy expressions above it.
+# Longest completed ordinary-publication receipt: 504.60 s including admission
+# and replay, this 12-core/30-GB host, 2026-11-07. Each stage is shorter than
+# the whole receipt; absolute time is only an order-of-magnitude hang guard.
+HANG_GUARD_FACTOR = 10
+DEFAULT_STAGE_HANG_GUARD_S = HANG_GUARD_FACTOR * 504.60
 sys.path.insert(0, str(ROOT / "scripts"))
 from pinned_sibling import resolve_sibling  # noqa: E402
 
@@ -270,13 +275,13 @@ class RefInterp:
     def __init__(self):
         self.binary = str(ref_binary())
 
-    def _run(self, *args):
+    def _run(self, *args, timeout=DEFAULT_STAGE_HANG_GUARD_S):
         env = {k: v for k, v in os.environ.items() if k not in
                {"DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "BROWSER"}}
-        return subprocess.run([self.binary, *map(str, args)], capture_output=True, text=True, env=env, timeout=600)
+        return subprocess.run([self.binary, *map(str, args)], capture_output=True, text=True, env=env, timeout=timeout)
 
-    def check(self, path):
-        done = self._run("check", path)
+    def check(self, path, *, timeout=DEFAULT_STAGE_HANG_GUARD_S):
+        done = self._run("check", path, timeout=timeout)
         if done.returncode:
             raise AssertionError(f"{path}: {done.stderr.strip()}")
         return json.loads(done.stdout)
