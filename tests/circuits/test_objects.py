@@ -4,14 +4,13 @@ from collections import Counter
 from contextlib import redirect_stdout
 from enum import Enum
 from io import StringIO
-from itertools import chain
 import json
 import os
 import subprocess
 import sys
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from typing import NamedTuple
 from pathlib import Path
 
@@ -96,10 +95,12 @@ def xoshiro(seed):
 class Published(unittest.TestCase):
     def test_token_aliases(self):
         from adders import constructions as c
-        examples = ((c.cuccaro(2).text(), []), (c.mulmod_const(4, 5, 11).text(), [0]))
-        published = ((ROOT / entry["file"]).read_text() for entry in MANIFEST["entries"])
+        fixtures = [(c.cuccaro(2).text(), [], None), (c.mulmod_const(4, 5, 11).text(), [0], None)]
+        for entry in MANIFEST["entries"]:
+            text = (ROOT / entry["file"]).read_text()
+            fixtures.append((text, [0] if "qinplace" in text else [], entry["file"]))
         checked = 0
-        for text, aliases in chain(examples, ((text, [0] if "qinplace" in text else []) for text in published)):
+        for text, aliases, publication in fixtures:
             cert = certificate(text)
             self.assertEqual(cert["bindings"]["invocation"]["token_aliases"], aliases)
             for closure, region in cert["regions"].items():
@@ -112,8 +113,8 @@ class Published(unittest.TestCase):
                     self.assertEqual(region["claims"][entry["claim"]]["subject"]["closure_hash"], closure)
                     self.assertEqual(region["claims"][entry["claim"]]["expected"], "inverse_pair")
                     self.assertLessEqual(set(map(type, entry["budget"])), {int})
-                    checked += 1
-        self.assertGreater(checked, 0)
+                    checked += publication is not None
+        self.assertGreater(checked, 0, "published inverse-pair obligations must be nonempty")
 
     def test_receipt_guards(self):
         with redirect_stdout(StringIO()):
@@ -133,13 +134,13 @@ class Published(unittest.TestCase):
             with patch.object(REF, "check", return_value=admitted), patch.object(subprocess, "run") as replay:
                 receipt = self._verify_publication(verifier, entry)
             self.assertEqual((receipt.state, receipt.claims), (ReceiptState.COMPLETE, 1))
-            replay.assert_called_once()
-            self.assertTrue(replay.call_args.kwargs["check"])
+            replay.assert_called_once_with([str(verifier), str(ROOT / entry["file"]), "1"], check=True, timeout=ANY)
             for verdict in ("Rejected", "Unverified"):
                 with patch.object(REF, "check", return_value=admitted), patch.object(subprocess, "run",
-                        side_effect=subprocess.CalledProcessError(1, "verifier", stderr=verdict)):
-                    with self.assertRaises(subprocess.CalledProcessError):
-                        self._verify_publication(verifier, entry)
+                        side_effect=subprocess.CalledProcessError(1, "verifier", stderr=verdict)), self.assertRaises(subprocess.CalledProcessError):
+                    self._verify_publication(verifier, entry)
+            with patch.dict(MANIFEST, {"entries": []}), self.assertRaises(AssertionError):
+                self.test_token_aliases()
 
     def test_manifest_is_current(self):
         done = subprocess.run([sys.executable, "-I", str(ROOT / "adders/generate.py"), "check"],
