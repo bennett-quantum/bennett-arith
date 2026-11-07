@@ -236,6 +236,25 @@ The P2 follow-up proposes an optimized build of the identical pinned reader,
 per-publication API replay at the same bounds, profiling quadratic admission,
 and avoiding duplicate CLI/API parsing when identities can be checked from
 the same parsed object. This cheaper route has not been verified here.
+
+Follow-up measurement on the same 12-core/30-GB host, 2026-11-07, runs each
+previously incomplete stage serially with `/usr/bin/time -v`, a 5400 s outer
+guard and a 6 GiB systemd scope. Each starts only with `free -g` available
+memory at least 6 GB, load1 below 8 and no other `bennett-heavy` scope.
+The addmod w8 full four-claim replay completed in **868.48 s**, peak RSS
+**21,960 KB**, exit 0: both sampled claims Evidence, both exhaustive
+inverse-pair claims Proof, and K92 applicability Established. Its preflight
+had 23 GB available and load1 1.23. The two large admission measurements and
+their complete claim receipts remain pending. The original full-manifest
+receipt above remains incomplete.
+
+R40 replaces absolute timing assertions with deterministic work assertions
+and hang guards at least ten times the measured covered stage. A hang
+guard must report a counted, listed **UNKNOWN** receipt, never a proof or a
+refutation. Completed rejected, refuted or Unverified claims remain errors.
+The deterministic guard regression is red against the existing `self.fail`
+timeout path; completed invalid object identities and verifier failures
+continue to fail. No stage limit has been changed before these measurements.
 The final quality ratchet passes for all 55 source files without increasing
 any baseline. No full gate was run.
 
