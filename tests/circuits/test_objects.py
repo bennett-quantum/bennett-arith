@@ -212,6 +212,7 @@ class Published(unittest.TestCase):
             if entry["root"] == "arith.add.cuccaro.w1":
                 self.assertEqual(got["symbols"][entry["root"]]["interface_hash"],
                                  "0e350e9c21db62e93d801271076c0f77424fb2ca4f0986a856a8312102036dae")
+            admission_end = time.monotonic()
             stage = "certificate replay"
             claims = sum(len(r["claims"]) for r in certificate(path.read_text())["regions"].values())
             subprocess.run([str(verifier), str(path), str(claims)], check=True, timeout=guard)
@@ -220,7 +221,8 @@ class Published(unittest.TestCase):
                        f"{time.monotonic() - started:.2f}s wall; no complete receipt")
             print(message, flush=True)
             return Receipt(ReceiptState.UNKNOWN, message, 0, time.monotonic() - started)
-        print(f"COMPLETE receipt: {entry['file']}: {claims} accepted claims; {time.monotonic() - started:.2f}s wall", flush=True)
+        print(f"COMPLETE receipt: {entry['file']}: {claims} accepted claims; {time.monotonic() - started:.2f}s wall; "
+              f"admission {admission_end - started:.2f}s; replay {time.monotonic() - admission_end:.2f}s", flush=True)
         return Receipt(ReceiptState.COMPLETE, entry["file"], claims, time.monotonic() - started)
 
     def test_certificates_tell_the_truth(self):
