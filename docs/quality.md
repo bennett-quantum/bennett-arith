@@ -2,15 +2,18 @@
 
 ## Default and exhaustive checks
 
-Default at 94cf09f: `timeout 1200 scripts/test`, **37 tests passed in 72.07 s
-wall time** (62.121 s test body), with all six bridge/support outputs moved
-aside first, after the reader pin and owner-binding repairs. A prior warm run at
-e11bc94 passed its 35 tests in 97.98 s (67.007 s test body); both runs
-regenerate and relink support despite existing outputs. The reviewed ISA pin is
-`3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`; the published dialect pin is
-`95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both were materialised
-and confirmed pushed with the pinned gate tool's `verify` command against
-commit 6dd2531. Publication metadata still identifies its governing base text
+Default at 7089922: `timeout 1200s systemd-run --user --scope -p MemoryMax=6G
+scripts/test`, **37 tests passed in 67.91 s wall time** (51.470 s test body).
+The build started with 23.72 GiB available and load1 5.71. The earlier cold
+run at 94cf09f passed 37 tests in 72.07 s after all six bridge/support outputs
+were moved aside. Both runs regenerate and relink support despite existing
+outputs. The ISA reader pin is
+`62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc` (ISA 0.9 K94); the dialect pin is
+`95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). The pinned gate tool's
+`verify --repo MAIN --sha cf4af47` materialised both and built the ISA reader
+in 10.97 s under a 6 GiB systemd scope, with 24.19 GiB available and load1
+3.37. At adoption the ISA gated push was pending (`pushed=False`); the dialect
+was pushed. Publication metadata still identifies its governing base text
 and K91 extension separately; the gate pin selects the reader used to check it.
 The cold bridge build does not regenerate or mutate the published bitcode.
 Every default invocation regenerates ABI support files and constants, then
@@ -93,13 +96,12 @@ stay outside the bounded default measurement.
   checks reject unverified structural claims as well as malformed objects
   (`bennett-arith-emu`, also inherited `bennett-arith-gdg`/`bennett-arith-vwi`).
 * K91 certificate partitions have unit tests against published ISA 0.9 text.
-  The reader at the gate's new `3b1090790d82` pin admits `token_aliases`.
-  Complete raw replay remains blocked: all 37 `adjoint_table` claims return
-  `Unverified`, rather than the proof required by their published labels.
-  ISA 0.9 §12.1 requires checking structural side conditions syntactically
-  against the object and subclaims; §5.3 gives the instruction adjoint table.
-  Arith retains these universal claims and requires a supporting reader
-  revision (`bennett-arith-emu`, `bennett-arith-4ss`). Diagnostic execution
+  The reader at `62a0cf0ef9f1` admits `token_aliases` and establishes all
+  **37 universal `adjoint_table` claims as proof** under §12.1 K94. The
+  previous `3b1090790d82` reader returned `Unverified` because the syntactic
+  premises were unspecified. No certificate bytes, claims, aliases or domains
+  changed for this second re-pin. Three large-publication receipts remain
+  explicitly incomplete (`bennett-arith-jn3`, P2); diagnostic execution
   coverage remains separate from raw certificate proof evidence.
 * Parity implementation is complete; `bennett-arith-4yg.1` remains open because
   its inherited release dependency on gdg prevents closure. No dependency override.
@@ -161,47 +163,68 @@ The new public API returns `CertificateReport`; the bridge now reads its
 and rejects every unestablished K92 applicability obligation. The old bridge
 failed compilation against this pin before that adaptation.
 
-Raw verification exposes two further issues. Six modular objects bound their
+Raw verification exposed two further issues. Six modular objects bound their
 K4 inverse-pair subjects to `g` instead of the owning action. ISA 0.9 §12.3
 K92 requires owner-local entries and claim indices. An added owner-subject
 regression failed before fixing that binding, then passed. No body, closure
 identity, token partition or inverse-pair domain changed.
 
-The other blocker requires ISA reader work outside this repository's owned
-paths: all 37 universal `adjoint_table` structural claims return
-`Unverified("the adjoint_table rule's side conditions are not specified beyond its subclaims")`.
-First witness: `adders/objects/arith.bij.add.w1.bisa`, region
-`arith.bij.sub.w1`, claim 1. ISA 0.9 §12.1's structural row requires syntactic
-side-condition checking; §5.3 gives the adjoint table, and §16.3 example 3
-explicitly assigns its reversed frame to this rule. These claims remain
-published and the mandatory test remains red. No unverified verdict is
-accepted as proof and no sampled replacement narrows their universal scope.
+Pin commit cf4af47 adopts ISA 0.9 K94 at `62a0cf0ef9f1`, which specifies the
+adjoint theorem's decidable premises and implements their checks. A focused
+raw-byte replay of manifest indices 41..77 completed all **111 claims**, with
+all **37 structural claims Established (proof)**, in 26.87 s wall time.
+This includes `arith.bij.sub.w1` claim 1, the original unchecked witness.
+The invocation remains universal over arguments, budgets and K91 partitions;
+no claim or domain was reduced and no publication regenerated.
+
+The replay bridge prints each established claim and a final complete receipt.
+It distinguishes failing `Unverified` outcomes from `Rejected` false or
+malformed claims, and refuses image-relative or sampled structural proofs.
+Using the old pinned public API reproduces the unchecked witness: the former
+diagnostic failed a distinct-`Unverified:` check, then the updated bridge
+passed it while retaining a nonzero result. A deliberately mutated Cuccaro
+table claiming `0+0=1` rejects at §12.1 K13 full-tuple mismatch, distinctly
+from Unverified. Timeout diagnostics print `INCOMPLETE`, the publication,
+admission/replay stage, bound and measured wall time, then fail the test.
 
 Separately, `timeout 240s python3 -B -I tests/circuits/test_objects.py
-Published.test_interpreter_replays_table_rows` passed at the new reader pin
-in 4.46 s wall time (4.351 s test body). The bounded default suite includes
+Published.test_interpreter_replays_table_rows Published.test_token_aliases
+Published.test_manifest_is_current Published.test_reproduces_byte_for_byte`
+passed four tests at the K94 pin in 7.13 s wall time (6.988 s test body).
+`Published.test_certificates_tell_the_truth` also passed in 0.494 s. The bounded default suite includes
 this diagnostic replay and an independent four-tuple width-one Cuccaro
 assertion, including `[1,0] -> [1,1]` with phase exactly +1. The full circuits
-suite selects unconditional raw admission and claim replay and cannot pass
-until the structural reader blocker is resolved.
+suite selects unconditional raw admission and claim replay; the remaining
+large-publication work limits still prevent a complete green receipt.
 
-The canonical `timeout 1200s python3 -B -I tests/circuits/test_objects.py
-Published.test_raw_publications_admitted` reached the width-32 Karatsuba
-publications and exited 124 at 1200 s. Its 37 structural failures and six
-pre-fix owner-binding failures are retained as failed evidence. A separate
-pinned-API suffix replay attempted manifest indices 119..128 so no publication
-was left unattempted; attempted admission is not a passing replay receipt.
-All four tree multipliers and all five QROM objects in that suffix pass raw
-admission and complete claim replay. The remaining width-32 Karatsuba
-multiplier's admission check timed out at 600 s: suffix 9/10 passed, all ten
-attempted, exit 1 in 600.37 s. Together with the interrupted serial Karatsuba
-publication and modular-adder timeout below, three receipts remain incomplete.
+The canonical `timeout 1200s systemd-run --user --scope -p MemoryMax=6G
+python3 -B -I tests/circuits/test_objects.py
+Published.test_raw_publications_admitted` at the K94 pin exited **124 at
+1200.00 s**. A serial outer timeout does not establish a complete manifest
+receipt. Complementary two-worker sweeps call the same committed raw helper
+and public pinned-reader verifier for every manifest entry, preserving the
+600 s bounds for admission and replay. The suffix at indices 118..128
+attempted all eleven publications: nine complete (all four tree multipliers
+and five QROM objects), two incomplete, exit 1 in **753.33 s** wall time.
 
-Five corrected modular publications pass admission, all 20 stored claims and
-K92 applicability. The corrected width-eight modular adder admits, but its
-four-claim replay exceeded both 180 s and then the normal 600 s per-publication
-bound. Its receipt remains incomplete. These timeouts are failures, not
-proofs, and do not justify removing a domain element, claim or publication.
+The three previously incomplete receipts remain explicit P2 work in
+`bennett-arith-jn3`:
+
+| Publication | Incomplete stage | Bound | Measured wall time |
+|---|---|---|---|
+| `arith.bij.addmod.w8.mfb` | Full four-claim replay after successful admission | 600 s | 600.03 s |
+| `arith.muladd.karatsuba.w32.r64` | Admission | 600 s | 600.21 s |
+| `arith.mul.karatsuba.w32.r64` | Admission | 600 s | 600.18 s |
+
+The earlier serial run at the previous pin stopped at the large muladd
+publication at its 1200 s outer bound; the new direct attempt supplies the
+more precise admission timeout above. None of these timeouts is a refutation
+or a proof. Every incomplete receipt remains a visible failing test result;
+no bound increased and no domain element, claim or publication was removed.
+The P2 follow-up proposes an optimized build of the identical pinned reader,
+per-publication API replay at the same bounds, profiling quadratic admission,
+and avoiding duplicate CLI/API parsing when identities can be checked from
+the same parsed object. This cheaper route has not been verified here.
 The final quality ratchet passes for all 55 source files without increasing
 any baseline. No full gate was run.
 
