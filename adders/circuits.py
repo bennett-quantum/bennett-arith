@@ -345,7 +345,7 @@ class Object:
         domain = {"borrowed": [], "bundles": [{"hi": _meta((1 << w) - 1), "lo": 0, "name": n, "width": w}
                                               for n, w in names], "regions": []}
         return {"domain": domain, "expected": "inverse_pair", "kind": "exhaustive",
-                "subject": {"closure_hash": hashes[c.g.name], "inherited_controls": 0, "variant": "forward"}}, {
+                "subject": {"closure_hash": hashes[c.name], "inherited_controls": 0, "variant": "forward"}}, {
             "budget": token, "claim": 1, "g": hashes[c.g.name], "ginv": hashes[c.ginv.name],
             "token_aliases": [0]}
 

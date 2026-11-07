@@ -2,14 +2,16 @@
 
 ## Default and exhaustive checks
 
-Default: `timeout 1200 scripts/test`, **37 tests passed in 45.18 s wall time**
-(38.028 s test body), with all six bridge/support outputs moved aside first,
-after the sparse-PPC and compatibility-replay repairs. A prior warm run at
+Default: `timeout 1200 scripts/test`, **37 tests passed in 39.11 s wall time**
+(31.610 s test body), with all six bridge/support outputs moved aside first,
+after re-pinning the ISA reader. A prior warm run at
 e11bc94 passed its 35 tests in 97.98 s (67.007 s test body); both runs
 regenerate and relink support despite existing outputs. The reviewed ISA pin is
-`ecaaac060c44e317d1181345fa6b8e38c096c099`; the published dialect pin is
+`3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`; the published dialect pin is
 `95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both were materialised
-and verified with the pinned gate tool's `verify` command against commit 5c98c3a.
+and confirmed pushed with the pinned gate tool's `verify` command against
+commit 6dd2531. Publication metadata still identifies its governing base text
+and K91 extension separately; the gate pin selects the reader used to check it.
 The cold bridge build does not regenerate or mutate the published bitcode.
 Every default invocation regenerates ABI support files and constants, then
 relinks the bridge from the current publication before loading any numerical
@@ -88,17 +90,17 @@ stay outside the bounded default measurement.
   (`bennett-arith-wvh`). The mandatory circuits suite separately checks raw
   release admission for **every** manifest entry and replays every certificate
   claim/table through the pinned reader API, without an opt-in switch. These
-  raw checks remain red at ecaaac0, failing first on `unknown field token_aliases`
+  checks reject unverified structural claims as well as malformed objects
   (`bennett-arith-emu`, also inherited `bennett-arith-gdg`/`bennett-arith-vwi`).
 * K91 certificate partitions have unit tests against published ISA 0.9 text.
-  The supporting reviewed reader revision is
-  `704d21d7c59ec432b5d2498cfcd287c68541a156` (reviewed code head
-  `5b7120852f17e56063462d50f01fcf1da708ed1f`, ISA review
-  `docs/reviews/2026-11-07-isaspec-main-r2.md`). The orchestrator must move the
-  `gate.toml` pin from ecaaac0 and rerun raw admission/replay. Until that move,
-  the executable differential uses an explicitly labelled diagnostic view
-  derived from the stored publication bytes.
-  It cannot establish raw release compatibility (`bennett-arith-4ss`).
+  The reader at the gate's new `3b1090790d82` pin admits `token_aliases`.
+  Complete raw replay remains blocked: all 37 `adjoint_table` claims return
+  `Unverified`, rather than the proof required by their published labels.
+  ISA 0.9 §12.1 requires checking structural side conditions syntactically
+  against the object and subclaims; §5.3 gives the instruction adjoint table.
+  Arith retains these universal claims and requires a supporting reader
+  revision (`bennett-arith-emu`, `bennett-arith-4ss`). Diagnostic execution
+  coverage remains separate from raw certificate proof evidence.
 * Parity implementation is complete; `bennett-arith-4yg.1` remains open because
   its inherited release dependency on gdg prevents closure. No dependency override.
 
@@ -144,18 +146,44 @@ CLI `check` only validates admission and identities; the Rust verifier is
 required because the documented public API performs full certificate replay,
 including borrowed-wire domains that CLI `run-action` cannot initialise.
 
-At the current ecaaac0 pin,
+At ec37c21 with the old ecaaac0 reader,
 `timeout 240s python3 -B -I tests/circuits/test_objects.py Published.test_raw_publications_admitted`
-is **RED: all 129 publications reject `token_aliases` before replay**. This is
-an open dependency, not release compatibility evidence. Separately, the
-compatibility table replay was RED on its first raw object before the fix,
-then GREEN after converting the stored bytes to the explicitly labelled
-pre-K91 diagnostic view. Five focused publication/compatibility tests passed
-in 32.795 s. The final cold default run passed 37 tests in 45.18 s (38.028 s test body).
-The bounded default suite now includes this replay and an
-independent four-tuple width-one Cuccaro assertion, including `[1,0] -> [1,1]`
-with phase exactly +1. The full circuits suite selects the unconditional raw
-check and will fail loudly until the orchestrator updates the pin.
+was reproduced **RED: all 129 publications reject `token_aliases` before replay**
+(1.375 s test body). Pin-only commit 6dd2531 moves the reader to pushed
+`3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`. Materialisation used:
+
+```sh
+timeout 1200s python3 /home/tobias/Projects/bennett-workspace/bennett-arith/.tmp/gate/tool/gate_run-01c0314c9aaa4a37313ab530da2134efafe9cbd5.py verify --repo /home/tobias/Projects/bennett-workspace/bennett-arith --sha 6dd2531
+```
+
+The new public API returns `CertificateReport`; the bridge now reads its
+`claims` field, retains exact claim-count and Proof/Evidence-only assertions,
+and rejects every unestablished K92 applicability obligation. The old bridge
+failed compilation against this pin before that adaptation.
+
+Raw verification exposes two further issues. Six modular objects bound their
+K4 inverse-pair subjects to `g` instead of the owning action. ISA 0.9 §12.3
+K92 requires owner-local entries and claim indices. An added owner-subject
+regression failed before fixing that binding, then passed. No body, closure
+identity, token partition or inverse-pair domain changed.
+
+The other blocker requires ISA reader work outside this repository's owned
+paths: all 37 universal `adjoint_table` structural claims return
+`Unverified("the adjoint_table rule's side conditions are not specified beyond its subclaims")`.
+First witness: `adders/objects/arith.bij.add.w1.bisa`, region
+`arith.bij.sub.w1`, claim 1. ISA 0.9 §12.1's structural row requires syntactic
+side-condition checking; §5.3 gives the adjoint table, and §16.3 example 3
+explicitly assigns its reversed frame to this rule. These claims remain
+published and the mandatory test remains red. No unverified verdict is
+accepted as proof and no sampled replacement narrows their universal scope.
+
+Separately, `timeout 240s python3 -B -I tests/circuits/test_objects.py
+Published.test_interpreter_replays_table_rows` passed at the new reader pin
+in 4.46 s wall time (4.351 s test body). The bounded default suite includes
+this diagnostic replay and an independent four-tuple width-one Cuccaro
+assertion, including `[1,0] -> [1,1]` with phase exactly +1. The full circuits
+suite selects unconditional raw admission and claim replay and cannot pass
+until the structural reader blocker is resolved.
 
 ## Audit disposition
 
@@ -343,10 +371,7 @@ Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 
 The local HANDOFF.md is retired; README links to the ecosystem handoff.
 
-Final promised checks were re-run after all implementation changes:
-`BENNETT_ARITH_PROMISED=1 timeout 120s python3 -B -I tests/test_directed.py 18 --quick`
-fails on the recorded sparse PPC sine witness after all 11970 IEEE checks pass;
-`BENNETT_ARITH_PROMISED=1 timeout 30s python3 -B -I tests/circuits/test_objects.py
-Published.test_raw_modular_publications_bennett_arith_gdg` fails on the pinned
-reader's unsupported K91 field. These are open obligations, not green tests.
-A council review is required for soft-float rounding before any CLEAR claim.
+The default sparse-PPC regression now includes the repaired sine witness
+and exponent family described above. The broader full-domain elementary
+and PPC arithmetic obligations remain open; no full gate or new council
+CLEAR claim follows from the re-pin checks.

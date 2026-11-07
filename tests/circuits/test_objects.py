@@ -57,13 +57,14 @@ class Published(unittest.TestCase):
         for obj, aliases in ((c.cuccaro(2), []), (c.mulmod_const(4, 5, 11), [0])):
             cert = certificate(obj.text())
             self.assertEqual(cert["bindings"]["invocation"]["token_aliases"], aliases)
-            for region in cert["regions"].values():
+            for closure, region in cert["regions"].items():
                 for claim in region["claims"]:
                     if "invocation" in claim:
                         inv = claim["invocation"]
                         self.assertEqual(inv["token_aliases"], "all" if inv["args"] == "all" else aliases)
                 for entry in region["verification"]["inverse_pairs"]:
                     self.assertEqual(entry["token_aliases"], [0])
+                    self.assertEqual(region["claims"][entry["claim"]]["subject"]["closure_hash"], closure)
 
     def test_reproduces_byte_for_byte(self):
         done = subprocess.run([sys.executable, "-I", str(ROOT / "adders/generate.py"), "check"],
