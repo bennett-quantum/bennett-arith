@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -18,10 +19,7 @@ REF = RefInterp()
 DIR = ROOT / ".tmp/opus-arith-circuits/objects/published"
 CHECK_GATE_LIMIT = 1500     # The debug binary's validation is quadratic in the body; larger
 REPLAY_GATE_LIMIT = 200     # objects are checked out of band with a release build (progress file).
-
-
-def manifest():
-    return json.loads((ROOT / "adders/objects/manifest.json").read_text())
+MANIFEST = json.loads((ROOT / "adders/objects/manifest.json").read_text())
 
 
 def certificate(text):
@@ -72,7 +70,7 @@ class Published(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
     def test_manifest_is_current(self):
-        m = manifest()
+        m = MANIFEST
         for source, digest in m["sources"].items():
             self.assertEqual(hashlib.sha256((ROOT / source).read_bytes()).hexdigest(), digest, source)
         for e in m["entries"]:
@@ -81,7 +79,7 @@ class Published(unittest.TestCase):
     def test_pinned_interpreter_diagnostic_view(self):
         DIR.mkdir(parents=True, exist_ok=True)
         checked = 0
-        for e in manifest()["entries"]:
+        for e in MANIFEST["entries"]:
             text = (ROOT / e["file"]).read_text()
             if "qinplace" in text:
                 continue    # The unconditional raw admission test validates these certificates.
@@ -112,21 +110,34 @@ class Published(unittest.TestCase):
         subprocess.run(["rustc", "--edition=2021", str(Path(__file__).with_name("verify_certificate.rs")),
                         "--extern", f"bennett_isa_ref={libraries[0]}", "-L", f"dependency={deps}",
                         "-o", str(verifier)], check=True, timeout=60)
-        for entry in manifest()["entries"]:
+        for entry in MANIFEST["entries"]:
             with self.subTest(publication=entry["file"]):
-                path = ROOT / entry["file"]
-                got = REF.check(path)
-                self.assertEqual(got["status"], "ok", entry["file"])
-                self.assertEqual(got["object_hash"], certificate(path.read_text())["bindings"]["object_hash"])
-                if entry["root"] == "arith.add.cuccaro.w1":
-                    self.assertEqual(got["symbols"][entry["root"]]["interface_hash"],
-                                     "0e350e9c21db62e93d801271076c0f77424fb2ca4f0986a856a8312102036dae")
-                claims = sum(len(r["claims"]) for r in certificate(path.read_text())["regions"].values())
-                subprocess.run([str(verifier), str(path), str(claims)], check=True, timeout=600)
+                self._verify_publication(verifier, entry)
+
+    def _verify_publication(self, verifier, entry):
+        path = ROOT / entry["file"]
+        stage = "admission"
+        started = time.monotonic()
+        print(f"START: {entry['file']}", flush=True)
+        try:
+            got = REF.check(path)
+            self.assertEqual(got["status"], "ok", entry["file"])
+            self.assertEqual(got["object_hash"], certificate(path.read_text())["bindings"]["object_hash"])
+            if entry["root"] == "arith.add.cuccaro.w1":
+                self.assertEqual(got["symbols"][entry["root"]]["interface_hash"],
+                                 "0e350e9c21db62e93d801271076c0f77424fb2ca4f0986a856a8312102036dae")
+            stage = "certificate replay"
+            claims = sum(len(r["claims"]) for r in certificate(path.read_text())["regions"].values())
+            subprocess.run([str(verifier), str(path), str(claims)], check=True, timeout=600)
+        except subprocess.TimeoutExpired as error:
+            message = (f"INCOMPLETE: {entry['file']}: {stage} timed out at {error.timeout}s; "
+                       f"{time.monotonic() - started:.2f}s wall; no complete receipt")
+            print(message, flush=True)
+            self.fail(message)
 
     def test_inverse_pair_obligation_is_published(self):
         checked = 0
-        for entry in manifest()["entries"]:
+        for entry in MANIFEST["entries"]:
             text = (ROOT / entry["file"]).read_text()
             if "qinplace" not in text:
                 continue
@@ -139,7 +150,7 @@ class Published(unittest.TestCase):
 
     def test_certificates_tell_the_truth(self):
         """Census, frame, labels and every table row, replayed on the emitted text, not the builder."""
-        m = manifest()
+        m = MANIFEST
         target = hashlib.sha256((ROOT / "adders/target-unit.json").read_bytes()).hexdigest()
         proofs = evidence = rows = 0
         for e in m["entries"]:
@@ -212,7 +223,7 @@ class Published(unittest.TestCase):
 
     def test_interpreter_replays_table_rows(self):
         """Diagnostic compatibility replay; raw admission is independently mandatory."""
-        m = manifest()
+        m = MANIFEST
         replayed = 0
         for e in m["entries"]:
             text = (ROOT / e["file"]).read_text()
