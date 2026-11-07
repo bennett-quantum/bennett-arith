@@ -244,17 +244,42 @@ memory at least 6 GB, load1 below 8 and no other `bennett-heavy` scope.
 The addmod w8 full four-claim replay completed in **868.48 s**, peak RSS
 **21,960 KB**, exit 0: both sampled claims Evidence, both exhaustive
 inverse-pair claims Proof, and K92 applicability Established. Its preflight
-had 23 GB available and load1 1.23. The two large admission measurements and
-their complete claim receipts remain pending. The original full-manifest
-receipt above remains incomplete.
+had 23 GB available and load1 1.23. Muladd Karatsuba w32 admission completed
+in **465.91 s**, peak RSS **1,086,448 KB**, exit 0; mul Karatsuba w32 admission
+completed in **473.02 s**, peak RSS **972,712 KB**, exit 0. Both returned
+`status:ok`, matching published identities and no unresolved imports. Their
+preflights were 23 GB/load1 0.86 and 24 GB/load1 1.50 respectively, with no
+heavy scope. Their certificate replay verdicts remain pending; admission
+does not establish them. The original full-manifest receipt above remains
+incomplete. The quiet admission measurements completed below the old 600 s
+cutoff despite the earlier loaded runs timing out at that bound.
 
-R40 replaces absolute timing assertions with deterministic work assertions
-and hang guards at least ten times the measured covered stage. A hang
-guard must report a counted, listed **UNKNOWN** receipt, never a proof or a
-refutation. Completed rejected, refuted or Unverified claims remain errors.
-The deterministic guard regression is red against the existing `self.fail`
-timeout path; completed invalid object identities and verifier failures
-continue to fail. No stage limit has been changed before these measurements.
+R40 is implemented in the receipt runner: absolute time is a cited hang
+guard at least ten times the measured covered stage. A guard expiry returns
+an explicit **UNKNOWN** receipt, printed immediately and counted/listed at
+the end. UNKNOWN contributes zero accepted claims. COMPLETE and FAILED are
+counted separately; completed rejected, refuted or Unverified claims still
+fail. The circuits runner footer reports completion and points to these
+statuses. It does not describe an UNKNOWN certificate as passed.
+
+The default stage guard derives from the prior 504.60 s completed ordinary
+receipt, including admission and replay. Per-entry guards use the slower
+measured covered stage; comments cite the wall time, host and date. The
+separate 60 s bridge-compilation guard cites its 0.108 s measurement and
+also reports UNKNOWN on expiry. Assertions still check deterministic work:
+the nonempty exact claim count, object/interface identities, full replay
+tuples, proof/evidence outcomes and K92 applicability. Reproducibility and
+manifest checks now share a test; K91 and inverse-pair metadata assertions
+share a traversal over the generated examples and every publication.
+
+The deterministic guard regression was red against `self.fail` and is now
+green for both admission and replay guard expiry. It also verifies completed
+valid checks and propagation of invalid status, Rejected and Unverified
+errors. A synthetic direct-runner probe attempted all 129 entries: guarded
+work produced UNKNOWN=129, COMPLETE=0, accepted claims=0, exit 0, with all
+129 UNKNOWN entries listed at the end; invalid completed checks produced
+FAILED=129, accepted claims=0 and exit 1. These probes assert calls and
+outcomes, not elapsed seconds.
 The final quality ratchet passes for all 55 source files without increasing
 any baseline. No full gate was run.
 
