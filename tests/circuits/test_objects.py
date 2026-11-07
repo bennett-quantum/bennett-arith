@@ -79,35 +79,49 @@ class Published(unittest.TestCase):
 
     def test_pinned_interpreter_diagnostic_view(self):
         DIR.mkdir(parents=True, exist_ok=True)
-        from adders.generate import FAMILIES, published
-        by_root = {obj.root: obj for _, family, args in published()
-                   for obj in [FAMILIES[family](*args)]}
         checked = 0
         for e in manifest()["entries"]:
             text = (ROOT / e["file"]).read_text()
             if "qinplace" in text:
-                continue    # Raw modular validation is the explicit promised test below.
+                continue    # The unconditional raw admission test validates these certificates.
             if sum(row.get("census", {}).get("gates", {}).get(g, 0) for row in e["symbols"].values()
                    for g in ("x", "cx", "ccx", "swap")) > CHECK_GATE_LIMIT:
                 continue
             path = DIR / f"{e['root']}.bisa"
-            path.write_text(interpreter_view(by_root[e["root"]]))
+            path.write_text(interpreter_view(text))
             got = REF.check(path)
             self.assertEqual(got["status"], "ok", e["file"])
             cert = certificate(text)
             self.assertEqual(got["object_hash"], cert["bindings"]["object_hash"], e["file"])
             for name, row in e["symbols"].items():
                 self.assertEqual(got["symbols"][name]["closure_hash"], row["closure_hash"], (e["file"], name))
+            if e["root"] == "arith.add.cuccaro.w1":
+                cases = [([0,0],[]),([0,1],[]),([1,0],[]),([1,1],[])]
+                self.assertEqual(REF.many(path, e["root"], cases),
+                                 [([0,0],[]),([0,1],[]),([1,1],[]),([1,0],[])])
             checked += 1
         self.assertGreater(checked, 80)
 
-    @unittest.skipUnless(os.environ.get("BENNETT_ARITH_PROMISED"),
-                         "BENNETT_ARITH_PROMISED=1: bennett-arith-gdg / bennett-arith-vwi")
-    def test_raw_modular_publications_bennett_arith_gdg(self):
+    def test_raw_publications_admitted(self):
+        """Admit raw bytes and replay every claim/table with the pinned reader."""
+        deps = Path(REF.binary).parent / "deps"
+        libraries = list(deps.glob("libbennett_isa_ref-*.rlib"))
+        self.assertEqual(len(libraries), 1, f"expected one pinned ISA reader library in {deps}")
+        verifier = Path(os.environ["TMPDIR"]) / "verify-certificate"
+        subprocess.run(["rustc", "--edition=2021", str(Path(__file__).with_name("verify_certificate.rs")),
+                        "--extern", f"bennett_isa_ref={libraries[0]}", "-L", f"dependency={deps}",
+                        "-o", str(verifier)], check=True, timeout=60)
         for entry in manifest()["entries"]:
-            path = ROOT / entry["file"]
-            if "qinplace" in path.read_text():
-                self.assertEqual(REF.check(path)["status"], "ok", entry["file"])
+            with self.subTest(publication=entry["file"]):
+                path = ROOT / entry["file"]
+                got = REF.check(path)
+                self.assertEqual(got["status"], "ok", entry["file"])
+                self.assertEqual(got["object_hash"], certificate(path.read_text())["bindings"]["object_hash"])
+                if entry["root"] == "arith.add.cuccaro.w1":
+                    self.assertEqual(got["symbols"][entry["root"]]["interface_hash"],
+                                     "0e350e9c21db62e93d801271076c0f77424fb2ca4f0986a856a8312102036dae")
+                claims = sum(len(r["claims"]) for r in certificate(path.read_text())["regions"].values())
+                subprocess.run([str(verifier), str(path), str(claims)], check=True, timeout=600)
 
     def test_inverse_pair_obligation_is_published(self):
         checked = 0
@@ -181,8 +195,7 @@ class Published(unittest.TestCase):
             out = [0] * width
             for lane, v in enumerate(values):
                 for i in range(width):
-                    if (v >> i) & 1:
-                        out[i] |= 1 << lane
+                    out[i] |= ((v >> i) & 1) << lane
             return out
         values = {}
         for j, (n, w) in enumerate(components):
@@ -197,7 +210,7 @@ class Published(unittest.TestCase):
         return lanes
 
     def test_interpreter_replays_table_rows(self):
-        """Full tuples through the reference interpreter wherever the body is small enough."""
+        """Diagnostic compatibility replay; raw admission is independently mandatory."""
         m = manifest()
         replayed = 0
         for e in m["entries"]:
@@ -211,7 +224,7 @@ class Published(unittest.TestCase):
                 if len(fn.gates()) > REPLAY_GATE_LIMIT:
                     continue
                 path = DIR / f"{e['root']}.bisa"
-                path.write_text(text)
+                path.write_text(interpreter_view(text))
                 table = cert["regions"][row["closure_hash"]]["claims"][0]["expected"]["table"][:8]
                 split = len(fn.mut)
                 cases = [([int(v) for v in r["before"]["bundles"][:split]],

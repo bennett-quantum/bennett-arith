@@ -429,13 +429,12 @@ def census(c):
     return {"ancilla": c.top, "depth": depth, "gates": gates, "t": t, "toffoli_depth": tdepth}
 
 
-def interpreter_view(obj):
+def interpreter_view(text):
     """Diagnostic execution view for the pre-K4/K91 pinned interpreter.
 
     This view cannot establish release compatibility: raw validation is kept
-    separately under BENNETT_ARITH_PROMISED until the interpreter supports it.
+    separately for every publication against the pinned reader.
     """
-    text = obj.text()
     if "section certificate\n" not in text:
         return text
     head, _, line = text.rpartition("section certificate\n")
@@ -450,7 +449,7 @@ def interpreter_view(obj):
 
 
 def write_object(obj, path):
-    Path(path).write_text(interpreter_view(obj))
+    Path(path).write_text(interpreter_view(obj.text()))
 
 
 cached = lru_cache(maxsize=None)
