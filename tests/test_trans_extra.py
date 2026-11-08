@@ -21,7 +21,11 @@ def undd(raw):
     h,s,_=e.decode(raw&((1<<64)-1),e.FORMATS['f64'])
     if isinstance(h,str):return h,s
     l,_,_=e.decode(raw>>64,e.FORMATS['f64']);return h+l,s
-for major in map(int,sys.argv[1:] or [18,23]):
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(map(int,sys.argv[1:] or [18,23]), script=__file__):
     edge=e.Edge(major);oracle=t.Oracle();worst=e.Q(0)
     for suffix in ('f16','bf16'):
         f=e.FORMATS[suffix]

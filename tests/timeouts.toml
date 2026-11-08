@@ -66,3 +66,50 @@ command = "scripts/gate (historical workload; current total provisional)"
 wall_seconds = 703.1
 date = "2026-11-02"
 source = "bennett-arith/.tmp/gate/records/18858d3eb3fbb6fe1fbd912e08ed1a5549a54a2f.json: arith gate exit 0, finished 2026-11-02T09:15:57Z"
+
+# One policy source for all harness/build widths. nproc uses sched_getaffinity;
+# memory uses /proc/meminfo MemAvailable, not installed RAM. Overrides only lower
+# the computed cap. Refuse dispatch if even one worker exceeds available memory.
+[parallelism]
+reserve_mib = 2048
+laptop = "12-core/30 GB"
+laptop_available_mib = 24576
+# Previous widths: cargo/cases 4; suites/majors/builds/receipts 1.
+# Receipts deliberately raised after real serial-v-pool receipt identity passes.
+
+[parallelism.pools.cargo]
+cpus_per_worker = 3
+mib_per_worker = 1536
+max_workers = 64
+override = "CARGO_BUILD_JOBS"
+
+[parallelism.pools.cases]
+cpus_per_worker = 3
+mib_per_worker = 512
+max_workers = 64
+override = "BENNETT_TEST_WORKERS"
+
+[parallelism.pools.receipts]
+cpus_per_worker = 3
+# Karatsuba admission peaks around 1.1 GB; leave headroom per admission/replay.
+mib_per_worker = 1536
+max_workers = 64
+override = "BENNETT_ARITH_RECEIPT_WORKERS"
+
+[parallelism.pools.suites]
+cpus_per_worker = 12
+mib_per_worker = 6144
+max_workers = 16
+override = "BENNETT_SUITE_WORKERS"
+
+[parallelism.pools.majors]
+cpus_per_worker = 12
+mib_per_worker = 3072
+max_workers = 16
+override = "BENNETT_MAJOR_WORKERS"
+
+[parallelism.pools.builds]
+cpus_per_worker = 12
+mib_per_worker = 3072
+max_workers = 16
+override = "BENNETT_BUILD_WORKERS"

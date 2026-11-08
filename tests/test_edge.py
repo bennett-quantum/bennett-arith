@@ -417,6 +417,16 @@ def run(major):
 
 if __name__=='__main__':
     results=[]
-    for major in map(int,sys.argv[1:] or (18,23)):
-        results.append(run(major))
+    from pathlib import Path as ProfilePath
+    import sys as profile_sys
+    profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+    from machine_profile import majors as machine_majors
+    selected=list(map(int,sys.argv[1:] or (18,23)))
+    remaining=machine_majors(selected)
+    for major in remaining:
+        result=run(major)
+        (ROOT/f'.tmp/test-results-{major}.json').write_text(json.dumps(result)+'\n')
+        results.append(result)
+    if not remaining:
+        results=[json.loads((ROOT/f'.tmp/test-results-{major}.json').read_text()) for major in selected]
     (ROOT/'.tmp/test-results.json').write_text(json.dumps(results,indent=2)+'\n')

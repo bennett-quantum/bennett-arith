@@ -132,4 +132,8 @@ if __name__=='__main__':
     parser.add_argument('majors',type=int,nargs='*',default=[18,23])
     parser.add_argument('--root',type=Path,default=ROOT)
     args=parser.parse_args()
-    for major in args.majors:run(major,args.root)
+    from pathlib import Path as ProfilePath
+    import sys as profile_sys
+    profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+    from machine_profile import majors as machine_majors
+    for major in machine_majors(args.majors, script=__file__):run(major,args.root)

@@ -11,7 +11,11 @@ parser=argparse.ArgumentParser()
 parser.add_argument('majors',type=int,nargs='*',default=[18,23])
 parser.add_argument('--root',type=pathlib.Path,default=R)
 options=parser.parse_args()
-for major in options.majors:
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(options.majors, script=__file__):
     edge=e.Edge(major,options.root)
     for bits in [129,193,257,513,1025]:
         for n in [0,1,-1,(1<<(bits-2))+1,-(1<<(bits-2))-1,(1<<(bits-2))-(1<<(bits-70))-1]:

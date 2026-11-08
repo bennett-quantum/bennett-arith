@@ -748,7 +748,12 @@ all baseline entries from before this job remain byte-for-byte equivalent values
 "tests/test_trans_boundaries.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans_extra.py":{"cognitive_mass":7,"functions":2,"max_lines":9,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans_phases.py":{"cognitive_mass":0,"functions":1,"max_lines":10,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
-"tests/trans_phases.c":{"cognitive_mass":7,"functions":6,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0}
+"tests/trans_phases.c":{"cognitive_mass":7,"functions":6,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/machine_profile.py":{"functions":7,"max_lines":29,"over_25":1,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":30,"trivial_wrappers":0},
+"scripts/publication_pool.py":{"functions":2,"max_lines":14,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":10,"trivial_wrappers":0},
+"scripts/suite_runner.py":{"functions":5,"max_lines":11,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":9,"trivial_wrappers":0},
+"tests/circuits/test_receipt_parallel.py":{"functions":4,"max_lines":30,"over_25":1,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":14,"trivial_wrappers":0},
+"tests/test_machine_profile.py":{"functions":13,"max_lines":19,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":9,"trivial_wrappers":0}
 },"litter":[],"process_identifiers":[]}
 ```
 <!-- /quality-baseline -->

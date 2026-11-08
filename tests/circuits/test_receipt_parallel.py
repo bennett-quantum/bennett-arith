@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / "scripts"), str(ROOT / "tests/circuits")]
 import test_objects as objects
 from time_guard import test_main
+import test_receipt_status as status
 
 
 class ReceiptParallel(unittest.TestCase):
@@ -47,6 +48,32 @@ class ReceiptParallel(unittest.TestCase):
                                 "requested pool still executes publications serially on the caller")
         self.assertEqual(snapshots[0], snapshots[1])
         self.assertEqual(snapshots[0][2], 0)
+
+    def test_unknown_and_failed_reports_are_identical(self):
+        fixture = status.ReceiptStatus()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        roots = [entry["root"] for entry in status.ENTRIES[:4]]
+        selection = ",".join(reversed(roots))
+        for outcomes in ({}, {roots[1]: "admission-UNKNOWN", roots[3]: "replay-UNKNOWN"},
+                         {roots[0]: "FAILED", roots[2]: "replay-UNKNOWN"},
+                         {roots[0]: "replay-UNKNOWN", roots[2]: "Rejected"}):
+            snapshots = []
+            for width in (1, 3):
+                with patch.dict(os.environ, BENNETT_ARITH_RECEIPT_WORKERS=str(width)):
+                    done = fixture.probe(outcomes, selection)
+                snapshots.append((done.returncode, done.stdout.encode()))
+            self.assertEqual(snapshots[0], snapshots[1], outcomes)
+
+    def test_interpreter_cases_match_at_both_widths(self):
+        path = objects.ROOT / objects.MANIFEST["entries"][0]["file"]
+        cases = [([0, 0], []), ([0, 1], []), ([1, 0], []), ([1, 1], [])]
+        results = []
+        for width in (1, 3):
+            with patch.dict(os.environ, BENNETT_TEST_WORKERS=str(width)):
+                results.append(objects.REF.many(path, "arith.add.cuccaro.w1", cases))
+        self.assertEqual(results[0], [([0, 0], []), ([0, 1], []), ([1, 1], []), ([1, 0], [])])
+        self.assertEqual(results[0], results[1])
 
 
 if __name__ == "__main__":

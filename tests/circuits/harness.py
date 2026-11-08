@@ -14,7 +14,6 @@ import random
 import re
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +23,7 @@ VECTOR_ABOVE = 1 << 17  # Specs run per lane up to here, as numpy expressions ab
 sys.path.insert(0, str(ROOT / "scripts"))
 from pinned_sibling import resolve_sibling  # noqa: E402
 from time_guard import run as guarded_run  # noqa: E402
+from machine_profile import ordered_map  # noqa: E402
 
 
 def ref_binary():
@@ -308,5 +308,5 @@ class RefInterp:
         return int(result["payload"])
 
     def many(self, path, symbol, cases, *extra):
-        with ThreadPoolExecutor(int(os.environ.get("BENNETT_TEST_WORKERS", "4"))) as pool:
-            return list(pool.map(lambda c: self.action(path, symbol, c[0], c[1], *extra), cases))
+        results = ordered_map(lambda c: self.action(path, symbol, c[0], c[1], *extra), cases, "cases")
+        return list(results)

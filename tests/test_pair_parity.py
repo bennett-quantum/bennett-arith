@@ -28,4 +28,8 @@ def run(major):
     print(f"LLVM {major}: {edge.count} exact zero-low parity/flag checks")
 
 if __name__=="__main__":
-    for major in map(int,sys.argv[1:] or [18,23]):run(major)
+    from pathlib import Path as ProfilePath
+    import sys as profile_sys
+    profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+    from machine_profile import majors as machine_majors
+    for major in machine_majors(map(int,sys.argv[1:] or [18,23]), script=__file__):run(major)

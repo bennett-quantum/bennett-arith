@@ -34,7 +34,11 @@ print('Exact bound: 1+2^-700 < exp(2^-700) < 1+2^-700+2^-1400.')
 print(f'Canonical neighbours: {lower:032x}, {upper:032x}; local ulp = 2^-752.')
 print('Nearest/down/towardzero select the lower pair; upward selects the upper; final flags=16.')
 differences=0
-for major in args.majors:
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(args.majors, script=__file__):
     edge=e.Edge(major,args.root)
     edge.env[1]=32
     plain=edge.call('exp_ppcf128',o.pair(x))[0]
