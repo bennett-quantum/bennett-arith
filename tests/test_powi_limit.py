@@ -7,7 +7,9 @@ rows=list(g.powi_entries([8388608]));assert len(rows)==14
 row=next(r for r in rows if r['fi']==5 and r['constrained'])
 ir='declare i128 @__bennett_sf_mul_f128_rm(i128,i128,i32)\ndeclare i128 @__bennett_sf_div_f128_rm(i128,i128,i32)\n'+'\n'.join(g.powi_wrapper(row))+'\n'
 assert 'i8388608 %a1' in ir and 'lshr i8388608 %n, 1' in ir
-p=R/'.tmp/powi-limit.ll';p.write_text(ir)
+p=R/'.tmp/powi-limit.ll'
+p.parent.mkdir(parents=True,exist_ok=True)
+p.write_text(ir)
 for major in [18,23]:
     bc=R/f'.tmp/powi-limit-{major}.bc'
     subprocess.run([f'/usr/lib/llvm-{major}/bin/llvm-as',str(p),'-o',str(bc)],check=True)

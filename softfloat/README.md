@@ -9,7 +9,7 @@ substitute host libc/libm. The plugin consumes this binary edge only.
 
 Each distribution includes `manifest.json` (all exported names, literal LLVM
 signatures, formats, semantic status, and spec section), `staged_exports` (required
-concrete signatures awaiting mechanics, each linked to a bead), three parametric
+concrete signatures awaiting mechanics, with explicit semantic status), three parametric
 families and `SHA256SUMS` for the bitcode and manifest. The manifest is the complete
 machine-readable entry-point list. Public wrappers use the dialect's LLVM carrier
 ABI, not C's aggregate/sret ABI for `_BitInt(80)` or `_BitInt(128)`.
@@ -78,7 +78,7 @@ bridge alone defines this global. Code using only unconstrained wrappers has no
 reachable reference to it. Flags use ordinary loads/stores under the contract's
 single-thread assumption.
 
-The IEEE core uses unsigned 512-bit integers. Libm uses 224 working significand
+The IEEE core uses unsigned 512-bit integers. Libm uses 240 working significand
 bits and a 1024-bit integer product for Payne–Hanek reduction with 17,408 bits of
 2/pi. Constants are generated with integer Chudnovsky and Python Decimal at
 5,400 decimal digits. There are no LLVM FP instructions, APFloat calls, host
@@ -123,20 +123,19 @@ Incoming IEEE conversion preserves its exact dyadic value until final pair
 selection. FMA forms the exact product and sum in 4352 integer bits at quantum
 2^-2148, including cancellation, then rounds once. Intermediate component
 operations contribute no flags. Independent Fraction tests replace APFloat
-expectations for these explicit guarantees. The current publication retains
-the 0.2.12 tie interpretation; the published 0.2.13 total tie policy is scheduled
-for implementation after the review fixes, tracked in **bennett-arith-4yg.1**.
+expectations for these explicit guarantees. Dialect 0.2.13 supplies the total
+nearest-even tie rule: compare both low significands, including zero, whenever
+either is nonzero; use high parity only when both lows are zero; equal parity
+selects the smaller absolute sum. Both signs and zero-low transitions are tested.
 
-Dialect 0.2.12 §13.4 requires a full-domain one-local-ulp envelope, correctly
-rounded constrained selection, and exact mathematical flags. The current
-libm v1 is a deterministic approximation evaluated at 224 working bits, then
-rounded to the requested carrier format (including explicit R for `_rm`). The
-engineering tests require <=4 ulp against MPFR at 384 bits, and exhaustive half/
-bfloat sin <=1 ulp. Passing these tests is measured evidence, not a universal
-error-bound or correct-rounding proof. No float/long-double host ABI is used.
-Constrained wrappers preserve sticky flags; full-domain accuracy and exact-flag
-implementation evidence remains in **bennett-arith-wvh**. Aggregate order and
-signed zeros are tested separately.
+Dialect 0.2.13 §13.4 requires a full-domain one-local-ulp envelope, correctly
+rounded constrained selection, and exact mathematical flags. Libm uses 240
+working bits. Tests select exact carrier bits from directed MPFR intervals,
+refining precision when necessary; no ulp tolerance can hide a wrong side.
+Passing the sampled IEEE tests is measured evidence, not a universal proof.
+Sparse PPC low-component failures remain visible under
+`BENNETT_ARITH_PROMISED=1`; see [quality evidence](../docs/quality.md).
+The full published domain and all entry points remain required.
 
 Exact dyadic powers and decimal/binary logarithm identities use normalized
 integer significands, perfect roots and integer exponentiation before one
@@ -157,14 +156,13 @@ x is exactly on it; that case selects the upper neighbour. Directed rounding
 compares x with log(1+h): the exact quadratic term settles the comparison
 unless it cancels l exactly, when the sign of the cubic term settles it.
 These integer comparisons preserve sparse tails in all five modes and raise
-only inexact; exp(±0) is exactly 1 with no flags. This fixes **bennett-arith-wvh.1**,
-whose original exp(2^-700) result exceeded one local ulp by over 2^52.
+only inexact; exp(±0) is exactly 1 with no flags. This preserves the sparse low component even for exp(2^-700).
 `tests/test_ppc_exp.py` verifies every power-of-two exponent in this range,
 both signs, sparse tails, component midpoints, quadratic cancellation, signed
 zeros and final flags. Its oracle encloses the exact result between independent
 rational Taylor bounds and requires both endpoints to round identically.
 The earlier diagnostic `tests/ppc_exp_sparse_witness.py` retains the exact
-counterexample bounds. Full-domain libm correctness remains in wvh; the
+counterexample bounds. Full-domain libm correctness remains open; the
 published contract's domain and available operations are unchanged.
 
 The default bitcode publishes powi at K = 1, 8, 16, 32, 64, 128, 192, 256, 513,
@@ -179,27 +177,18 @@ manifest lists its widths. No exponent is narrowed to i32/i128.
 ## Remaining parametric contracts
 
 The offline generator below implements the 0.2.12 static request protocol.
-The default `dist/` manifest targets 0.2.12 and records outstanding verification,
+The default `dist/` manifest targets 0.2.13 and records outstanding verification,
 PPC and libm obligations in `conformance_pending`.
 
 All 1,008 previously inventoried concrete signatures are published, plus 126
 additional powi and seven signaling comparison signatures: **1,141 exports per
 major**, no staged concrete bodies.
-The remaining obligations are retained:
+Named-format conversions and arbitrary powi widths are available through the
+offline generator below. Signaling comparisons are published for all seven
+formats. Consumers re-pin the matching bitcode and verify their materialised
+L/CC closure; producer tests do not establish consumer resource bounds.
 
-- `bennett-arith-38c`: named-format conversions and arbitrary powi widths are
-  available through the documented offline generator below.
-- `bennett-arith-chn`: the distinct 0.2.12 `cmps_B_rm` implementation is
-  published and verified for all seven formats; **bennett-arith-chn.1** is
-  closed. `softfloat/test_cmps.py` tests all predicates,
-  half/bfloat NaN payloads, sticky flags and scalar lane sequences.
-
-No placeholder numerical bodies or input-dependent unsupported traps implement
-these unresolved families. This publication alone is not full DF/runtime or
-plugin bp-7ni conformance. The consumer must re-pin BENNETT_ARITH_BITCODE hashes
-and verify its own materialised L/CC closure. The plugin was read-only here.
-
-## Offline instances (dialect 0.2.12)
+## Offline instances (dialect 0.2.13)
 
 Run `python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY` with
 `TMPDIR` set to an existing job-local build directory. The installed LLVM 18 or
@@ -259,9 +248,7 @@ an independent LLVM dispatcher. It checks all source encodings of every named
 format into all seven bases, conversion midpoints under all five modes and
 both saturation settings, malformed requests, request/bitcode hashes, exact
 exports, target fields, sticky flags, and the absence of hardware FP/imported
-numerical routines. It does not establish the separate PPC sqrt/FMA or
-full-domain transcendental obligations in `bennett-arith-4yg` and
-`bennett-arith-wvh`.
+numerical routines. It does not establish the separate full-domain PPC or transcendental obligations.
 
 `python3 -I softfloat/test_instance_limits.py --reproduce` verifies the inclusive
 i8388608 exponent on both majors and AArch64 request fields. Run the numerical
@@ -289,7 +276,7 @@ normaliser; this is link-input bitcode, not already-materialised ISA code.
 
 The gate additionally sweeps exp/exp2/exp10 through every subnormal-output
 exponent and overflow boundaries, and runs a test-only C++ oracle linked to the **same LLVM major's
-APFloat**, MPFR 384-bit oracle comparisons, all 65,536 encodings of half and
+APFloat**, adaptive directed MPFR bracket comparisons, all 65,536 encodings of half and
 bfloat sin, PPC sparse-tail conversions and all predicates, and powi transport
 through i1025. `libmpfr.so.6` is required by tests only; LLVM development headers
 and llvm-config provide the APFloat oracle. Each manifest records the bitcode

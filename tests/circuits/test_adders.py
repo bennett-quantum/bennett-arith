@@ -299,6 +299,16 @@ class Differential(unittest.TestCase):
         self.dir = Path(__file__).resolve().parents[2] / ".tmp/opus-arith-circuits/objects"
         self.dir.mkdir(parents=True, exist_ok=True)
 
+    def test_mulmod_unbounded_constants(self):
+        for k in (31, -2, 11 * (1 << 80) + 9):
+            obj = C.mulmod_const(4, k, 11)
+            path = self.dir / "mulmod_oracles.bisa"
+            # Isolate arithmetic from certificate admission; exercise emitted IR.
+            path.write_text(Object(obj.circuits[:2])._base())
+            for x in range(16):
+                self.assertEqual(REF.oracle(path, obj.circuits[0].name, [x], "9,0,0,0"),
+                                 k * x % 11 if x < 11 else x, (k, x))
+
     def place(self, obj):
         path = self.dir / f"{obj.root}.bisa"
         write_object(obj, path)

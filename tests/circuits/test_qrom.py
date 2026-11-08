@@ -2,12 +2,13 @@
 import random
 import sys
 import unittest
+import subprocess
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from harness import RefInterp, counts, depths, parse  # noqa: E402
+from harness import RefInterp, counts, depths, parse, simulate, word  # noqa: E402
 from test_adders import verify  # noqa: E402
 from adders.circuits import write_object  # noqa: E402
 from qrom import constructions as Q  # noqa: E402
@@ -30,6 +31,19 @@ def sizes(obj):
 
 
 class Qrom(unittest.TestCase):
+    def test_cli_single_word_table(self):
+        for family, n, extra in (("qrom", 0, []), ("qrom.select_swap", 0, ["0"]),
+                                 ("qrom.select_swap_dirty", 1, ["0"])):
+            result = subprocess.run([sys.executable, "-B", "-I",
+                                     str(Path(__file__).resolve().parents[2] / "adders/generate.py"),
+                                     "one", family, "1", str(n), "1", *extra],
+                                    capture_output=True, text=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            fn = next(iter(parse(result.stdout)[0].values()))
+            values = {name: [0] * width for name, width in fn.mut + fn.ins + fn.borrowed()}
+            store = simulate(fn, values, 1)
+            self.assertEqual(word(store, "t", 1), [1])
+
     def test_every_address_every_target(self):
         for n in range(0, 9):
             for W in (1, 3, 8):
@@ -146,6 +160,7 @@ class Differential(unittest.TestCase):
 
     def test_dirty_form(self):
         """Borrowed wires are returned; the interpreter's own frame decision is reported as it stands."""
+        DIR.mkdir(parents=True, exist_ok=True)
         data = table(3, 2, seed=4)
         obj = Q.select_swap_dirty(tuple(data), 3, 2, 1)
         path = DIR / f"{obj.root}.bisa"

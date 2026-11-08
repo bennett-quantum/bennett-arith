@@ -189,7 +189,7 @@ def generate(dest, widths=POWI_WIDTHS):
         e['signature'] = f"{e['result']} ({', '.join(e['params'])})"
         e['status'] = 'deterministic-integer-libm-v1' if e['op']!='cmps' and OPS.index(e['op'])>=OPS.index('sin') else 'exact' if e['op'] != 'powi' else 'deterministic-repeated-squaring'
         if (e['fi']==6 and e['op']=='fma') or (e['op']=='convert' and e['extra']==6):
-            e.update(status='canonical-pair-pending-parity-migration',bead='bennett-arith-4yg')
+            e.update(status='canonical-pair-exact')
         ret, params, op = e['result'], e['params'], e['op']
         if op in ('cmp','cmps') and e['fi'] in IEEE_COMPARE:
             e['comparison_implementation']='format-specific-integer-ir'
@@ -290,8 +290,8 @@ def generate(dest, widths=POWI_WIDTHS):
     (dest/'wrappers.ll').write_text('\n'.join(ir)+'\n')
     (dest/'bridge.ll').write_text('\n'.join(bridge)+'\n')
     (dest/'exports.txt').write_text('\n'.join(e['name'] for e in rows)+'\n__bennett_rt_fenv\n')
-    manifest = dict(dialect='0.2.12', isa='0.8',
-                    conformance_pending=['bennett-arith-4yg','bennett-arith-wvh'],
+    manifest = dict(dialect='0.2.13', isa='0.8',
+                    conformance_pending=['ppc-full-domain-arithmetic','elementary-full-domain-accuracy'],
                     instance_generator=dict(command='python3 -I softfloat/instantiate.py REQUEST.json OUTPUT_DIRECTORY',
                         request_schema='bennett-arith-instantiations-1',manifest_schema='bennett-arith-instances-1'),
                     implementation='integer-core-v2-libm1', exports=rows,
@@ -301,38 +301,37 @@ def generate(dest, widths=POWI_WIDTHS):
                         dict(name='__bennett_sf_powi_B_i<K>', signature='C_B (C_B, iK)',
                              constrained_name='__bennett_sf_powi_B_i<K>_rm', constrained_signature='C_B (C_B, iK, i32 R)',
                              formats='all seven', status='published listed widths; arbitrary LLVM iK widths available offline', published_widths=[32]+list(widths), generator='softfloat/instantiate.py',
-                             section='13.4', bead='bennett-arith-0he'),
+                             section='13.4'),
                         dict(name='__bennett_sf_convert_to_<fmt>_B', signature='iN (C_B, i32 R, i1 Sat)',
                              formats='all eleven LLVM23 interpretation names from each of seven bases; no names on LLVM18',
-                             generator='softfloat/instantiate.py',section='13.1', status='available-offline', bead='bennett-arith-38c'),
+                             generator='softfloat/instantiate.py',section='13.1', status='available-offline'),
                         dict(name='__bennett_sf_convert_from_<fmt>_B', signature='C_B (iN)',
                              formats='each of seven bases from all eleven LLVM23 interpretation names; no names on LLVM18',
-                             generator='softfloat/instantiate.py',section='13.1', status='available-offline', bead='bennett-arith-38c')])
+                             generator='softfloat/instantiate.py',section='13.1', status='available-offline')])
     implemented={e['name'] for e in rows}
     for e in entries(FORMATS):
         if e['name'] not in implemented:
             e['signature']=f"{e['result']} ({', '.join(e['params'])})"
-            e.update(status='staged', bead='bennett-arith-r3d', section='13.1/13.3/13.5')
+            e.update(status='staged', section='13.1/13.3/13.5')
             manifest['staged_exports'].append(e)
-    manifest['numerical_accuracy'] = dict(contract='0.2.12 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
-        pending_bead='bennett-arith-wvh',
-        claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=224,
+    manifest['numerical_accuracy'] = dict(contract='0.2.13 13.4: full-domain one-local-ulp; constrained correctly rounded selection and exact flags',
+        pending_obligation='elementary-full-domain-accuracy',
+        claim='deterministic approximation; no global correct-rounding or ulp-bound proof', working_significand_bits=240,
         exact_dyadic_families=['pow','exp2','exp10','log2','log10','half-integer sincospi'],
         exact_dyadic_method='normalized integer significands, perfect roots/powers and one final target rounding',
         proven_paths=[dict(operation='exp_ppcf128',domain='finite |x| <= 2^-112',
             method='exact high+low midpoint comparison; quadratic/cubic log(1+h) comparison for directed sides',
             guarantee='correct canonical pair in all five modes; zero is exact, otherwise only inexact',
-            test='tests/test_ppc_exp.py',bead='bennett-arith-wvh.1')],
-        payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with MPFR at 384 bits; <=4 ulp engineering acceptance, exhaustive f16/bf16 sin <=1 ulp')
+            test='tests/test_ppc_exp.py')],
+        payne_hanek_constant_bits=17408, verification='tests/test_trans.py and tests/test_trans_extra.py compare published bitcode with adaptive directed MPFR brackets and exact carrier selection; unresolved PPC cases use BENNETT_ARITH_PROMISED')
     manifest['ppc_semantics'] = dict(oracle='independent exact rational arithmetic for explicit guarantees; same-major LLVM APFloat for component operations', high_component_carrier_bits='0..63',
         both_majors='exact high+low conversions, full-width integer inputs, canonical-pair integral rounding, sqrt and one-rounding exact FMA',
         exact_sum_quantum='2^-1074',exact_sum_bits=2176,sqrt_comparison_bits=4352,
         llvm18='component add/mul; legacy 106-bit divide/remainder operation conventions',
         llvm23='same operations as LLVM18, including explicit 0.2.12 exact-value overrides',
-        pending_bead='bennett-arith-4yg',
-        implementation_gaps='0.2.13 nearest-even parity migration follows review round 2; the current publication retains the 0.2.12 parity interpretation')
-    manifest['contract_questions']=[dict(bead='bennett-arith-4yg.1',section='13.1',
-        question='Published 0.2.13 resolves the 0.2.12 zero-low parity question; implementation migration is sequenced after review round 2.')]
+        pending_obligation='ppc-full-domain-arithmetic',
+        implementation_gaps='legacy component add/mul and divide/remainder conventions remain versioned')
+    manifest['contract_questions']=[]
     manifest['comparison_semantics']=dict(quiet='cmp_B_rm: invalid only on signaling NaN',
         signaling='cmps_B_rm: invalid on any NaN, including false/true predicates',
         specialized_formats=[FORMATS[i][0] for i in IEEE_COMPARE],

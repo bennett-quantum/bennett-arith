@@ -85,8 +85,9 @@ def expected_to(value, sign, f, rm, sat):
         units,_=edge.roundedq(v/edge.power(step),sign,rm)
         rounded=units*edge.power(step)
         if rounded>maximum:
-            if not sat and kind!='ieee': return 0
-            result=maxbits if sat else (((1<<eb)-1)<<(p-1) if kind=='ieee' else 0)
+            finite_direction=rm==3 or (rm==1 and not sign) or (rm==2 and sign)
+            if not sat and not finite_direction and kind!='ieee': return 0
+            result=maxbits if sat or finite_direction else (((1<<eb)-1)<<(p-1) if kind=='ieee' else 0)
         else:
             result=values[rounded]
             if not result and kind=='uz': return 0

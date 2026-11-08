@@ -581,6 +581,7 @@ def mulmod_const(W, k, m):
     _check_modulus(W, m)
     if math.gcd(k, m) != 1:
         raise ValueError(f"mulmod needs gcd(k, m) = 1, got k={k} m={m}")
+    k %= m
     kinv = pow(k, -1, m) if m > 1 else 0
     tag = f"w{W}.k{k:x}.m{m:x}"
     return _named_pair(_mulmod_oracle(f"arith.ref.mulmodk.{tag}", W, m, k),

@@ -11,19 +11,8 @@ o=importlib.util.module_from_spec(s);s.loader.exec_module(o);e=o.e
 def tanh_bounds(x):
     spec=importlib.util.spec_from_file_location('mpfr',ROOT/'tests/test_trans.py')
     t=importlib.util.module_from_spec(spec);spec.loader.exec_module(t)
-    oracle=t.Oracle();t.m.mpfr_clear(t.C.byref(oracle.r));t.m.mpfr_init2(t.C.byref(oracle.r),2048)
-    try:
-        oracle.put(oracle.a,x);bounds=[]
-        for direction in (3,2): # MPFR downward/upward
-            t.m.mpfr_tanh(t.C.byref(oracle.r),t.C.byref(oracle.a),direction)
-            exponent=t.C.c_long()
-            p=t.m.mpfr_get_str(None,t.C.byref(exponent),2,0,t.C.byref(oracle.r),0)
-            digits=t.C.string_at(p).decode();t.m.mpfr_free_str(p)
-            sign=-1 if digits.startswith('-') else 1;digits=digits.lstrip('-')
-            bounds.append(sign*int(digits,2)*e.power(exponent.value-len(digits)))
-        return bounds
-    finally:
-        for item in (oracle.a,oracle.b,oracle.r):t.m.mpfr_clear(t.C.byref(item))
+    oracle=t.Oracle(2048)
+    return [oracle.call("tanh",x,0,direction=direction)[0] for direction in (3,2)]
 
 def run(major,root,case):
     edge=e.Edge(major,root);f=e.FORMATS['f64'];one=e.encode(e.Q(1),f)[0]

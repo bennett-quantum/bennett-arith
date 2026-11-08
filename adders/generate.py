@@ -18,7 +18,8 @@ from adders.circuits import OracleFn, QinplaceAction, census, jcs  # noqa: E402
 from multipliers import constructions as M  # noqa: E402
 from qrom import constructions as Q  # noqa: E402
 
-ISA_SPEC_COMMIT = "5513d7822edc7cfc54aeda37092bfb3f2fec7581"
+ISA_SPEC_COMMIT = "ecaaac060c44e317d1181345fa6b8e38c096c099"
+CERTIFICATE_EXTENSION_SPEC_COMMIT = "be109bd27889ea91e3c0ad78a30e5e4d71d3d0d3"
 MANIFEST = ROOT / "adders/objects/manifest.json"
 SOURCES = ["adders/circuits.py", "adders/constructions.py", "adders/generate.py", "adders/target-unit.json",
            "multipliers/constructions.py", "qrom/constructions.py"]
@@ -95,6 +96,7 @@ def build():
                         "file": path, "inverse": obj.inverse, "root": obj.root,
                         "sha256": hashlib.sha256(text.encode()).hexdigest(), "symbols": symbols})
     manifest = {"entries": entries, "isa": "0.9", "isa_spec_commit": ISA_SPEC_COMMIT,
+                "certificate_extensions": {"K91": CERTIFICATE_EXTENSION_SPEC_COMMIT},
                 "sources": {s: hashlib.sha256((ROOT / s).read_bytes()).hexdigest() for s in SOURCES},
                 "target_sha256": hashlib.sha256((ROOT / "adders/target-unit.json").read_bytes()).hexdigest()}
     files[str(MANIFEST.relative_to(ROOT))] = jcs(manifest) + "\n"
@@ -107,7 +109,9 @@ def main(argv):
     if argv[1] == "one":
         if len(argv) < 3 or argv[2] not in FAMILIES:
             raise SystemExit(f"family must be one of {sorted(FAMILIES)}")
-        args = [tuple(int(w, 0) for w in a.split(",")) if "," in a else int(a, 0) for a in argv[3:]]
+        args = [tuple(int(w, 0) for w in a.split(","))
+                if i == 0 and argv[2] in {"qrom", "qrom.select_swap", "qrom.select_swap_dirty"}
+                else int(a, 0) for i, a in enumerate(argv[3:])]
         sys.stdout.write(FAMILIES[argv[2]](*args).text())
         return
     files = build()
