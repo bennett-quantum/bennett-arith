@@ -10,7 +10,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from harness import RefInterp, counts, depths, parse  # noqa: E402
 from test_adders import verify  # noqa: E402
-from adders.circuits import write_object  # noqa: E402
 from multipliers import constructions as M  # noqa: E402
 
 REF = RefInterp()
@@ -190,7 +189,7 @@ class Differential(unittest.TestCase):
         cases += [(M.mul_tree(W), False, W, 2 * W, b) for W, b in ((1, 16), (2, 64), (3, 16), (4, 8))]
         for obj, add, W, R, budget in cases:
             path = DIR / f"{obj.root}.bisa"
-            write_object(obj, path)
+            path.write_text(obj.text())
             runs = [([rng.getrandbits(R)], [rng.getrandbits(W), rng.getrandbits(W)]) for _ in range(budget)]
             for (mut, ins), got in zip(runs, REF.many(path, obj.root, runs)):
                 product = ins[0] * ins[1]

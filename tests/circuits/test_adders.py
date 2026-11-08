@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from harness import Lanes, RefInterp, VECTOR_ABOVE, counts, depths, pack_word, parse, simulate, tobits, word  # noqa: E402
 from adders import constructions as C  # noqa: E402
-from adders.circuits import Circuit, Object, write_object  # noqa: E402
+from adders.circuits import Circuit, Object  # noqa: E402
 
 EXHAUSTIVE = range(1, 11)
 RANDOM = (11, 16, 32, 64, 128, 256)
@@ -311,7 +311,7 @@ class Differential(unittest.TestCase):
 
     def place(self, obj):
         path = self.dir / f"{obj.root}.bisa"
-        write_object(obj, path)
+        path.write_text(obj.text())
         return path
 
     def diff(self, obj, symbol, spec, budget=256, seed=3):
@@ -395,7 +395,7 @@ class Differential(unittest.TestCase):
             for symbol, sign in ((obj.root, 1), (obj.inverse, -1)):
                 token = self.token(obj, symbol)
                 cases = [([x], []) for x in range(1 << W)]
-                for (mut, _), got in zip(cases, REF.many(path, symbol, cases, "--arg", token)):
+                for (mut, _), got in zip(cases, REF.many(path, symbol, cases, "--arg", token, "--token-aliases", "[0]")):
                     x = mut[0]
                     self.assertEqual(got[0], [(x + sign * k) % m if x < m else x], (obj.root, x))
         for W, k, m in ((1, 1, 1), (3, 3, 7), (4, 5, 11), (4, 7, 16)):
@@ -407,7 +407,7 @@ class Differential(unittest.TestCase):
             for symbol, factor in ((obj.root, k), (obj.inverse, inv)):
                 token = self.token(obj, symbol)
                 cases = [([x], []) for x in range(1 << W)]
-                for (mut, _), got in zip(cases, REF.many(path, symbol, cases, "--arg", token)):
+                for (mut, _), got in zip(cases, REF.many(path, symbol, cases, "--arg", token, "--token-aliases", "[0]")):
                     x = mut[0]
                     self.assertEqual(got[0], [(x * factor) % m if x < m else x], (obj.root, x))
 
