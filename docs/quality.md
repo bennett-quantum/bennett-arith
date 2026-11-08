@@ -591,8 +591,8 @@ child, including concurrent reference-interpreter calls. Usage below 10% or
 above 50% of the class produces a warning, never a performance assertion.
 Timeouts terminate descendants and report `UNKNOWN/TIMEOUT`; they establish no
 proof or evidence. Standalone commands/suites retain exit 124. Explicit
-`--gate-check` mode exits zero on an UNKNOWN after emitting that receipt, per
-the gate's own-check convention; real command failures still propagate.
+`--gate-check` mode also retains exit 124 on UNKNOWN after emitting that receipt,
+so the push gate cannot accept incomplete checks; real command failures still propagate.
 Publication receipts retain COMPLETE/UNKNOWN/FAILED and UNKNOWN claims count zero.
 
 The one provisional row is `eternal`: the current exhaustive `scripts/gate`
@@ -614,7 +614,7 @@ Focused validation (all exited zero, class guards from the table):
 - `python3 -B -I scripts/time_guard.py moderate scripts/test`: 45 tests,
   79.545 s body, 101.759527 s wall and 101.386932 CPU seconds.
 - `python3 -B -I scripts/time_guard.py short python3 -B -I tests/test_time_guard.py`:
-  six tests; UNKNOWN propagation, gate zero status versus real failures, CPU
+  six tests; UNKNOWN propagation, gate exit 124 versus real failures, CPU
   accounting, class margin/factor and persistent receipt output.
 - `python3 -B -I scripts/time_guard.py short python3 -B -I tests/test_time_literals.py`:
   three tests, including the full scoped repository scan.

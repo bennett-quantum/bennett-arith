@@ -156,7 +156,7 @@ def main():
     try:
         result = run(argv, guard_class=guard_class)
     except subprocess.TimeoutExpired:
-        raise SystemExit(0 if gate_check else 124)
+        raise SystemExit(124)
     raise SystemExit(result.returncode)
 
 

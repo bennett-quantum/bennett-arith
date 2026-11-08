@@ -67,12 +67,12 @@ class TimeGuards(unittest.TestCase):
         self.assertEqual(prior.exception.code, 1)
         self.assertIn("earlier mismatch", result.stream.getvalue())
 
-    def test_gate_mode_reports_unknown_without_failing_own_checks(self):
+    def test_gate_mode_preserves_unknown_exit_code(self):
         error = subprocess.TimeoutExpired("probe", guard.seconds("short"))
         with patch.object(sys, "argv", ["time_guard.py", "short", "--gate-check", "probe"]), patch.object(guard, "run", side_effect=error):
             with self.assertRaises(SystemExit) as result:
                 guard.main()
-        self.assertEqual(result.exception.code, 0)
+        self.assertEqual(result.exception.code, 124)
         with patch.object(sys, "argv", ["time_guard.py", "short", "probe"]), patch.object(guard, "run", side_effect=error):
             with self.assertRaises(SystemExit) as result:
                 guard.main()
