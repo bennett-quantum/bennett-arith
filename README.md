@@ -19,4 +19,4 @@ Everything is local and headless, with temporary files under `.tmp/`.
 The wider arithmetic scope remains: `adders/`, `multipliers/`, `qrom/` and
 soft-float as ISA library objects with certificates. See `docs/PORT_PLAN.md`.
 This repository publishes ordinary LLVM bitcode and circuit objects with certificates.
-The pinned reader proves all 37 universal `adjoint_table` claims; two large-publication receipts remain incomplete, as recorded in [quality evidence](docs/quality.md).
+The pinned reader completed all 129 publication receipts: 116 proofs, including all 37 universal `adjoint_table` claims, and 105 sampled evidence claims. See [quality evidence](docs/quality.md) for measurements and the explicit UNKNOWN policy for hang guards.

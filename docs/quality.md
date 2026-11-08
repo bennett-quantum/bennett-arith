@@ -2,19 +2,19 @@
 
 ## Default and exhaustive checks
 
-Default at 7089922: `timeout 1200s systemd-run --user --scope -p MemoryMax=6G
-scripts/test`, **37 tests passed in 67.91 s wall time** (51.470 s test body).
-The build started with 23.72 GiB available and load1 5.71. The earlier cold
-run at 94cf09f passed 37 tests in 72.07 s after all six bridge/support outputs
-were moved aside. Both runs regenerate and relink support despite existing
-outputs. The ISA reader pin is
+Default after the R40 receipt changes: `timeout 1200s systemd-run --user
+--scope --unit=bennett-arith-quality-default -p MemoryMax=6G scripts/test`,
+**36 tests passed in 72.97 s wall time** (55.963 s test body), exit 0.
+The build started with 24 GB available (`free -g`) and load1 2.4741.
+The test count changed because two pairs of metadata/reproduction checks
+were consolidated and the guard regression was added; all checks remain.
+The earlier cold run at 94cf09f passed 37 tests in 72.07 s after all six
+bridge/support outputs were moved aside. Both runs regenerate and relink
+support despite existing outputs. The ISA reader pin is
 `62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc` (ISA 0.9 K94); the dialect pin is
-`95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). The pinned gate tool's
-`verify --repo MAIN --sha cf4af47` materialised both and built the ISA reader
-in 10.97 s under a 6 GiB systemd scope, with 24.19 GiB available and load1
-3.37. At adoption the ISA gated push was pending (`pushed=False`); the dialect
-was pushed. Final verification against head 2cd29d7 confirms both pins
-`pushed=True`; the ISA gated push completed during these checks.
+`95a4b8d06933018a07fef3516296a25fd582fcde` (0.2.13). Both pins were
+materialised and confirmed pushed by the pinned gate tool's `verify`
+operation. A final ISA `git log -1 origin/main` still names the exact K94 pin.
 Publication metadata still identifies its governing base text
 and K91 extension separately; the gate pin selects the reader used to check it.
 The cold bridge build does not regenerate or mutate the published bitcode.
@@ -102,9 +102,10 @@ stay outside the bounded default measurement.
   **37 universal `adjoint_table` claims as proof** under §12.1 K94. The
   previous `3b1090790d82` reader returned `Unverified` because the syntactic
   premises were unspecified. No certificate bytes, claims, aliases or domains
-  changed for this second re-pin. Three large-publication receipts remain
-  explicitly incomplete (`bennett-arith-jn3`, P2); diagnostic execution
-  coverage remains separate from raw certificate proof evidence.
+  changed for this second re-pin. All 129 publication receipts now complete,
+  covering 116 proofs and 105 evidence claims, resolving `bennett-arith-jn3`.
+  Diagnostic execution coverage remains separate from raw certificate proof
+  evidence.
 * Parity implementation is complete; `bennett-arith-4yg.1` remains open because
   its inherited release dependency on gdg prevents closure. No dependency override.
 
@@ -137,151 +138,273 @@ runs `timeout 240s python3 -B -I tests/test_directed.py 18 --quick` and the
 corresponding `23 --quick` passed **12,460 checks each**. No tolerance or
 baseline changed.
 
-ISA 0.9 K91 at be109bd §12.3 explicitly requires canonical `token_aliases` and
-states that closed-schema readers require its upgrade. Publications retain
-this required metadata. The unconditional
-`Published.test_raw_publications_admitted` checks all 129 unmodified files and
-then uses the pinned reader's public `Object::verify_certificate` API to
-replay every stored claim, accepting only proof or sampled evidence reports.
-A nonempty report set and exact claim count prevent vacuous success. The
-bridge links only to the library built beside the gate-pinned reader binary.
-It does not substitute the local ISA working tree or generator output. The
-CLI `check` only validates admission and identities; the Rust verifier is
-required because the documented public API performs full certificate replay,
-including borrowed-wire domains that CLI `run-action` cannot initialise.
+ISA 0.9 K91 at be109bd §12.3 requires canonical `token_aliases` and a
+reader implementing its upgraded schema. Publications retain that metadata.
+`Published.test_raw_publications_admitted` admits every manifest file and
+replays every stored claim using the gate-pinned reader's public
+`Object::verify_certificate` API. It asserts nonempty reports, exact claim
+counts, matching object/interface identities, Established K92 applicability,
+and Proof/Evidence-only outcomes. Structural `adjoint_table` claims require
+Proof. The bridge links to the library beside the pinned reader binary;
+CLI admission alone does not establish a certificate claim.
 
-At ec37c21 with the old ecaaac0 reader,
-`timeout 240s python3 -B -I tests/circuits/test_objects.py Published.test_raw_publications_admitted`
-was reproduced **RED: all 129 publications reject `token_aliases` before replay**
-(1.375 s test body). Pin-only commit 6dd2531 moves the reader to pushed
-`3b1090790d82a00ac95d30b8da6b42d1d7a9f5d1`. Materialisation used:
+Red-first history: the old ecaaac0 reader rejected `token_aliases` in all 129
+publications before replay. Adopting the upgraded API exposed six modular
+K4 inverse-pair subjects bound to `g` rather than their owning action;
+an owner-local regression failed before that binding was fixed. No body,
+closure identity, partition or inverse-pair domain changed. Reader 3b10907
+then reported the structural claims Unverified because their premises were
+unspecified. Pin commit cf4af47 adopts pushed ISA 0.9 K94 at
+`62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc`, which specifies and checks those
+premises. A focused replay established all 37 structural claims as proof,
+including the original `arith.bij.sub.w1` claim 1 witness. The universal
+invocations, budgets, domains and K91 partitions were retained.
+
+The bridge prints every accepted claim and a complete receipt. Unverified
+is an explicit failing outcome, distinct from Rejected; a deliberately
+mutated Cuccaro claim `0+0=1` rejects at §12.1 K13 full-tuple mismatch.
+Image-relative or sampled structural claims also fail. Diagnostic table
+replays retain the independent four-tuple width-one Cuccaro assertion,
+including `[1,0] -> [1,1]` with phase exactly +1.
+
+### Completed publication measurements
+
+The earlier 600 s stage limits failed on three large receipts under load:
+addmod replay stopped at 600.03 s, muladd admission at 600.21 s, and mul
+admission at 600.18 s. The former test called `self.fail()` on those guards.
+A 1200 s serial outer timeout also failed to produce a complete manifest
+receipt. None of those outcomes was a refutation or a proof.
+
+The requested once-only measurements ran serially on this 12-core/30-GB
+host on **2026-11-07**, each under `/usr/bin/time -v`, `timeout 5400s` and
+`systemd-run --user --scope --unit=bennett-heavy-arith-measure -p MemoryMax=6G`.
+Before each start, `free -g` showed at least 6 GB available, load1 was below
+8, and no other `bennett-heavy` scope was active. No 600 s inner limit applied.
+
+| Publication and measured stage | Wall seconds | Peak RSS, KB | Result | Preflight available GB / load1 |
+|---|---:|---:|---|---:|
+| `arith.bij.addmod.w8.mfb`, full four-claim replay | 868.48 | 21,960 | Two sampled Evidence, two inverse-pair Proof; K92 Established | 23 / 1.23 |
+| `arith.muladd.karatsuba.w32.r64`, admission | 465.91 | 1,086,448 | Accepted; matching published identity, no unresolved imports | 23 / 0.86 |
+| `arith.mul.karatsuba.w32.r64`, admission | 473.02 | 972,712 | Accepted; matching published identity, no unresolved imports | 24 / 1.50 |
+
+An earlier mul admission attempt was stopped after 17.64 s because its shell
+continued after a failed resource preflight. That attempt is explicitly
+discarded and does not set a guard. The corrected launcher starts work only
+after its resource predicate succeeds. Quiet Karatsuba admissions completed
+below 600 s despite the earlier loaded attempts timing out there; absolute
+time is not a deterministic correctness assertion.
+
+The required full publication test ran **once**, with the same preflight
+rule (24 GB available, load1 4.2285, no other heavy scope), using:
 
 ```sh
-timeout 1200s python3 /home/tobias/Projects/bennett-workspace/bennett-arith/.tmp/gate/tool/gate_run-01c0314c9aaa4a37313ab530da2134efafe9cbd5.py verify --repo /home/tobias/Projects/bennett-workspace/bennett-arith --sha 6dd2531
+/usr/bin/time -v -o .tmp/quality-arith/measure-full-publications.time timeout 7200s systemd-run --user --scope --unit=bennett-heavy-arith-measure -p MemoryMax=6G /usr/bin/python3 -B -I tests/circuits/test_objects.py
 ```
 
-The new public API returns `CertificateReport`; the bridge now reads its
-`claims` field, retains exact claim-count and Proof/Evidence-only assertions,
-and rejects every unestablished K92 applicability obligation. The old bridge
-failed compilation against this pin before that adaptation.
+It passed **7 tests in 3158.577 s test-body time**, **3158.68 s wall**,
+peak RSS **1,086,736 KB**, exit 0. The runner reported
+**selected=129, COMPLETE=129, UNKNOWN=0, FAILED=0**, with **221 accepted
+claims: 116 Proof and 105 Evidence**, including all **37 structural proofs**.
+Both Karatsuba publications' single sampled claim completed as Evidence;
+K92 applicability was Established. The addmod receipt completed its four
+claims as two Proof and two Evidence. These are complete receipts rather
+than admission-only results. `bennett-arith-jn3` is resolved; the earlier
+K91/K94 rejection beads `bennett-arith-emu` and `bennett-arith-4ss` were
+already resolved.
 
-Raw verification exposed two further issues. Six modular objects bound their
-K4 inverse-pair subjects to `g` instead of the owning action. ISA 0.9 §12.3
-K92 requires owner-local entries and claim indices. An added owner-subject
-regression failed before fixing that binding, then passed. No body, closure
-identity, token partition or inverse-pair domain changed.
+The live full run loaded 09e97d3. Logging-only commit d10fdf7 subsequently
+added admission/replay durations to future completion lines; the selected
+inputs, assertions and guards are identical. The actual transcript retains
+its original total-only format. A read-only observer recovered kernel
+process-start ticks and confirmed process exits, yielding conservative
+phase wall upper bounds without rerunning or modifying a stage:
 
-Pin commit cf4af47 adopts ISA 0.9 K94 at `62a0cf0ef9f1`, which specifies the
-adjoint theorem's decidable premises and implements their checks. A focused
-raw-byte replay of manifest indices 41..77 completed all **111 claims**, with
-all **37 structural claims Established (proof)**, in 26.87 s wall time.
-This includes `arith.bij.sub.w1` claim 1, the original unchecked witness.
-The invocation remains universal over arguments, budgets and K91 partitions;
-no claim or domain was reduced and no publication regenerated.
+| Publication | Admission upper bound, seconds | Replay upper bound, seconds | Guard for each stage, seconds |
+|---|---:|---:|---:|
+| `arith.bij.addmod.w8.mfb` | Included in 853.55 s whole receipt | 853.67 | 8684.80 |
+| `arith.muladd.karatsuba.w32.r64` | 444.08 | 452.52 | 4659.10 |
+| `arith.mul.karatsuba.w32.r64` | 405.33 | 391.15 | 4730.20 |
 
-The replay bridge prints each established claim and a final complete receipt.
-It distinguishes failing `Unverified` outcomes from `Rejected` false or
-malformed claims, and refuses image-relative or sampled structural proofs.
-Using the old pinned public API reproduces the unchecked witness: the former
-diagnostic failed a distinct-`Unverified:` check, then the updated bridge
-passed it while retaining a nonzero result. A deliberately mutated Cuccaro
-table claiming `0+0=1` rejects at §12.1 K13 full-tuple mismatch, distinctly
-from Unverified. Timeout diagnostics print `INCOMPLETE`, the publication,
-admission/replay stage, bound and measured wall time, then fail the test.
+Each per-entry guard is ten times the slower completed measurement across
+its admission and replay stages, including the once-only measurements
+above. The ordinary-publication guard is 5046 s, based on the earlier
+504.60 s completed ordinary receipt including both stages; the largest
+ordinary receipt in this full run was 205.74 s. Comments beside the named
+constants cite measured values, this host and 2026-11-07. The separate
+bridge-compilation guard is 60 s, based on a 0.108 s compile/link measurement
+on the same host/date.
 
-Separately, `timeout 240s python3 -B -I tests/circuits/test_objects.py
-Published.test_interpreter_replays_table_rows Published.test_token_aliases
-Published.test_manifest_is_current Published.test_reproduces_byte_for_byte`
-passed four tests at the K94 pin in 7.13 s wall time (6.988 s test body).
-`Published.test_certificates_tell_the_truth` also passed in 0.494 s. The bounded default suite includes
-this diagnostic replay and an independent four-tuple width-one Cuccaro
-assertion, including `[1,0] -> [1,1]` with phase exactly +1. The full circuits
-suite selects unconditional raw admission and claim replay; the remaining
-large-publication work limits still prevent a complete green receipt.
+R40 guard expiry produces an explicit **UNKNOWN** receipt, printed
+immediately and counted/listed at the end. UNKNOWN contributes **zero**
+accepted claims. COMPLETE and FAILED are counted separately; completed
+refuted, rejected or Unverified claims still fail. Compilation expiry marks
+every selected receipt UNKNOWN before admission starts. The circuits runner
+footer points to these statuses. Tests assert claim counts, identities,
+full replay tuples and verdicts; they do not assert absolute seconds.
 
-The canonical `timeout 1200s systemd-run --user --scope -p MemoryMax=6G
-python3 -B -I tests/circuits/test_objects.py
-Published.test_raw_publications_admitted` at the K94 pin exited **124 at
-1200.00 s**. A serial outer timeout does not establish a complete manifest
-receipt. Complementary two-worker sweeps call the same committed raw helper
-and public pinned-reader verifier for every manifest entry, preserving the
-600 s bounds for admission and replay. The suffix at indices 118..128
-attempted all eleven publications: nine complete (all four tree multipliers
-and five QROM objects), two incomplete, exit 1 in **753.33 s** wall time.
-The prefix at indices 0..117 attempted all 118 publications: 117 complete,
-one incomplete, exit 1 in **902.81 s**. Comparing both result arrays with the
-manifest confirms every one of the **129 entries attempted exactly once**,
-**126 complete receipts covering 215 claims**, and exactly the three
-incomplete receipts below. All 37 universal structural claims are proof;
-no rejected or Unverified verdict was reported at this pin. This is not a green
-full-manifest receipt. The original K91/K94 rejection regressions
-(`bennett-arith-emu`, `bennett-arith-4ss`) are resolved; the incomplete
-performance receipts remain open in `bennett-arith-jn3`.
+The deterministic guard regression failed against the old `self.fail()`
+policy and passes for both admission and replay expiry. It also checks
+completed valid work and propagation of invalid status, Rejected and
+Unverified errors. Synthetic direct-runner probes attempted all 129 entries:
+guarded work yielded UNKNOWN=129, COMPLETE=0, accepted claims=0, exit 0,
+with all UNKNOWN entries listed; completed invalid work yielded FAILED=129,
+accepted claims=0 and exit 1. A compilation-guard probe reported UNKNOWN=129
+without attempting admission. Reproducibility and manifest checks share a
+test, and the K91/inverse-pair traversal covers generated examples and every
+publication. A permanent negative probe ensures generated examples cannot
+satisfy the published-only inverse-pair count when the manifest is empty.
+All original assertions remain, with budget typing additionally rejecting
+booleans. The quality baseline is unchanged for all 55 source files.
 
-The three previously incomplete receipts remain explicit P2 work in
-`bennett-arith-jn3`:
+The raw transcript, `/usr/bin/time -v` output, preflight, per-claim/per-entry
+validation and phase envelopes are in `.tmp/quality-arith/` as
+`measure-full-publications.log`, `measure-full-publications.time`,
+`measure-full-publications-preflight.log`, `full-publication-receipts.json`
+and `full-publication-phase-envelopes.json`. The transcript validator checks
+every manifest entry and stored claim, rejecting missing or duplicate
+reports; manifest SHA-256 is
+`d8b11db684390251fb5d89510c6b79c6352a40be2118c5faa25da81ecc9aad2c`.
+No full eight-hour gate was run; the orchestrator owns it.
 
-| Publication | Incomplete stage | Bound | Measured wall time |
-|---|---|---|---|
-| `arith.bij.addmod.w8.mfb` | Full four-claim replay after successful admission | 600 s | 600.03 s |
-| `arith.muladd.karatsuba.w32.r64` | Admission | 600 s | 600.21 s |
-| `arith.mul.karatsuba.w32.r64` | Admission | 600 s | 600.18 s |
+<details>
+<summary>All 129 completed receipts: measured wall time and accepted claim counts</summary>
 
-The earlier serial run at the previous pin stopped at the large muladd
-publication at its 1200 s outer bound; the new direct attempt supplies the
-more precise admission timeout above. None of these timeouts is a refutation
-or a proof. Every incomplete receipt remains a visible failing test result;
-no bound increased and no domain element, claim or publication was removed.
-The P2 follow-up proposes an optimized build of the identical pinned reader,
-per-publication API replay at the same bounds, profiling quadratic admission,
-and avoiding duplicate CLI/API parsing when identities can be checked from
-the same parsed object. This cheaper route has not been verified here.
+Times below include admission and full certificate replay; these are
+observations, not performance assertions. Every row is COMPLETE.
 
-Follow-up measurement on the same 12-core/30-GB host, 2026-11-07, runs each
-previously incomplete stage serially with `/usr/bin/time -v`, a 5400 s outer
-guard and a 6 GiB systemd scope. Each starts only with `free -g` available
-memory at least 6 GB, load1 below 8 and no other `bennett-heavy` scope.
-The addmod w8 full four-claim replay completed in **868.48 s**, peak RSS
-**21,960 KB**, exit 0: both sampled claims Evidence, both exhaustive
-inverse-pair claims Proof, and K92 applicability Established. Its preflight
-had 23 GB available and load1 1.23. Muladd Karatsuba w32 admission completed
-in **465.91 s**, peak RSS **1,086,448 KB**, exit 0; mul Karatsuba w32 admission
-completed in **473.02 s**, peak RSS **972,712 KB**, exit 0. Both returned
-`status:ok`, matching published identities and no unresolved imports. Their
-preflights were 23 GB/load1 0.86 and 24 GB/load1 1.50 respectively, with no
-heavy scope. Their certificate replay verdicts remain pending; admission
-does not establish them. The original full-manifest receipt above remains
-incomplete. The quiet admission measurements completed below the old 600 s
-cutoff despite the earlier loaded runs timing out at that bound.
+| Publication root | Wall seconds | Proof | Evidence |
+|---|---:|---:|---:|
+| `arith.add.cuccaro.w1` | 0.01 | 1 | 0 |
+| `arith.add.cuccaro.w2` | 0.01 | 1 | 0 |
+| `arith.add.cuccaro.w3` | 0.02 | 1 | 0 |
+| `arith.add.cuccaro.w4` | 0.05 | 1 | 0 |
+| `arith.add.cuccaro.w8` | 0.03 | 0 | 1 |
+| `arith.add.cuccaro.w16` | 0.04 | 0 | 1 |
+| `arith.add.cuccaro.w32` | 0.09 | 0 | 1 |
+| `arith.add.cuccaro.w64` | 0.26 | 0 | 1 |
+| `arith.add.cuccaro.w128` | 1.27 | 0 | 1 |
+| `arith.add.cuccaro_carry.w1` | 0.01 | 1 | 0 |
+| `arith.add.cuccaro_carry.w2` | 0.02 | 1 | 0 |
+| `arith.add.cuccaro_carry.w3` | 0.04 | 1 | 0 |
+| `arith.add.cuccaro_carry.w4` | 0.02 | 0 | 1 |
+| `arith.add.cuccaro_carry.w8` | 0.02 | 0 | 1 |
+| `arith.add.cuccaro_carry.w16` | 0.05 | 0 | 1 |
+| `arith.add.cuccaro_carry.w32` | 0.09 | 0 | 1 |
+| `arith.add.cuccaro_carry.w64` | 0.26 | 0 | 1 |
+| `arith.add.cuccaro_carry.w128` | 1.39 | 0 | 1 |
+| `arith.add.gidney.w1` | 0.01 | 1 | 0 |
+| `arith.add.gidney.w2` | 0.01 | 1 | 0 |
+| `arith.add.gidney.w3` | 0.03 | 1 | 0 |
+| `arith.add.gidney.w4` | 0.05 | 1 | 0 |
+| `arith.add.gidney.w8` | 0.02 | 0 | 1 |
+| `arith.add.gidney.w16` | 0.05 | 0 | 1 |
+| `arith.add.gidney.w32` | 0.28 | 0 | 1 |
+| `arith.add.gidney.w64` | 1.62 | 0 | 1 |
+| `arith.add.gidney.w128` | 13.37 | 0 | 1 |
+| `arith.add.ripple.w1` | 0.01 | 1 | 0 |
+| `arith.add.ripple.w2` | 0.05 | 1 | 0 |
+| `arith.add.ripple.w3` | 0.03 | 0 | 1 |
+| `arith.add.ripple.w8` | 0.04 | 0 | 1 |
+| `arith.add.ripple.w16` | 0.05 | 0 | 1 |
+| `arith.add.ripple.w32` | 0.16 | 0 | 1 |
+| `arith.add.ripple.w64` | 0.51 | 0 | 1 |
+| `arith.add.qcla.w1` | 0.02 | 1 | 0 |
+| `arith.add.qcla.w2` | 0.04 | 1 | 0 |
+| `arith.add.qcla.w3` | 0.02 | 0 | 1 |
+| `arith.add.qcla.w8` | 0.04 | 0 | 1 |
+| `arith.add.qcla.w16` | 0.08 | 0 | 1 |
+| `arith.add.qcla.w32` | 0.23 | 0 | 1 |
+| `arith.add.qcla.w64` | 0.69 | 0 | 1 |
+| `arith.bij.add.w1` | 0.02 | 3 | 0 |
+| `arith.bij.add.w2` | 0.03 | 3 | 0 |
+| `arith.bij.add.w3` | 0.05 | 3 | 0 |
+| `arith.bij.add.w4` | 0.15 | 3 | 0 |
+| `arith.bij.add.w8` | 0.08 | 1 | 2 |
+| `arith.bij.add.w16` | 0.09 | 1 | 2 |
+| `arith.bij.add.w32` | 0.24 | 1 | 2 |
+| `arith.bij.add.w64` | 1.09 | 1 | 2 |
+| `arith.bij.add.w128` | 6.98 | 1 | 2 |
+| `arith.bij.xor.w1` | 0.02 | 3 | 0 |
+| `arith.bij.xor.w2` | 0.02 | 3 | 0 |
+| `arith.bij.xor.w3` | 0.02 | 3 | 0 |
+| `arith.bij.xor.w4` | 0.10 | 3 | 0 |
+| `arith.bij.xor.w8` | 0.02 | 1 | 2 |
+| `arith.bij.xor.w16` | 0.04 | 1 | 2 |
+| `arith.bij.xor.w32` | 0.04 | 1 | 2 |
+| `arith.bij.xor.w64` | 0.08 | 1 | 2 |
+| `arith.bij.xor.w128` | 0.13 | 1 | 2 |
+| `arith.bij.neg.w1` | 0.02 | 3 | 0 |
+| `arith.bij.neg.w2` | 0.01 | 3 | 0 |
+| `arith.bij.neg.w3` | 0.02 | 3 | 0 |
+| `arith.bij.neg.w4` | 0.02 | 3 | 0 |
+| `arith.bij.neg.w8` | 0.14 | 3 | 0 |
+| `arith.bij.neg.w16` | 0.08 | 1 | 2 |
+| `arith.bij.neg.w32` | 0.17 | 1 | 2 |
+| `arith.bij.neg.w64` | 0.76 | 1 | 2 |
+| `arith.bij.neg.w128` | 4.64 | 1 | 2 |
+| `arith.bij.bswap.w16` | 0.04 | 1 | 2 |
+| `arith.bij.bswap.w32` | 0.04 | 1 | 2 |
+| `arith.bij.bswap.w64` | 0.08 | 1 | 2 |
+| `arith.bij.bswap.w128` | 0.08 | 1 | 2 |
+| `arith.bij.addk.w8.k1` | 0.20 | 3 | 0 |
+| `arith.bij.addk.w32.k1` | 0.16 | 1 | 2 |
+| `arith.bij.addk.w64.k1` | 0.70 | 1 | 2 |
+| `arith.bij.xork.w8.kff` | 0.09 | 3 | 0 |
+| `arith.bij.rotl.w8.r3` | 0.09 | 3 | 0 |
+| `arith.bij.rotl.w32.r7` | 0.05 | 1 | 2 |
+| `arith.bij.addmodk.w4.k5.mb` | 0.79 | 4 | 0 |
+| `arith.bij.addmodk.w8.k64.mfb` | 12.22 | 4 | 0 |
+| `arith.bij.addmod.w4.mb` | 13.83 | 4 | 0 |
+| `arith.bij.addmod.w8.mfb` | 853.55 | 2 | 2 |
+| `arith.bij.mulmodk.w4.k5.mb` | 0.69 | 4 | 0 |
+| `arith.bij.mulmodk.w8.k11.mfb` | 11.47 | 4 | 0 |
+| `arith.muladd.school.w1.r2` | 0.01 | 1 | 0 |
+| `arith.mul.school.w1.r2` | 0.01 | 1 | 0 |
+| `arith.muladd.school.w2.r4` | 0.08 | 1 | 0 |
+| `arith.muladd.school.w2.r2` | 0.03 | 1 | 0 |
+| `arith.mul.school.w2.r4` | 0.13 | 1 | 0 |
+| `arith.mul.school.w2.r2` | 0.03 | 1 | 0 |
+| `arith.muladd.school.w3.r6` | 0.03 | 0 | 1 |
+| `arith.muladd.school.w3.r3` | 0.03 | 0 | 1 |
+| `arith.mul.school.w3.r6` | 0.05 | 0 | 1 |
+| `arith.mul.school.w3.r3` | 0.04 | 0 | 1 |
+| `arith.muladd.school.w4.r8` | 0.05 | 0 | 1 |
+| `arith.muladd.school.w4.r4` | 0.03 | 0 | 1 |
+| `arith.mul.school.w4.r8` | 0.09 | 0 | 1 |
+| `arith.mul.school.w4.r4` | 0.04 | 0 | 1 |
+| `arith.muladd.school.w8.r16` | 0.25 | 0 | 1 |
+| `arith.muladd.school.w8.r8` | 0.09 | 0 | 1 |
+| `arith.mul.school.w8.r16` | 0.49 | 0 | 1 |
+| `arith.mul.school.w8.r8` | 0.15 | 0 | 1 |
+| `arith.muladd.school.w16.r32` | 3.52 | 0 | 1 |
+| `arith.muladd.school.w16.r16` | 0.36 | 0 | 1 |
+| `arith.mul.school.w16.r32` | 7.09 | 0 | 1 |
+| `arith.mul.school.w16.r16` | 0.75 | 0 | 1 |
+| `arith.muladd.school.w32.r64` | 103.51 | 0 | 1 |
+| `arith.muladd.school.w32.r32` | 7.56 | 0 | 1 |
+| `arith.mul.school.w32.r64` | 205.74 | 0 | 1 |
+| `arith.mul.school.w32.r32` | 15.36 | 0 | 1 |
+| `arith.muladd.karatsuba.w2.r4` | 0.14 | 1 | 0 |
+| `arith.mul.karatsuba.w2.r4` | 0.14 | 1 | 0 |
+| `arith.muladd.karatsuba.w4.r8` | 0.14 | 0 | 1 |
+| `arith.mul.karatsuba.w4.r8` | 0.10 | 0 | 1 |
+| `arith.muladd.karatsuba.w8.r16` | 3.89 | 0 | 1 |
+| `arith.mul.karatsuba.w8.r16` | 3.33 | 0 | 1 |
+| `arith.muladd.karatsuba.w16.r32` | 57.28 | 0 | 1 |
+| `arith.mul.karatsuba.w16.r32` | 51.52 | 0 | 1 |
+| `arith.muladd.karatsuba.w32.r64` | 896.38 | 0 | 1 |
+| `arith.mul.karatsuba.w32.r64` | 796.34 | 0 | 1 |
+| `arith.mul.tree.w2` | 0.08 | 1 | 0 |
+| `arith.mul.tree.w4` | 0.16 | 0 | 1 |
+| `arith.mul.tree.w8` | 2.05 | 0 | 1 |
+| `arith.mul.tree.w16` | 50.46 | 0 | 1 |
+| `arith.qrom.n3.w2.te0c3e191134bfb05` | 0.04 | 1 | 0 |
+| `arith.qrom.n4.w8.t2a91cc1790fe9fbc` | 0.04 | 0 | 1 |
+| `arith.qrom_ss.k2.n4.w8.t2a91cc1790fe9fbc` | 0.08 | 0 | 1 |
+| `arith.qrom_ssd.k1.n3.w2.te0c3e191134bfb05` | 0.04 | 0 | 1 |
+| `arith.qrom_ssd.k2.n4.w8.t2a91cc1790fe9fbc` | 0.11 | 0 | 1 |
 
-R40 is implemented in the receipt runner: absolute time is a cited hang
-guard at least ten times the measured covered stage. A guard expiry returns
-an explicit **UNKNOWN** receipt, printed immediately and counted/listed at
-the end. UNKNOWN contributes zero accepted claims. COMPLETE and FAILED are
-counted separately; completed rejected, refuted or Unverified claims still
-fail. The circuits runner footer reports completion and points to these
-statuses. It does not describe an UNKNOWN certificate as passed.
-
-The default stage guard derives from the prior 504.60 s completed ordinary
-receipt, including admission and replay. Per-entry guards use the slower
-measured covered stage; comments cite the wall time, host and date. The
-separate 60 s bridge-compilation guard cites its 0.108 s measurement and
-also reports UNKNOWN on expiry. Assertions still check deterministic work:
-the nonempty exact claim count, object/interface identities, full replay
-tuples, proof/evidence outcomes and K92 applicability. Reproducibility and
-manifest checks now share a test; K91 and inverse-pair metadata assertions
-share a traversal over the generated examples and every publication.
-
-The deterministic guard regression was red against `self.fail` and is now
-green for both admission and replay guard expiry. It also verifies completed
-valid checks and propagation of invalid status, Rejected and Unverified
-errors. A synthetic direct-runner probe attempted all 129 entries: guarded
-work produced UNKNOWN=129, COMPLETE=0, accepted claims=0, exit 0, with all
-129 UNKNOWN entries listed at the end; invalid completed checks produced
-FAILED=129, accepted claims=0 and exit 1. These probes assert calls and
-outcomes, not elapsed seconds.
-The final quality ratchet passes for all 55 source files without increasing
-any baseline. No full gate was run.
+</details>
 
 ## Audit disposition
 

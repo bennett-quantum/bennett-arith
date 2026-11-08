@@ -27,7 +27,9 @@ DIR = ROOT / ".tmp/opus-arith-circuits/objects/published"
 CHECK_GATE_LIMIT = 1500     # The debug binary's validation is quadratic in the body; larger
 REPLAY_GATE_LIMIT = 200     # objects are checked out of band with a release build (progress file).
 MANIFEST = json.loads((ROOT / "adders/objects/manifest.json").read_text())
-# Completed stage measurements, this 12-core/30-GB host, 2026-11-07.
+# Maximum completed admission/replay measurements, this 12-core/30-GB host,
+# 2026-11-07. Full-run Karatsuba replay upper bounds were 452.52/391.15 s,
+# below their admission measurements; each guard covers both stages.
 PUBLICATION_STAGE_WALL_S = {
     "arith.bij.addmod.w8.mfb": 868.48,       # Full four-claim replay, peak RSS 21,960 KB.
     "arith.muladd.karatsuba.w32.r64": 465.91,  # Admission, peak RSS 1,086,448 KB.

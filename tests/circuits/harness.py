@@ -31,7 +31,7 @@ from pinned_sibling import resolve_sibling  # noqa: E402
 
 
 def ref_binary():
-    """Use the debug build from the pinned ISA checkout (release only accepts 0.8)."""
+    """Use the debug build materialised from the gate.toml ISA pin."""
     path = resolve_sibling("bennett-isa-spec") / "reference-interpreter/target/debug/bennett-isa-ref"
     if not path.is_file():
         raise SystemExit(f"reference interpreter binary not found at {path}; "
