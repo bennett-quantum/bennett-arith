@@ -9,10 +9,13 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run, output as guarded_output
 LLVM = Path("/usr/lib/llvm-18/bin")
 PROBE = '''import sys
 from pathlib import Path
@@ -30,7 +33,7 @@ class DefaultPreparation(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        for name in ("scripts/test", "softfloat/generate.py", "softfloat/constants.py",
+        for name in ("scripts/test", "scripts/time_guard.py", "tests/timeouts.toml", "softfloat/generate.py", "softfloat/constants.py",
                      "dist/llvm18/bennett-arith.bc", "dist/llvm18/manifest.json",
                      "tests/test_edge.py"):
             dest = self.root / name
@@ -40,22 +43,22 @@ class DefaultPreparation(unittest.TestCase):
         self.work = self.root / ".tmp/llvm18"
 
     def default_run(self):
-        return subprocess.run([str(self.root / "scripts/test")], capture_output=True,
-                              text=True, timeout=120)
+        return guarded_run([str(self.root / "scripts/test")], capture_output=True,
+                              text=True, guard_class="moderate")
 
     def test_changed_publication_cannot_pass_with_previous_bridge(self):
         first = self.default_run()
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         bc = self.root / "dist/llvm18/bennett-arith.bc"
-        ir = subprocess.check_output([str(LLVM / "llvm-dis"), str(bc), "-o", "-"],
-                                     text=True, timeout=30)
+        ir = guarded_output([str(LLVM / "llvm-dis"), str(bc), "-o", "-"],
+                                     text=True, guard_class="moderate")
         # Deliberately return 1 instead of its predecessor for this downward
         # tanh case, retaining the ABI and every other published definition.
         pattern = r"(define i16 @__bennett_sf_tanh_f16_rm\([^\n]*\) \{\n).*?^}"
         broken, count = re.subn(pattern, r"\g<1>  ret i16 15360\n}", ir, flags=re.M | re.S)
         self.assertEqual(count, 1)
-        subprocess.run([str(LLVM / "llvm-as"), "-o", str(bc)], input=broken,
-                       text=True, check=True, timeout=30)
+        guarded_run([str(LLVM / "llvm-as"), "-o", str(bc)], input=broken,
+                       text=True, check=True, guard_class="moderate")
         dist = bc.parent
         manifest = dist / "manifest.json"
         data = json.loads(manifest.read_text())
@@ -93,4 +96,5 @@ class DefaultPreparation(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    from time_guard import test_main
+    test_main()

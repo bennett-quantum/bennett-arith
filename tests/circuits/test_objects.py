@@ -18,8 +18,9 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from harness import (DEFAULT_STAGE_HANG_GUARD_S, HANG_GUARD_FACTOR, RefInterp,
+from harness import (RefInterp,
                      counts, parse, simulate, word)  # noqa: E402
+from time_guard import run as guarded_run, seconds  # noqa: E402
 from adders.circuits import interpreter_view  # noqa: E402
 
 REF = RefInterp()
@@ -27,17 +28,6 @@ DIR = ROOT / ".tmp/opus-arith-circuits/objects/published"
 CHECK_GATE_LIMIT = 1500     # The debug binary's validation is quadratic in the body; larger
 REPLAY_GATE_LIMIT = 200     # objects are checked out of band with a release build (progress file).
 MANIFEST = json.loads((ROOT / "adders/objects/manifest.json").read_text())
-# Maximum completed admission/replay measurements, this 12-core/30-GB host,
-# 2026-11-07. Full-run Karatsuba replay upper bounds were 452.52/391.15 s,
-# below their admission measurements; each guard covers both stages.
-PUBLICATION_STAGE_WALL_S = {
-    "arith.bij.addmod.w8.mfb": 868.48,       # Full four-claim replay, peak RSS 21,960 KB.
-    "arith.muladd.karatsuba.w32.r64": 465.91,  # Admission, peak RSS 1,086,448 KB.
-    "arith.mul.karatsuba.w32.r64": 473.02,  # Admission, peak RSS 972,712 KB.
-}
-PUBLICATION_HANG_GUARDS_S = {name: HANG_GUARD_FACTOR * wall for name, wall in PUBLICATION_STAGE_WALL_S.items()}
-# Bridge compile/link measured 0.108 s on this 12-core/30-GB host, 2026-11-07.
-BRIDGE_HANG_GUARD_S = 60
 
 
 class ReceiptState(Enum):
@@ -106,10 +96,9 @@ class Published(unittest.TestCase):
             cert = certificate(text)
             self.assertEqual(cert["bindings"]["invocation"]["token_aliases"], aliases)
             for closure, region in cert["regions"].items():
-                for claim in region["claims"]:
-                    if "invocation" in claim:
-                        inv = claim["invocation"]
-                        self.assertEqual(inv["token_aliases"], "all" if inv["args"] == "all" else aliases)
+                for claim in filter(lambda claim: "invocation" in claim, region["claims"]):
+                    inv = claim["invocation"]
+                    self.assertEqual(inv["token_aliases"], "all" if inv["args"] == "all" else aliases)
                 for entry in region["verification"]["inverse_pairs"]:
                     self.assertEqual(entry["token_aliases"], [0])
                     self.assertEqual(region["claims"][entry["claim"]]["subject"]["closure_hash"], closure)
@@ -124,21 +113,21 @@ class Published(unittest.TestCase):
             admitted = REF.check(ROOT / entry["file"])
             verifier = Path("verifier")
             for stage in ("admission", "certificate replay"):
-                error = subprocess.TimeoutExpired("synthetic guard", 1)
+                error = subprocess.TimeoutExpired("synthetic guard", seconds("short"))
                 with redirect_stdout(StringIO()) as output, patch.object(REF, "check", return_value=admitted,
-                        side_effect=error if stage == "admission" else None), patch.object(subprocess, "run", side_effect=error):
+                        side_effect=error if stage == "admission" else None), patch(__name__ + ".guarded_run", side_effect=error):
                     receipt = self._verify_publication(verifier, entry)
                 self.assertEqual((receipt.state, receipt.claims), (ReceiptState.UNKNOWN, 0))
                 self.assertIn("UNKNOWN:", output.getvalue())
                 self.assertIn(stage, receipt.detail)
             with patch.object(REF, "check", return_value={"status": "invalid"}), self.assertRaises(AssertionError):
                 self._verify_publication(verifier, entry)
-            with patch.object(REF, "check", return_value=admitted), patch.object(subprocess, "run") as replay:
+            with patch.object(REF, "check", return_value=admitted), patch(__name__ + ".guarded_run") as replay:
                 receipt = self._verify_publication(verifier, entry)
             self.assertEqual((receipt.state, receipt.claims), (ReceiptState.COMPLETE, 1))
-            replay.assert_called_once_with([str(verifier), str(ROOT / entry["file"]), "1"], check=True, timeout=ANY)
+            replay.assert_called_once_with([str(verifier), str(ROOT / entry["file"]), "1"], check=True, guard_class="long")
             for verdict in ("Rejected", "Unverified"):
-                with patch.object(REF, "check", return_value=admitted), patch.object(subprocess, "run",
+                with patch.object(REF, "check", return_value=admitted), patch(__name__ + ".guarded_run",
                         side_effect=subprocess.CalledProcessError(1, "verifier", stderr=verdict)), self.assertRaises(subprocess.CalledProcessError):
                     self._verify_publication(verifier, entry)
             with patch.dict(MANIFEST, {"entries": []}), self.assertRaises(AssertionError):
@@ -187,28 +176,29 @@ class Published(unittest.TestCase):
         verifier = Path(os.environ["TMPDIR"]) / "verify-certificate"
         RAW_RECEIPTS.clear()
         try:
-            subprocess.run(["rustc", "--edition=2021", str(Path(__file__).with_name("verify_certificate.rs")),
+            guarded_run(["rustc", "--edition=2021", str(Path(__file__).with_name("verify_certificate.rs")),
                         "--extern", f"bennett_isa_ref={libraries[0]}", "-L", f"dependency={deps}",
-                        "-o", str(verifier)], check=True, timeout=BRIDGE_HANG_GUARD_S)
+                        "-o", str(verifier)], check=True, guard_class="short")
         except subprocess.TimeoutExpired as error:
             message = f"UNKNOWN: certificate bridge compilation hang guard {error.timeout:.2f}s expired"
             print(message, flush=True)
             RAW_RECEIPTS.update((entry["file"], Receipt(ReceiptState.UNKNOWN, message, 0, 0.0))
                                 for entry in MANIFEST["entries"])
-            return
+            raise
         for entry in MANIFEST["entries"]:
             RAW_RECEIPTS[entry["file"]] = Receipt(ReceiptState.FAILED, "validation did not complete", 0, 0.0)
             with self.subTest(publication=entry["file"]):
                 RAW_RECEIPTS[entry["file"]] = self._verify_publication(verifier, entry)
+        if any(receipt.state is ReceiptState.UNKNOWN for receipt in RAW_RECEIPTS.values()):
+            raise subprocess.TimeoutExpired("publication receipts incomplete", seconds("long"))
 
     def _verify_publication(self, verifier, entry):
         path = ROOT / entry["file"]
         stage = "admission"
         started = time.monotonic()
-        guard = PUBLICATION_HANG_GUARDS_S.get(entry["root"], DEFAULT_STAGE_HANG_GUARD_S)
         print(f"START: {entry['file']}", flush=True)
         try:
-            got = REF.check(path, timeout=guard)
+            got = REF.check(path, guard_class="long")
             self.assertEqual(got["status"], "ok", entry["file"])
             self.assertEqual(got["object_hash"], certificate(path.read_text())["bindings"]["object_hash"])
             if entry["root"] == "arith.add.cuccaro.w1":
@@ -217,7 +207,7 @@ class Published(unittest.TestCase):
             admission_end = time.monotonic()
             stage = "certificate replay"
             claims = sum(len(r["claims"]) for r in certificate(path.read_text())["regions"].values())
-            subprocess.run([str(verifier), str(path), str(claims)], check=True, timeout=guard)
+            guarded_run([str(verifier), str(path), str(claims)], check=True, guard_class="long")
         except subprocess.TimeoutExpired as error:
             message = (f"UNKNOWN: {entry['file']}: {stage} hang guard {error.timeout:.2f}s expired; "
                        f"{time.monotonic() - started:.2f}s wall; no complete receipt")
@@ -328,6 +318,9 @@ class Published(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    program = unittest.main(exit=False)
-    report_receipts()
+    from time_guard import test_main
+    try:
+        program = test_main(exit=False)
+    finally:
+        report_receipts()
     raise SystemExit(not program.result.wasSuccessful())

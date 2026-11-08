@@ -16,6 +16,8 @@ from multipliers import constructions as M
 from qrom import constructions as Q
 sys.path.insert(0,str(ROOT/"tests"))
 from test_quality import Quality
+from test_time_literals import TimeLiterals
+from test_time_guard import TimeGuards
 
 def module(name):
     spec=importlib.util.spec_from_file_location(name,ROOT/"tests"/(name+".py"))
@@ -84,7 +86,7 @@ class Numeric(unittest.TestCase):
 
 def suite():
     out=unittest.TestSuite()
-    for cls in (SmallCircuits,Numeric,Pins,Quality):
+    for cls in (SmallCircuits,Numeric,Pins,Quality,TimeLiterals,TimeGuards):
         out.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
     for name in ("test_manifest_is_current","test_receipt_guards","test_token_aliases",
                  "test_interpreter_replays_table_rows","test_pinned_interpreter_diagnostic_view"):
@@ -93,5 +95,5 @@ def suite():
     return out
 
 if __name__=="__main__":
-    result=unittest.TextTestRunner(verbosity=2).run(suite())
-    raise SystemExit(not result.wasSuccessful())
+    from time_guard import test_main
+    test_main(defaultTest="suite", verbosity=2)

@@ -12,7 +12,7 @@ work="$root/.tmp/llvm18"
 mkdir -p "$work"
 python3 -B -I "$root/softfloat/generate.py" "$work"
 python3 -B -I "$root/softfloat/constants.py" "$work"
-timeout 90s /usr/lib/llvm-18/bin/clang -shared -fPIC \
+python3 -B -I "$root/scripts/time_guard.py" moderate /usr/lib/llvm-18/bin/clang -shared -fPIC \
   "$root/dist/llvm18/bennett-arith.bc" "$work/bridge.ll" -o "$work/oracle-new.so"
 mv -f "$work/oracle-new.so" "$work/oracle.so"
-exec python3 -B -I "$root/tests/test_default.py" "$@"
+exec python3 -B -I "$root/scripts/time_guard.py" moderate python3 -B -I "$root/tests/test_default.py" "$@"

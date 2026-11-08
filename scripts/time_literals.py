@@ -8,7 +8,7 @@ ALLOW = {"tests/timeouts.toml", "tests/test_time_literals.py"}
 TEXT_TIME = re.compile(
     r"\b(?:timeout|sleep)\s+(?:--[\w-]+(?:=\S+)?\s+)*[0-9]+(?:\.[0-9]+)?[smhd]?\b"
     r"|(?:timeout_s|deadline|hang_guard|wall_seconds)\s*[:=]\s*[0-9]"
-    r"|(?:sleep|alarm|from_secs|from_millis)\s*\(\s*[0-9]"
+    r"|(?:sleep|alarm|timeout|from_secs|from_millis)\s*\(\s*[0-9]"
     r"|(?:timeout|deadline)\s*=\s*[0-9]", re.I)
 
 
@@ -21,6 +21,12 @@ def bare_times(name, text):
     tree = ast.parse(text)
     lines = set()
     for node in ast.walk(tree):
+        if isinstance(node, ast.arguments):
+            defaults = list(zip(node.args[-len(node.defaults):], node.defaults))
+            defaults += list(zip(node.kwonlyargs, node.kw_defaults))
+            lines.update(value.lineno for arg, value in defaults if value is not None
+                         and TIME_NAME.search(arg.arg) and isinstance(value, ast.Constant)
+                         and type(value.value) in (int, float))
         if isinstance(node, ast.keyword) and node.arg and TIME_NAME.search(node.arg):
             if any(isinstance(v, ast.Constant) and isinstance(v.value, (int, float))
                    for v in ast.walk(node.value)):
@@ -45,7 +51,7 @@ def bare_times(name, text):
 
 def inventory(root, paths):
     selected = (n for n in paths if n.startswith(("tests/", "scripts/", "configs/"))
-                or Path(n).suffix in {".toml", ".yaml", ".yml", ".ini", ".cfg"})
+                or Path(n).suffix in {".toml", ".yaml", ".yml", ".ini", ".cfg", ".json"})
     return [f"{name}:{line}: bare time literal" for name in selected
             if (root / name).is_file() and (root / name).suffix not in {".bc", ".bisa", ".pyc"}
             for line in bare_times(name, (root / name).read_text())]

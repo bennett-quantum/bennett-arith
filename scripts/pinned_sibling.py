@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import tomllib
+from time_guard import run as guarded_run
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,12 +12,12 @@ def _head(path):
     if not (path / ".git").exists():
         return "unavailable"
     try:
-        done = subprocess.run(
+        done = guarded_run(
             ["git", "-C", str(path), "rev-parse", "HEAD"], capture_output=True,
-            text=True, timeout=10, env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
+            text=True, guard_class="short", env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
         )
         return done.stdout.strip() if done.returncode == 0 else "unavailable"
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.CalledProcessError):
         return "unavailable"
 
 

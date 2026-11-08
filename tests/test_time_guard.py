@@ -1,0 +1,62 @@
+"""Hang guards preserve real failures and never turn incomplete work into proof."""
+from contextlib import redirect_stderr
+from io import StringIO
+import json
+from pathlib import Path
+import subprocess
+import sys
+import unittest
+from unittest.mock import patch, MagicMock
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import time_guard as guard
+
+
+class TimeGuards(unittest.TestCase):
+    def test_class_citations_and_factor(self):
+        self.assertEqual(set(guard.TABLE["classes"]), {"short", "moderate", "long", "eternal"})
+        for name, row in guard.TABLE["classes"].items():
+            self.assertGreaterEqual(guard.seconds(name), guard.TABLE["measurement_margin"] * max(m["wall_seconds"] for m in row["measurements"]))
+            for measurement in row["measurements"]:
+                self.assertTrue(all(measurement[k] for k in ("command", "date", "source")))
+        with patch.dict(guard.TABLE, machine_config_factor=2):
+            self.assertEqual(guard.seconds("short"), 2 * guard.TABLE["classes"]["short"]["seconds"])
+
+    def test_receipt_and_nonzero_command(self):
+        with redirect_stderr(StringIO()) as stream:
+            done = guard.run([sys.executable, "-c", "print(sum(range(10000)))"], capture_output=True, text=True, check=True, guard_class="short")
+        self.assertEqual(done.stdout.strip(), "49995000")
+        row = json.loads(stream.getvalue().splitlines()[0])
+        self.assertEqual(row["state"], "COMPLETE")
+        self.assertGreater(row["wall_seconds"], 0)
+        self.assertGreater(row["cpu_seconds"], 0)
+        with redirect_stderr(StringIO()), self.assertRaises(subprocess.CalledProcessError) as error:
+            guard.run([sys.executable, "-c", "raise SystemExit(7)"], check=True)
+        self.assertEqual(error.exception.returncode, 7)
+
+    def test_timeout_is_unknown_and_kills_descendants(self):
+        process = MagicMock()
+        process.cpu_seconds = 0
+        process.returncode = -9
+        process.communicate.side_effect = [subprocess.TimeoutExpired("probe", guard.seconds("short")), (None, None)]
+        with patch.object(guard, "TimedProcess") as factory, patch.object(guard, "kill_tree") as kill:
+            factory.return_value.__enter__.return_value = process
+            with redirect_stderr(StringIO()) as stream, self.assertRaises(subprocess.TimeoutExpired):
+                guard.run(["probe"], guard_class="short")
+        kill.assert_called_once_with(process.pid)
+        self.assertEqual(json.loads(stream.getvalue().splitlines()[0])["state"], "UNKNOWN/TIMEOUT")
+        self.assertNotIn('"state": "FAILED"', stream.getvalue())
+
+    def test_unittest_timeout_aborts_before_verdict(self):
+        result = guard.UnknownResult(StringIO(), True, 1)
+        error = subprocess.TimeoutExpired("probe", guard.seconds("short"))
+        with self.assertRaises(subprocess.TimeoutExpired):
+            result.addError(self, (type(error), error, None))
+        self.assertEqual(result.errors, [])
+        nested = subprocess.CalledProcessError(124, "nested probe")
+        with self.assertRaises(subprocess.TimeoutExpired):
+            result.addError(self, (type(nested), nested, None))
+        self.assertEqual(result.errors, [])
+
+
+if __name__ == "__main__":
+    guard.test_main()

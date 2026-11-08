@@ -6,15 +6,17 @@ import subprocess
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run
 WORK=Path(os.environ["TMPDIR"])/"named-overflow"
 WORK.mkdir(parents=True,exist_ok=True)
 LLVM=Path("/usr/lib/llvm-23/bin")
 
 def run():
     flags=subprocess.check_output([str(LLVM/"llvm-config"),"--cxxflags","--ldflags","--libs","support","--system-libs"],text=True).split()
-    subprocess.run([str(LLVM/"clang++"),str(ROOT/"tests/named_oracle.cpp"),*flags,"-o",str(WORK/"oracle")],check=True,timeout=60)
-    subprocess.run([str(LLVM/"clang"),"-std=c2x","-O0","-shared","-fPIC","-DBENNETT_LLVM_MAJOR=23",
-                    "-I",str(ROOT/".tmp/llvm18"),str(ROOT/"softfloat/named.c"),"-o",str(WORK/"named.so")],check=True,timeout=90)
+    guarded_run([str(LLVM/"clang++"),str(ROOT/"tests/named_oracle.cpp"),*flags,"-o",str(WORK/"oracle")],check=True,guard_class="moderate")
+    guarded_run([str(LLVM/"clang"),"-std=c2x","-O0","-shared","-fPIC","-DBENNETT_LLVM_MAJOR=23",
+                    "-I",str(ROOT/".tmp/llvm18"),str(ROOT/"softfloat/named.c"),"-o",str(WORK/"named.so")],check=True,guard_class="moderate")
     lib=ctypes.CDLL(str(WORK/"named.so"))
     call=lib.bennett_sf_named
     call.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_void_p,ctypes.c_int,ctypes.c_int]
@@ -32,4 +34,6 @@ def run():
         assert out[0]==want,(hex(raw),fmt,rm,hex(out[0]),hex(want))
     print(f"{len(cases)} named directed-overflow APFloat comparisons")
 
-if __name__=="__main__":run()
+if __name__=="__main__":
+    from time_guard import command_main
+    command_main(run)
