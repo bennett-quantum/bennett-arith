@@ -1,5 +1,38 @@
 # Arithmetic quality floor
 
+## Tiny paired PPC results
+
+The tiny-argument table now covers both fields of `sincos` and `sincospi`,
+including scalar `cos`. At `x=2^-700`, cosine rounds to `(1,+0)` in
+nearest/even, upward and nearest/away modes, and `(1,-2^-1074)` downward
+or toward zero. Sine uses the same signed analytic correction as scalar
+`sin`. The cosine path retains the exact input square and six Taylor terms
+at 4350 fractional bits before rounding; adding the tail to a 240-bit `1`
+would discard the sparse residual. The existing global accuracy obligations
+remain unchanged.
+
+The MPFR-bracket tiny family checks both signs, all five modes, both paired
+fields, flags and unrelated sticky-bit preservation. Its quick selection
+also covers cosine quantum transitions, normal/subnormal endpoints and
+four sparse two-component inputs. Both LLVM versions pass 1540 checks with
+`timeout 600s python3 -B -I tests/test_directed.py 18 23 --quick --tiny-only`.
+The initial family failed on both publications at `4cba9a9`; an independent
+field inventory found scalar cosine, both `sincos` fields and `sincospi`
+cosine wrong (290 field mismatches per major in the original 730-call family).
+
+Both publications and test bridges were regenerated with `scripts/build 18`
+and `scripts/build 23` under a user systemd scope with `MemoryMax=6G`, after
+checking at least 6 GB available and load1 below 8. `tests/test_contract.py`
+passes for both majors. The quality baseline is unchanged. Inspection of
+aggregate exports and secondary outputs finds only `sincos`, `sincospi`,
+`frexp` and `modf`; the latter two use exact decomposition/scaling paths,
+so they do not bypass a transcendental correction table.
+
+No ISA circuit publication changed. The circuit manifest SHA-256 remains
+`d8b11db684390251fb5d89510c6b79c6352a40be2118c5faa25da81ecc9aad2c`;
+the existing full-publication receipt below remains applicable. No full
+publication test or gate was rerun.
+
 ## Default and exhaustive checks
 
 Default after the R40 receipt changes: `timeout 1200s systemd-run --user

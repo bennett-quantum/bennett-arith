@@ -5,7 +5,10 @@
 #include "constants.h"
 /* Two 113-bit input significands plus guard bits for near-one powers;
  * twice this precision still fits the 512-bit product accumulator. */
-enum { TRANS_BITS = 240, PPC_TINY_SUM_BIT = 716, PPC_TINY_EXP = -1076 };
+enum { TRANS_BITS = 240, PPC_TINY_SUM_BIT = 716, PPC_TINY_EXP = -1076,
+       /* Six cosine terms at |x|<=2^-358 leave a remainder below 2^-5000.
+        * Retain the exact input square (quantum 2^-2148) and sparse tails. */
+       PPC_COS_BITS = 4350, PPC_COS_TERMS = 6 };
 static V tn(V a) {
     if(a.kind==FINITE && width(a.mag)>TRANS_BITS) {int s=width(a.mag)-TRANS_BITS;a.mag=jam(a.mag,s);a.exp+=s;}
     return a;
@@ -70,7 +73,8 @@ static void tsc(V a,int piarg,V *s,V *c) {
         if(tinyterm(st,ss) && tinyterm(ct,cc))break;
     }
     if(!x.mag) {ss=x;cc=ti(1);}
-    if(q==0){*s=ss;*c=cc;}else if(q==1){*s=cc;*c=tneg(ss);}else if(q==2){*s=tneg(ss);*c=tneg(cc);}else{*s=tneg(cc);*c=ss;}
+    V quadrants[]={ss,cc,tneg(ss),tneg(cc)};
+    *s=quadrants[q];*c=quadrants[(q+1)&3];
     if(piarg && !s->mag)s->sign=a.sign;
     if(piarg && !c->mag)c->sign=0;
 }
@@ -171,13 +175,25 @@ static U ppc_exp_near_zero(PairSum a,int rm,int *flags) {
     *flags|=16;
     return one|(lo<<64);
 }
-static V trans_unpack(U x,int fi) {
-    if(fi!=6)return unpack(x,formats[fi]);
-    V hi=unpack(low64(x),formats[3]);
-    if(hi.kind!=FINITE || !hi.mag)return hi;
-    return ta(hi,unpack(x>>64,formats[3]));
-}
 #include "trans_exact.h"
+static U ppc_cos_near_zero(PairSum a,int piarg,int rm,int *flags) {
+    typedef unsigned _BitInt(2*(PPC_COS_BITS+2)) CosProduct;
+    SquareBits square=(SquareBits)a.mag*a.mag;
+    int exponent=-2148;
+    if(piarg) {
+        V pi=tc_pi();
+        square*=((SquareBits)pi.mag*pi.mag);exponent+=2*pi.exp;
+    }
+    square<<=PPC_COS_BITS+exponent;
+    SquareBits term=(SquareBits)1<<PPC_COS_BITS,result=term;
+    for(unsigned n=1;n<=PPC_COS_TERMS;++n) {
+        unsigned remainder;
+        term=(SquareBits)(((CosProduct)term*square)>>PPC_COS_BITS);
+        term=exact_divide_small(term,(2*n-1)*(2*n),&remainder);
+        result=n&1 ? result-term:result+term;
+    }
+    return ppc_round_exact(result,-PPC_COS_BITS,0,rm,flags);
+}
 enum TransPath { TRANS_CORE, TRANS_EXACT, TRANS_PPC_EXP, TRANS_TANH_LIMIT, TRANS_LINEAR };
 typedef struct {
     enum TransPath path;
@@ -191,12 +207,21 @@ typedef struct {
  * Their strict signs settle directed rounding even below the low quantum.
  * Dialect 13.4 requires neighbours in the exact canonical-pair ordering. */
 static const int trans_odd_correction[SINCOSPI+1]={
-    [SIN]=-1, [SINH]=1, [TAN]=1, [ATAN]=-1, [ASIN]=1, [TANH]=-1
+    [SIN]=-1, [SINH]=1, [TAN]=1, [ATAN]=-1, [ASIN]=1, [TANH]=-1, [SINCOS]=-1
+};
+static const unsigned char trans_tiny_cosine[SINCOSPI+1]={
+    [COS]=1, [SINCOS]=1, [SINCOSPI]=1
 };
 static const unsigned char trans_exact_math_ops[SINCOSPI+1]={
     [POW]=1, [EXP2]=1, [EXP10]=1, [LOG2]=1, [LOG10]=1
 };
 static const unsigned char trans_binary_ops[SINCOSPI+1]={[ATAN2]=1, [POW]=1};
+enum TransRangeFlag { TRANS_POLE=1, TRANS_UNDERFLOW_ZERO=2 };
+static const unsigned char trans_range_flags[SINCOSPI+1]={
+    [LOG]=TRANS_POLE, [LOG2]=TRANS_POLE, [LOG10]=TRANS_POLE,
+    [EXP]=TRANS_UNDERFLOW_ZERO, [EXP2]=TRANS_UNDERFLOW_ZERO,
+    [EXP10]=TRANS_UNDERFLOW_ZERO, [POW]=TRANS_UNDERFLOW_ZERO
+};
 static TransState trans_domain(int fi,int op,const U *in) {
     TransState s={.path=TRANS_CORE,.pair=op==SINCOS || op==SINCOSPI};
     if(op==SINCOSPI) {
@@ -221,8 +246,12 @@ static TransState trans_domain(int fi,int op,const U *in) {
             return s;
         }
     }
-    s.a=trans_unpack(in[0],fi);
-    s.b=trans_unpack(in[1],fi);
+    V *inputs[]={&s.a,&s.b};
+    for(int i=0;i<2;++i) {
+        V a=unpack(fi==6 ? low64(in[i]):in[i],formats[fi==6 ? 3:fi]);
+        if(fi==6 && a.kind==FINITE && a.mag)a=ta(a,unpack(in[i]>>64,formats[3]));
+        *inputs[i]=a;
+    }
     s.r=nanv();s.c=ti(0);
     s.flags=s.a.snan || (trans_binary_ops[op] && s.b.snan);
     if(op==TANH && s.a.kind==FINITE && s.a.mag && width(s.a.mag)+s.a.exp>6) {
@@ -232,12 +261,13 @@ static TransState trans_domain(int fi,int op,const U *in) {
     int correction=trans_odd_correction[op];
     if(fi==6) {
         s.sum=sum_read(in[0]);
-        if(correction && s.sum.kind==FINITE && s.sum.mag &&
+        if((correction || trans_tiny_cosine[op]) && s.sum.kind==FINITE && s.sum.mag &&
            s.sum.mag<=((SumBits)1<<PPC_TINY_SUM_BIT))s.path=TRANS_LINEAR;
     } else if(correction && s.a.kind==FINITE && s.a.mag &&
               width(s.a.mag)+s.a.exp<=-112) {
         int shift=480-width(s.a.mag);
         s.r=s.a;s.r.mag=(s.r.mag<<shift)+correction;s.r.exp-=shift;
+        s.c=(V){mask(480),-480,0,FINITE,0};
         s.path=TRANS_LINEAR;
     }
     return s;
@@ -255,10 +285,9 @@ static void trans_core(TransState *s,int op) {
     case ATAN2: r=tatan2(a,b);break;
     case ASIN: case ACOS: {
         V x=a;x.sign=0;
-        if(a.kind!=NANV && compare(x,ti(1))<=0) {
-            V root=tsqrt(tm(ta(ti(1),tneg(x)),ta(ti(1),x)));
-            r=op==ASIN ? tatan2(a,root):tatan2(root,a);
-        }
+        if(a.kind==NANV || compare(x,ti(1))>0)break;
+        V root=tsqrt(tm(ta(ti(1),tneg(x)),ta(ti(1),x)));
+        r=op==ASIN ? tatan2(a,root):tatan2(root,a);
         break;
     }
     case LOG: case LOG2: case LOG10:
@@ -271,29 +300,29 @@ static void trans_core(TransState *s,int op) {
     case POW: r=tpow(a,b);break;
     case SINH: case COSH: case TANH: {
         V x=a;x.sign=0;
-        if(op==TANH && x.kind==INF)r=ti(a.sign ? -1:1);
-        else if(x.kind==FINITE && (!x.mag || width(x.mag)+x.exp< -4)) {
-            V term=op==COSH ? ti(1):a,sum=term,xx=tm(a,a);
-            for(int n=1;n<=90;++n) {
-                term=td(tm(term,xx),ti(op==COSH ? (2*n-1)*(2*n):(2*n)*(2*n+1)));
-                sum=ta(sum,term);
-                if(tinyterm(term,sum))break;
-            }
-            if(op==TANH) {
-                V sh=sum,ch=ti(1),t=ch;
-                for(int n=1;n<=90;++n) {
-                    t=td(tm(t,xx),ti((2*n-1)*(2*n)));
-                    ch=ta(ch,t);
-                }
-                sum=td(sh,ch);
-            }
-            r=sum;
-        } else {
+        if(op==TANH && x.kind==INF){r=ti(a.sign ? -1:1);break;}
+        if(x.kind!=FINITE || (x.mag && width(x.mag)+x.exp>=-4)) {
             V ex=texp(x),inv=td(ti(1),ex);
             r=op==COSH ? ta(ex,inv):ta(ex,tneg(inv));
             if(op==TANH)r=td(r,ta(ex,inv));else --r.exp;
             if(op!=COSH)r.sign=a.sign;
+            break;
         }
+        V term=op==COSH ? ti(1):a,sum=term,xx=tm(a,a);
+        for(int n=1;n<=90;++n) {
+            term=td(tm(term,xx),ti(op==COSH ? (2*n-1)*(2*n):(2*n)*(2*n+1)));
+            sum=ta(sum,term);
+            if(tinyterm(term,sum))break;
+        }
+        if(op==TANH) {
+            V sh=sum,ch=ti(1),t=ch;
+            for(int n=1;n<=90;++n) {
+                t=td(tm(t,xx),ti((2*n-1)*(2*n)));
+                ch=ta(ch,t);
+            }
+            sum=td(sh,ch);
+        }
+        r=sum;
         break;
     }
     default: __builtin_trap();
@@ -351,27 +380,29 @@ static void trans_pack(U *out,int fi,int op,int rm,TransState s) {
         out[1]=0;out[2]=s.flags|16;
         return;
     case TRANS_LINEAR:
-        if(fi==6) {
-            /* Exact input sums and all canonical midpoints are on the 2^-1075
-             * grid. A signed quarter-quantum perturbation selects precisely
-             * the same neighbours as the nonzero analytic residual (<2^-1075),
-             * including when a noncanonical input lies on a midpoint. */
+        if(fi!=6)break;
+        /* Exact input sums and all canonical midpoints are on the 2^-1075
+         * grid. A signed quarter-quantum perturbation selects precisely
+         * the same neighbours as the nonzero analytic residual (<2^-1075),
+         * including when a noncanonical input lies on a midpoint. */
+        U cosine=trans_tiny_cosine[op] ? ppc_cos_near_zero(s.sum,op==SINCOSPI,rm,&s.flags):0;
+        int correction=trans_odd_correction[op];
+        if(correction) {
             SquareBits mag=(SquareBits)s.sum.mag<<2;
-            mag=trans_odd_correction[op]>0 ? mag+1:mag-1;
+            mag=correction>0 ? mag+1:mag-1;
             out[0]=ppc_round_exact(mag,PPC_TINY_EXP,s.sum.sign,rm,&s.flags);
-            out[1]=0;out[2]=s.flags;
-            return;
-        }
-        break;
+        } else out[0]=s.pair ? ppc_round(s.r,rm,&s.flags):cosine;
+        out[1]=s.pair ? cosine:0;out[2]=s.flags;
+        return;
     case TRANS_CORE: break;
     }
     V a=s.a,b=s.b,r=s.r,c=s.c;
     if(r.kind==NANV && a.kind!=NANV && (!trans_binary_ops[op] || b.kind!=NANV))s.flags|=1;
-    if((op==LOG || op==LOG2 || op==LOG10) && a.kind==FINITE && !a.mag)s.flags|=2;
+    if((trans_range_flags[op]&TRANS_POLE) && a.kind==FINITE && !a.mag)s.flags|=2;
     if(op==POW && a.kind==FINITE && !a.mag && b.sign && (b.mag || b.kind==INF))s.flags|=2;
     int exact=trans_is_exact(op,a,b,r);
     if(r.kind==FINITE && !exact)s.flags|=16;
-    if((op==EXP || op==EXP2 || op==EXP10 || op==POW) && !r.mag &&
+    if((trans_range_flags[op]&TRANS_UNDERFLOW_ZERO) && !r.mag &&
        r.kind==FINITE && a.kind==FINITE && a.mag && !exact)s.flags|=24;
     out[0]=fi==6 ? ppc_round(r,rm,&s.flags):pack(r,formats[fi],rm,&s.flags);
     out[1]=s.pair ? (fi==6 ? ppc_round(c,rm,&s.flags):pack(c,formats[fi],rm,&s.flags)):0;
@@ -380,6 +411,6 @@ static void trans_pack(U *out,int fi,int op,int rm,TransState s) {
 
 static void trans_eval(U *out,int fi,int op,const U *in,int rm) {
     TransState s=trans_domain(fi,op,in);
-    if(s.path==TRANS_CORE)trans_core(&s,op);
+    if(s.path==TRANS_CORE || (s.path==TRANS_LINEAR && s.pair && !trans_odd_correction[op]))trans_core(&s,op);
     trans_pack(out,fi,op,rm,s);
 }

@@ -10,21 +10,32 @@ s=importlib.util.spec_from_file_location("trans",ROOT/"tests/test_trans.py")
 t=importlib.util.module_from_spec(s);s.loader.exec_module(t)
 e=t.e
 
+TINY_PPC_FIELDS = (
+    ("sincos",("sin","cos")), ("sincospi",("sinpi","cospi")),
+    ("sin",("sin",)), ("cos",("cos",)), ("sinh",("sinh",)),
+    ("tan",("tan",)), ("atan",("atan",)), ("asin",("asin",)), ("tanh",("tanh",)),
+)
+TINY_PPC_SPARSE = (
+    e.power(-359)+e.power(-1074), e.power(-358)-e.power(-1074),
+    e.power(-538)+e.power(-1074), e.power(-538)-e.power(-1074),
+)
+
 def tiny_ppc(edge, oracle, quick):
     """MPFR brackets resolve corrections below the binary64 low quantum.
 
     2^-358 through 2^-1074 covers the entire power-of-two underflow band
     for every cubic correction, including both sides of the normal boundary.
     """
-    exponents = (700,358,359,360,538,1022,1073,1074) if quick else range(358,1075)
-    for k, sign, op, rm in product(exponents, (-1,1),
-                                  ("sin","sinh","tan","atan","asin","tanh"), range(5)):
-        value = sign * e.power(-k)
-        expected = oracle.rounded(op, value, int(sign<0), rm=rm)
+    exponents = ((700,358,359,360,537,538,539,540,1021,1022,1023,1073,1074)
+                 if quick else range(358,1075))
+    values = tuple(map(lambda k: e.power(-k), exponents)) + TINY_PPC_SPARSE
+    for v, sign, (op, components), rm in product(values, (-1,1), TINY_PPC_FIELDS, range(5)):
+        value = sign * v
+        expected = tuple(map(lambda field: oracle.rounded(field,value,int(sign<0),rm=rm), components))
         raw = oracle.pairs.to_pair(value)[0]
-        rounded = oracle.pairs.decode(expected)[0]
+        rounded = oracle.pairs.decode(expected[0])[0]
         flags = 16 | (8 if abs(rounded)<e.power(-1022) else 0)
-        edge.check(op+"_ppcf128_rm", [raw,rm], expected, flags)
+        edge.check(op+"_ppcf128_rm", [raw,rm], (expected+(0,))[:2], flags)
     for sign, rm in product((-1,1), range(5)):
         value = sign * e.power(-700)
         expected = oracle.rounded("exp", value, int(sign<0), rm=rm)
