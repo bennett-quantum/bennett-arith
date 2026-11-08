@@ -292,8 +292,9 @@ The deterministic guard regression failed against the old `self.fail()`
 policy and passes for both admission and replay expiry. It also checks
 completed valid work and propagation of invalid status, Rejected and
 Unverified errors. Synthetic direct-runner probes attempted all 129 entries:
-guarded work yielded UNKNOWN=129, COMPLETE=0, accepted claims=0, exit 0,
-with all UNKNOWN entries listed; completed invalid work yielded FAILED=129,
+guarded work originally yielded UNKNOWN=129, COMPLETE=0, accepted claims=0,
+with all UNKNOWN entries listed and the former exit 0 (superseded by exit 124
+under the central hang-guard policy); completed invalid work yielded FAILED=129,
 accepted claims=0 and exit 1. A compilation-guard probe reported UNKNOWN=129
 without attempting admission. Reproducibility and manifest checks share a
 test, and the K91/inverse-pair traversal covers generated examples and every
@@ -574,6 +575,49 @@ tracked/nonignored files for pycache, pyc, logs, locks, backups and progress fil
 
 Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 
+## Publication receipt verdicts and selected reruns
+
+A gate with any UNKNOWN publication receipt is UNKNOWN, not PASS and not FAIL: it exits 124; re-run only the UNKNOWN receipts once in a quiet slot; a second UNKNOWN on the same receipt is a bead; nothing merges or pushes on UNKNOWN.
+
+A completed FAILED receipt, including invalid admission, Rejected or Unverified
+certificate replay, takes precedence over UNKNOWN and exits 1. All COMPLETE
+receipts exit 0. The publication entry point reports the receipt verdict in
+addition to unittest's result; the circuits runner and `--gate-check` wrapper
+preserve exit 124. UNKNOWN never contributes accepted claims.
+
+Set `BENNETT_ARITH_RECEIPTS` to comma-separated manifest entry roots to replay
+only those publications, in manifest order. For example:
+
+```sh
+BENNETT_ARITH_RECEIPTS=arith.add.cuccaro.w1 tests/circuits/run
+```
+
+The same selector works with `tests/circuits/test_objects.py` directly. It
+selects raw admission and certificate replay only; other circuit suites and
+metadata/diagnostic checks do not run. Guards and receipt reporting are
+identical to the full publication path. Unknown names and empty selections
+fail before compilation or admission. Repeated names run once. The summary
+prints a pasteable `BENNETT_ARITH_RECEIPTS=... tests/circuits/run` command
+containing exactly its UNKNOWN roots. A selected rerun establishes receipts
+for its selected entries only.
+
+The deterministic `tests/circuits/test_receipt_status.py` regression executes
+the real publication entry point, circuits shell runner and gate-check wrapper
+with mocked admission/replay guards. It covers one UNKNOWN among COMPLETE
+receipts, all COMPLETE, FAILED/Rejected/Unverified mixed with UNKNOWN in either
+order, exact policy output, selector rejection, selected compilation expiry,
+and reuse of the printed UNKNOWN command. The original exit-code assertions
+already passed at base `1fc2202`; red-first failures concerned the missing
+policy output and selector. No exit-zero reproduction is claimed for that base.
+Existing quality baseline values remain unchanged; the two new receipt modules
+have initial metric entries below.
+
+Focused real validation selected only `arith.add.cuccaro.w1` through
+`python3 -B -I scripts/time_guard.py short --gate-check tests/circuits/run`:
+selected=1, COMPLETE=1, UNKNOWN=0, FAILED=0, one accepted proof, exit 0.
+The pinned reader admitted the raw bytes and the newly compiled certificate
+bridge replayed the claim. No full publication run or gate was run for this change.
+
 ## Central hang-guard classes
 
 `tests/timeouts.toml` is the only clock-budget table. All test/script clocks,
@@ -670,6 +714,8 @@ all baseline entries from before this job remain byte-for-byte equivalent values
 "softfloat/trans_exact.h":{"cognitive_mass":129,"functions":9,"max_lines":67,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
 "tests/build_stage.py":{"cognitive_mass":1,"functions":2,"max_lines":3,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
 "tests/circuits/harness.py":{"cognitive_mass":145,"functions":24,"max_lines":40,"over_100":0,"over_200":0,"over_25":2,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/circuits/publication_receipts.py":{"cognitive_mass":13,"functions":2,"max_lines":17,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/circuits/test_receipt_status.py":{"cognitive_mass":13,"functions":9,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/circuits/test_adders.py":{"cognitive_mass":235,"functions":55,"max_lines":36,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":1},
 "tests/circuits/test_multipliers.py":{"cognitive_mass":70,"functions":19,"max_lines":25,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":1},
 "tests/circuits/test_objects.py":{"cognitive_mass":150,"functions":16,"max_lines":47,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":2},
