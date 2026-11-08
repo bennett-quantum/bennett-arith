@@ -18,6 +18,7 @@ sys.path.insert(0,str(ROOT/"tests"))
 from test_quality import Quality
 from test_time_literals import TimeLiterals
 from test_time_guard import TimeGuards
+from test_machine_profile import MachineProfile
 
 def module(name):
     spec=importlib.util.spec_from_file_location(name,ROOT/"tests"/(name+".py"))
@@ -86,7 +87,7 @@ class Numeric(unittest.TestCase):
 
 def suite():
     out=unittest.TestSuite()
-    for cls in (SmallCircuits,Numeric,Pins,Quality,TimeLiterals,TimeGuards):
+    for cls in (SmallCircuits,Numeric,Pins,Quality,TimeLiterals,TimeGuards,MachineProfile):
         out.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(cls))
     for name in ("test_manifest_is_current","test_receipt_guards","test_token_aliases",
                  "test_interpreter_replays_table_rows","test_pinned_interpreter_diagnostic_view"):
@@ -95,5 +96,10 @@ def suite():
     return out
 
 if __name__=="__main__":
-    from time_guard import test_main
-    test_main(defaultTest="suite", verbosity=2)
+    from time_guard import test_main, command_main
+    from machine_profile import workers
+    if len(sys.argv)==1 and workers("suites")>1:
+        from suite_runner import default_suite
+        command_main(default_suite)
+    else:
+        test_main(defaultTest="suite", verbosity=2)

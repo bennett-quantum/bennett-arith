@@ -77,7 +77,11 @@ class Oracle:
         raise AssertionError((op,a,b,rm,'MPFR bracket inconclusive at 65536 bits'))
 
 if __name__=='__main__':
-    for major in map(int,sys.argv[1:] or [18,23]):
+    from pathlib import Path as ProfilePath
+    import sys as profile_sys
+    profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+    from machine_profile import majors as machine_majors
+    for major in machine_majors(map(int,sys.argv[1:] or [18,23]), script=__file__):
         edge=e.Edge(major)
         assert '__bennett_sf_sin_f128' in edge.rows,'RED: missing own-format binary128 sin'
         oracle=Oracle();rng=random.Random(0x12851);worst={}

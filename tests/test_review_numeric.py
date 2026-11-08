@@ -95,4 +95,8 @@ def run(major,root,case):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('majors',type=int,nargs='*',default=[18,23]);p.add_argument('--root',type=Path,default=ROOT);p.add_argument('--case',choices=('all','ppc','limits','exact'),default='all');a=p.parse_args()
-    for major in a.majors:run(major,a.root,a.case)
+    from pathlib import Path as ProfilePath
+    import sys as profile_sys
+    profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+    from machine_profile import majors as machine_majors
+    for major in machine_majors(a.majors, script=__file__):run(major,a.root,a.case)

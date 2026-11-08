@@ -6,7 +6,11 @@ s=importlib.util.spec_from_file_location('trans',R/'tests/test_trans.py');t=impo
 with decimal.localcontext() as ctx:
     ctx.prec=120
     ln2=e.Q(decimal.Decimal(2).ln());log10two=ln2/e.Q(decimal.Decimal(10).ln())
-for major in map(int,sys.argv[1:] or [18,23]):
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(map(int,sys.argv[1:] or [18,23]), script=__file__):
     edge=e.Edge(major);oracle=t.Oracle()
     for suffix,f in e.FORMATS.items():
         tiny=1-f[3]-(f[1]-1);emin=1-f[3]

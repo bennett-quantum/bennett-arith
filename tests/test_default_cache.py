@@ -33,7 +33,7 @@ class DefaultPreparation(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        for name in ("scripts/test", "scripts/time_guard.py", "tests/timeouts.toml", "softfloat/generate.py", "softfloat/constants.py",
+        for name in ("scripts/test", "scripts/time_guard.py", "scripts/machine_profile.py", "scripts/suite_runner.py", "tests/timeouts.toml", "softfloat/generate.py", "softfloat/constants.py",
                      "dist/llvm18/bennett-arith.bc", "dist/llvm18/manifest.json",
                      "tests/test_edge.py"):
             dest = self.root / name

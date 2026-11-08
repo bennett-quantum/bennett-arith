@@ -10,7 +10,11 @@ assert 'i8388608 %a1' in ir and 'lshr i8388608 %n, 1' in ir
 p=R/'.tmp/powi-limit.ll'
 p.parent.mkdir(parents=True,exist_ok=True)
 p.write_text(ir)
-for major in [18,23]:
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(map(int,sys.argv[1:] or (18,23)), script=__file__):
     bc=R/f'.tmp/powi-limit-{major}.bc'
     subprocess.run([f'/usr/lib/llvm-{major}/bin/llvm-as',str(p),'-o',str(bc)],check=True)
     subprocess.run([f'/usr/lib/llvm-{major}/bin/opt','-passes=verify',str(bc),'-disable-output'],check=True)

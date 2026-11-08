@@ -18,6 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import (RefInterp,
                      counts, parse, simulate, word)  # noqa: E402
 from time_guard import run as guarded_run, seconds  # noqa: E402
+from machine_profile import ordered_map  # noqa: E402
+from publication_pool import bridge, replay  # noqa: E402
 from publication_receipts import Receipt, ReceiptState, report_receipts, select_publications  # noqa: E402
 from adders.circuits import interpreter_view  # noqa: E402
 
@@ -99,7 +101,7 @@ class Published(unittest.TestCase):
             with patch.object(REF, "check", return_value=admitted), patch(__name__ + ".guarded_run") as replay:
                 receipt = self._verify_publication(verifier, entry)
             self.assertEqual((receipt.state, receipt.claims), (ReceiptState.COMPLETE, 1))
-            replay.assert_called_once_with([str(verifier), str(ROOT / entry["file"]), "1"], check=True, guard_class="long")
+            replay.assert_called_once_with([str(verifier), str(ROOT / entry["file"]), "1"], check=True, guard_class="long", capture_output=True, text=True)
             for verdict in ("Rejected", "Unverified"):
                 with patch.object(REF, "check", return_value=admitted), patch(__name__ + ".guarded_run",
                         side_effect=subprocess.CalledProcessError(1, "verifier", stderr=verdict)), self.assertRaises(subprocess.CalledProcessError):
@@ -146,32 +148,31 @@ class Published(unittest.TestCase):
         """Admit raw bytes and replay every claim/table with the pinned reader."""
         RAW_RECEIPTS.clear()
         entries = select_publications(MANIFEST["entries"], os.environ.get("BENNETT_ARITH_RECEIPTS"))
-        deps = Path(REF.binary).parent / "deps"
-        libraries = list(deps.glob("libbennett_isa_ref-*.rlib"))
-        self.assertEqual(len(libraries), 1, f"expected one pinned ISA reader library in {deps}")
-        verifier = Path(os.environ["TMPDIR"]) / "verify-certificate"
-        try:
-            guarded_run(["rustc", "--edition=2021", str(Path(__file__).with_name("verify_certificate.rs")),
-                        "--extern", f"bennett_isa_ref={libraries[0]}", "-L", f"dependency={deps}",
-                        "-o", str(verifier)], check=True, guard_class="short")
-        except subprocess.TimeoutExpired as error:
-            message = f"UNKNOWN: certificate bridge compilation hang guard {error.timeout:.2f}s expired"
-            print(message, flush=True)
-            RAW_RECEIPTS.update((entry["root"], Receipt(ReceiptState.UNKNOWN, message, 0, 0.0))
-                                for entry in entries)
-            raise
-        for entry in entries:
+        verifier = bridge(REF.binary, Path(__file__).with_name("verify_certificate.rs"),
+                          entries, RAW_RECEIPTS, Receipt, ReceiptState.UNKNOWN)
+        for entry, output, receipt, error in ordered_map(
+                lambda entry: self._publication_result(verifier, entry), entries, "receipts"):
+            print(output, end="", flush=True)
             RAW_RECEIPTS[entry["root"]] = Receipt(ReceiptState.FAILED, "validation did not complete", 0, 0.0)
             with self.subTest(publication=entry["file"]):
-                RAW_RECEIPTS[entry["root"]] = self._verify_publication(verifier, entry)
+                if error is not None:
+                    raise error
+                RAW_RECEIPTS[entry["root"]] = receipt
         if any(receipt.state is ReceiptState.UNKNOWN for receipt in RAW_RECEIPTS.values()):
             raise subprocess.TimeoutExpired("publication receipts incomplete", seconds("long"))
 
-    def _verify_publication(self, verifier, entry):
+    def _publication_result(self, verifier, entry):
+        output = StringIO()
+        try:
+            receipt = self._verify_publication(verifier, entry, output=output)
+            return entry, output.getvalue(), receipt, None
+        except Exception as error:
+            return entry, output.getvalue(), None, error
+
+    def _verify_publication(self, verifier, entry, output=None):
         path = ROOT / entry["file"]
-        stage = "admission"
-        started = time.monotonic()
-        print(f"START: {entry['file']}", flush=True)
+        stage, started = "admission", time.monotonic()
+        print(f"START: {entry['file']}", file=output, flush=True)
         try:
             got = REF.check(path, guard_class="long")
             self.assertEqual(got["status"], "ok", entry["file"])
@@ -182,14 +183,14 @@ class Published(unittest.TestCase):
             admission_end = time.monotonic()
             stage = "certificate replay"
             claims = sum(len(r["claims"]) for r in certificate(path.read_text())["regions"].values())
-            guarded_run([str(verifier), str(path), str(claims)], check=True, guard_class="long")
+            replay(guarded_run, [str(verifier), str(path), str(claims)], output)
         except subprocess.TimeoutExpired as error:
             message = (f"UNKNOWN: {entry['file']}: {stage} hang guard {error.timeout:.2f}s expired; "
                        f"{time.monotonic() - started:.2f}s wall; no complete receipt")
-            print(message, flush=True)
+            print(message, file=output, flush=True)
             return Receipt(ReceiptState.UNKNOWN, message, 0, time.monotonic() - started)
         print(f"COMPLETE receipt: {entry['file']}: {claims} accepted claims; {time.monotonic() - started:.2f}s wall; "
-              f"admission {admission_end - started:.2f}s; replay {time.monotonic() - admission_end:.2f}s", flush=True)
+              f"admission {admission_end - started:.2f}s; replay {time.monotonic() - admission_end:.2f}s", file=output, flush=True)
         return Receipt(ReceiptState.COMPLETE, entry["file"], claims, time.monotonic() - started)
 
     def test_certificates_tell_the_truth(self):

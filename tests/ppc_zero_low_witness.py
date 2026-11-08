@@ -49,7 +49,11 @@ cbits=e.encode(cv,e.FORMATS['f128'])[0]
 assert e.decode(cbits,e.FORMATS['f128'])[0]==cv
 assert e.encode(cv,f)[0]==chbits
 print(f'Exact binary128 input {cbits:032x} is also a zero-low odd/odd canonical-pair midpoint.')
-for major in map(int,sys.argv[1:] or (18,23)):
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(map(int,sys.argv[1:] or (18,23)), script=__file__):
     edge=e.Edge(major);edge.env[1]=0
     actual=edge.call('fma_ppcf128_rm',a,b,c,0)[0]
     print(f'LLVM {major} current result {actual:032x}, flags={edge.env[1]}; every nearest result must be inexact (16).')

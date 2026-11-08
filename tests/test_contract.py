@@ -12,7 +12,11 @@ binary='add sub mul div rem minnum maxnum minimum maximum minimumnum maximumnum'
 unary='sqrt floor ceil trunc round roundeven rint nearbyint canonicalize'.split()
 integer='fptosi fptoui lround llround lrint llrint'.split()
 trans='sin cos tan asin acos atan sinh cosh tanh exp exp2 exp10 log log2 log10'.split()
-for major in map(int,sys.argv[1:] or (18,23)):
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(map(int,sys.argv[1:] or (18,23)), script=__file__):
     data=json.loads((root/f'dist/llvm{major}/manifest.json').read_text())
     assert data['llvm_major']==major
     assert data['bitcode_sha256']==hashlib.sha256((root/f'dist/llvm{major}/bennett-arith.bc').read_bytes()).hexdigest()

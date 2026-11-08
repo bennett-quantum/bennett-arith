@@ -3,7 +3,11 @@ import importlib.util,pathlib,sys
 sys.dont_write_bytecode=True
 R=pathlib.Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location('edge',R/'tests/test_edge.py');e=importlib.util.module_from_spec(s);s.loader.exec_module(e)
-for major in map(int,sys.argv[1:] or [18,23]):
+from pathlib import Path as ProfilePath
+import sys as profile_sys
+profile_sys.path.insert(0, str(ProfilePath(__file__).resolve().parents[1] / "scripts"))
+from machine_profile import majors as machine_majors
+for major in machine_majors(map(int,sys.argv[1:] or [18,23]), script=__file__):
     edge=e.Edge(major)
     assert '__bennett_sf_powi_f128_i64' in edge.rows,'RED: missing non-i32 powi'
     for suffix,f in list(e.FORMATS.items())+[('ppcf128',e.FORMATS['f64'])]:

@@ -54,7 +54,7 @@ def run(argv, *, guard_class, **kwargs):
         raise subprocess.TimeoutExpired(argv, time_guard.seconds(guard_class))
     if stage == "replay" and outcome in ("Rejected", "Unverified"):
         raise subprocess.CalledProcessError(1, argv, stderr=outcome)
-    return subprocess.CompletedProcess(argv, 0)
+    return subprocess.CompletedProcess(argv, 0, "", "")
 
 def check(path, *, guard_class):
     run(["admission", str(path)], guard_class=guard_class)
@@ -71,7 +71,8 @@ def receipt_main(**kwargs):
     return original_main(**kwargs)
 
 reader = Path(os.environ["RECEIPT_PROBE_READER"])
-with patch.object(harness, "RefInterp", return_value=SimpleNamespace(binary=reader, check=check)), \
+with patch("time.monotonic", return_value=1.0), \
+        patch.object(harness, "RefInterp", return_value=SimpleNamespace(binary=reader, check=check)), \
         patch.object(time_guard, "run", side_effect=run), \
         patch.object(time_guard, "test_main", side_effect=receipt_main):
     runpy.run_path(str(root / "tests/circuits/test_objects.py"), run_name="__main__")
@@ -83,12 +84,12 @@ class ReceiptStatus(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(dir=os.environ["TMPDIR"])
         self.addCleanup(self.temp.cleanup)
         self.fixture = Path(self.temp.name)
-        for name in ("scripts/time_guard.py", "tests/timeouts.toml", "tests/circuits/run"):
+        for name in ("scripts/time_guard.py", "tests/timeouts.toml", "scripts/machine_profile.py", "scripts/suite_runner.py", "tests/circuits/run"):
             destination = self.fixture / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, destination)
         circuits = self.fixture / "tests/circuits"
-        for name in ("test_pins", "test_adders", "test_multipliers", "test_qrom", "test_receipt_status"):
+        for name in ("test_pins", "test_adders", "test_multipliers", "test_qrom", "test_receipt_status", "test_receipt_parallel"):
             (circuits / (name + ".py")).write_text("print('UNRELATED SUITE')\n")
         (circuits / "test_objects.py").write_text(PROBE)
         (self.fixture / "deps").mkdir()
@@ -138,16 +139,16 @@ class ReceiptStatus(unittest.TestCase):
         done = self.probe({roots[1]: "admission-UNKNOWN"}, ",".join(roots))
         self.assertEqual(done.returncode, 124, done.stdout + done.stderr)
         self.assertIn("selected=2 COMPLETE=1 UNKNOWN=1 FAILED=0", done.stdout)
-        self.assertEqual(done.stdout.count("UNRELATED SUITE"), 5)
+        self.assertEqual(done.stdout.count("UNRELATED SUITE"), 6)
         trace = [json.loads(line) for line in (self.fixture / "trace.jsonl").read_text().splitlines()]
-        self.assertEqual(trace, [["compile", "compile"], ["admission", roots[0]], ["replay", roots[0]], ["admission", roots[1]]])
+        self.assertEqual([trace[0], *sorted(trace[1:], key=lambda row: roots.index(row[1]))], [["compile", "compile"], ["admission", roots[0]], ["replay", roots[0]], ["admission", roots[1]]])
         retry = next(line for line in done.stdout.splitlines() if line.startswith("BENNETT_ARITH_RECEIPTS="))
         self.assertEqual(retry, f"BENNETT_ARITH_RECEIPTS={roots[1]} tests/circuits/run")
         (self.fixture / "trace.jsonl").unlink()
         complete = self.probe({}, retry.split("=", 1)[1].split()[0])
         self.assertEqual(complete.returncode, 0, complete.stdout + complete.stderr)
         self.assertIn("selected=1 COMPLETE=1 UNKNOWN=0 FAILED=0", complete.stdout)
-        self.assertEqual(complete.stdout.count("UNRELATED SUITE"), 5)
+        self.assertEqual(complete.stdout.count("UNRELATED SUITE"), 6)
 
     def test_invalid_selection_fails_before_guarded_work(self):
         for selection in ("", "missing.receipt", ENTRIES[0]["root"] + ",", "," + ENTRIES[0]["root"]):
