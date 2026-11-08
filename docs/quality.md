@@ -749,16 +749,42 @@ Full `python3 -B -I tests/circuits/test_objects.py` comparison:
 | Measurement | Width | Wall seconds | CPU seconds | Machine/date |
 | --- | ---: | ---: | ---: | --- |
 | Before, 129 COMPLETE receipts / 221 accepted claims | 1 | 3158.68 | 3172.00 | 12-core/30 GB, 2026-11-07 |
-| After | profile | pending exclusive heavy slot | pending | 12-core/30 GB |
+| After, 129 COMPLETE receipts / 221 accepted claims | 4 | 1730.77 | 4990.77 | 12-core/30 GB, 2026-11-08 |
 
 The before receipt is
 `bennett-arith-job-quality/.tmp/quality-arith/measure-full-publications.time`
-(user 3165.75 s plus system 6.25 s). The one required after run has not started:
-`bennett-heavy-push-arith16b-093111.scope` occupied the heavy slot during validation.
-Run it only with no `bennett-heavy` scope, inside
-`bennett-heavy-arith-par-$(date -u +%H%M%S)`, using the eternal class. Record its
-outer command receipt's wall and CPU here; do not substitute a selected subset
-for that measurement. No full gate or `gate_run` was run by this job.
+(user 3165.75 s plus system 6.25 s). The one full after run measured head
+`f77a1b64dbf9d4374b4216f66f400ac0e55d8078`. The orchestrator's
+`bennett/.tmp/orchestrator/s4/qwait.sh '' '' -- <command>` released at
+**2026-11-08T15:14:58Z**, after its no-heavy-scope, memory and load checks.
+The launch recorded 12 CPUs, 24963 MiB available and load1 3.78; the profile
+reported four receipt workers. The scope was
+`bennett-heavy-arith-par-151458.scope`, and its command was:
+
+```sh
+/usr/bin/time -v -o .tmp/arith-parallel/full-after.time \
+  python3 -B -I scripts/time_guard.py eternal \
+  python3 -B -I tests/circuits/test_objects.py
+```
+
+The run finished at **2026-11-08T15:43:49Z**, exit 0: **7 tests PASS**, all
+**129 receipts COMPLETE**, **221 accepted claims**, **UNKNOWN=0, FAILED=0**.
+The 129 COMPLETE receipt lines match manifest order exactly. The table reports
+`/usr/bin/time -v` wall and total CPU (user 4982.98 s plus system 7.79 s).
+The outer eternal-guard receipt independently records **1730.736370 s wall,
+4988.332029 s CPU**, state COMPLETE. Evidence is in
+`.tmp/arith-parallel/full-after.log` and `.tmp/arith-parallel/full-after.time`.
+These timings cover the launched command; the preceding queue wait is excluded.
+Aggregate CPU increased in this observation while wall time decreased; neither
+quantity is asserted as a performance threshold. No full gate or `gate_run` was
+run by this job.
+
+The pooled run also supplies new evidence for choosing classes: addmod w8 replay took
+**1260.934664 s wall**, and mul Karatsuba w32 admission took **947.842155 s**.
+The existing long class (9000 s) is about **7.14 times** the slower observation,
+below the programme's ten-times measurement margin. This follow-up records the
+finding for reconciliation with the class table; its tracked changes are confined
+to this document.
 
 The suites under `softfloat/` also contain serial major loops. Those hashed
 publication inputs and their regenerated `dist/` manifests require a separate
