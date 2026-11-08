@@ -177,18 +177,22 @@ static U ppc_exp_near_zero(PairSum a,int rm,int *flags) {
 }
 #include "trans_exact.h"
 static U ppc_cos_near_zero(PairSum a,int piarg,int rm,int *flags) {
-    typedef unsigned _BitInt(2*(PPC_COS_BITS+2)) CosProduct;
-    SquareBits square=(SquareBits)a.mag*a.mag;
+    /* Bound the unscaled square, including the optional pi significand,
+     * before multiplying by a fixed-point term. Do not multiply two full
+     * fixed-point carriers when one operand has this much smaller width. */
+    enum { SQUARE_BITS=2*(PPC_TINY_SUM_BIT+1+TRANS_BITS) };
+    typedef unsigned _BitInt(SQUARE_BITS) CosSquare;
+    typedef unsigned _BitInt(PPC_COS_BITS+2+SQUARE_BITS) CosProduct;
+    CosSquare square=(CosSquare)a.mag*a.mag;
     int exponent=-2148;
     if(piarg) {
         V pi=tc_pi();
-        square*=((SquareBits)pi.mag*pi.mag);exponent+=2*pi.exp;
+        square*=((CosSquare)pi.mag*pi.mag);exponent+=2*pi.exp;
     }
-    square<<=PPC_COS_BITS+exponent;
     SquareBits term=(SquareBits)1<<PPC_COS_BITS,result=term;
-    for(unsigned n=1;n<=PPC_COS_TERMS;++n) {
+    for(unsigned n=1;n<=PPC_COS_TERMS && term;++n) {
         unsigned remainder;
-        term=(SquareBits)(((CosProduct)term*square)>>PPC_COS_BITS);
+        term=(SquareBits)(((CosProduct)term*square)>>-exponent);
         term=exact_divide_small(term,(2*n-1)*(2*n),&remainder);
         result=n&1 ? result-term:result+term;
     }

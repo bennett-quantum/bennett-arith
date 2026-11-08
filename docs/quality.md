@@ -14,8 +14,9 @@ remain unchanged.
 The MPFR-bracket tiny family checks both signs, all five modes, both paired
 fields, flags and unrelated sticky-bit preservation. Its quick selection
 also covers cosine quantum transitions, normal/subnormal endpoints and
-four sparse two-component inputs. Both LLVM versions pass 1540 checks with
-`timeout 600s python3 -B -I tests/test_directed.py 18 23 --quick --tiny-only`.
+four sparse two-component inputs. Both LLVM versions pass 1540 tiny checks
+within `timeout 1200s python3 -B -I tests/test_directed.py 18 23 --quick`
+(13510 total checks per major).
 The initial family failed on both publications at `4cba9a9`; an independent
 field inventory found scalar cosine, both `sincos` fields and `sincospi`
 cosine wrong (290 field mismatches per major in the original 730-call family).
@@ -27,6 +28,17 @@ passes for both majors. The quality baseline is unchanged. Inspection of
 aggregate exports and secondary outputs finds only `sincos`, `sincospi`,
 `frexp` and `modf`; the latter two use exact decomposition/scaling paths,
 so they do not bypass a transcendental correction table.
+
+Final default validation was
+`timeout 1200s systemd-run --user --scope
+--unit=bennett-arith-paired-efficient-default -p MemoryMax=6G scripts/test`:
+**36 tests passed, 89.822 s test body, 120.59 s wall time**, exit 0,
+peak RSS 175580 KB. Preflight available memory was 14001930240 bytes and
+load1 4.9644. The first fixed-point implementation passed in 239.41 s wall;
+keeping the square unscaled, bounding its multiplication width from the
+input domain, and stopping at a zero term preserves the arithmetic while
+meeting the inherited 180 s default target. The accumulator precision and
+quality baseline did not change.
 
 No ISA circuit publication changed. The circuit manifest SHA-256 remains
 `d8b11db684390251fb5d89510c6b79c6352a40be2118c5faa25da81ecc9aad2c`;
@@ -160,9 +172,10 @@ sets inexact and tininess-after-rounding flags. The IEEE small-argument path
 now uses the same six-operation sign table. Both publications were rebuilt
 with `timeout 600s scripts/build 18` and `timeout 600s scripts/build 23`.
 
-`tests/test_directed.py` includes a default eight-exponent family (both signs,
+The original scalar repair added a default eight-exponent family (both signs,
 all five modes, all six operations) and the sparse exp witness, independently
-rounded from MPFR bounds. Its full form enumerates every exponent 358..1074:
+rounded from MPFR bounds. That family's full form enumerated every exponent
+358..1074; the paired expansion and its current quick counts are recorded above:
 **43,030 exact value/flag checks passed on each LLVM major**, using
 `timeout 1200s python3 -B -I tests/test_directed.py 18 23 --tiny-only`.
 The `2^-358` endpoint was separately observed RED after the initial

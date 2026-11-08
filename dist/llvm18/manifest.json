@@ -20911,7 +20911,7 @@
     "flags": "sticky invalid only; plain cmp_B has no fenv access"
   },
   "llvm_major": 18,
-  "bitcode_sha256": "ae4f13fb8fbe2ac95e0d309f5b72f5ae68688f82d377fa7d52e17c578875d439",
+  "bitcode_sha256": "053d820087cdb91f851d2505c6eb37d117ec3041a614f1c53d23d47a93423d92",
   "tool_versions": {
     "clang": "Ubuntu clang version 18.1.3 (1ubuntu1)",
     "llvm-as": "Ubuntu LLVM version 18.1.3",
@@ -20976,8 +20976,8 @@
       "git_blob_sha1": "2683f8cc91015e16b8cae1efba6eb9f13da9f6d3"
     },
     "softfloat/trans.h": {
-      "sha256": "89f000806d854afcdd6320528015eeca2ded312b5da895e8241f1a15431192b9",
-      "git_blob_sha1": "3ee8f9422dbcea125eed27a7f32511ea020b52de"
+      "sha256": "cd8cf81356bfbca2cc5f945741b1d566cd4b1a0bf3332d7b8b281f4dcbc4b65a",
+      "git_blob_sha1": "a99e53e3dab23e8373fbf8cadc08c014b9199897"
     },
     "softfloat/trans_exact.h": {
       "sha256": "402ba4ae26241af7af91a5a0278390ae8fa7d9f0e38d4caa902e77c553207118",
