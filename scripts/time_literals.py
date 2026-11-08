@@ -51,6 +51,7 @@ def bare_times(name, text):
 
 def inventory(root, paths):
     selected = (n for n in paths if n.startswith(("tests/", "scripts/", "configs/"))
+                or n == "softfloat/instantiate.py" or Path(n).name.startswith("test_")
                 or Path(n).suffix in {".toml", ".yaml", ".yml", ".ini", ".cfg", ".json"})
     return [f"{name}:{line}: bare time literal" for name in selected
             if (root / name).is_file() and (root / name).suffix not in {".bc", ".bisa", ".pyc"}

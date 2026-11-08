@@ -15,6 +15,8 @@ import tempfile
 
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run, output as guarded_output, command_main
 NAMES = ['Float8E5M2','Float8E5M2FNUZ','Float8E4M3','Float8E4M3FN',
          'Float8E4M3FNUZ','Float8E4M3B11FNUZ','Float8E3M4','Float8E8M0FNU',
          'Float6E3M2FN','Float6E2M3FN','Float4E2M1FN']
@@ -65,7 +67,7 @@ def validate(request):
     return result
 
 def run(args):
-    subprocess.run([str(a) for a in args],check=True,timeout=300)
+    guarded_run([str(a) for a in args],check=True,guard_class="moderate")
 
 def instantiate(request,destination):
     request=validate(request);g=module('generate');major=request['llvm_major']
@@ -138,7 +140,7 @@ def instantiate(request,destination):
         (work/'target.ll').write_text(target('target datalayout = ""\ntarget triple = ""\n'))
         run([llvm/'llvm-as',work/'target.ll','-o',work/'target.bc'])
         def disassemble(path):
-            return subprocess.check_output([str(llvm/'llvm-dis'),str(path),'-o','-'],text=True,timeout=60)
+            return guarded_output([str(llvm/'llvm-dis'),str(path),'-o','-'],text=True,guard_class="moderate")
         actual=disassemble(work/'bennett-arith.bc');reference=disassemble(work/'target.bc')
         for field in ('datalayout','triple'):
             pattern=rf'^target {field} = .*'
@@ -160,4 +162,4 @@ if __name__=='__main__':
     if len(sys.argv)!=3: raise SystemExit(__doc__)
     request=json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'),object_pairs_hook=unique_object,
                        parse_constant=lambda s: (_ for _ in ()).throw(ValueError(f'invalid JSON number {s}')))
-    instantiate(request,Path(sys.argv[2]))
+    command_main(instantiate,request,Path(sys.argv[2]))

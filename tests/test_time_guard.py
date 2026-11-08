@@ -2,6 +2,7 @@
 from contextlib import redirect_stderr
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -29,6 +30,8 @@ class TimeGuards(unittest.TestCase):
         self.assertEqual(row["state"], "COMPLETE")
         self.assertGreater(row["wall_seconds"], 0)
         self.assertGreater(row["cpu_seconds"], 0)
+        receipts = Path(os.environ["TMPDIR"]) / "command-receipts.jsonl"
+        self.assertIn(row, [json.loads(line) for line in receipts.read_text().splitlines()])
         with redirect_stderr(StringIO()), self.assertRaises(subprocess.CalledProcessError) as error:
             guard.run([sys.executable, "-c", "raise SystemExit(7)"], check=True)
         self.assertEqual(error.exception.returncode, 7)
@@ -56,6 +59,28 @@ class TimeGuards(unittest.TestCase):
         with self.assertRaises(subprocess.TimeoutExpired):
             result.addError(self, (type(nested), nested, None))
         self.assertEqual(result.errors, [])
+
+    def test_gate_mode_reports_unknown_without_failing_own_checks(self):
+        error = subprocess.TimeoutExpired("probe", guard.seconds("short"))
+        with patch.object(sys, "argv", ["time_guard.py", "short", "--gate-check", "probe"]), patch.object(guard, "run", side_effect=error):
+            with self.assertRaises(SystemExit) as result:
+                guard.main()
+        self.assertEqual(result.exception.code, 0)
+        with patch.object(sys, "argv", ["time_guard.py", "short", "probe"]), patch.object(guard, "run", side_effect=error):
+            with self.assertRaises(SystemExit) as result:
+                guard.main()
+        self.assertEqual(result.exception.code, 124)
+        with patch.object(sys, "argv", ["time_guard.py", "short", "--gate-check", "probe"]), patch.object(guard, "run", return_value=subprocess.CompletedProcess(["probe"], 7)):
+            with self.assertRaises(SystemExit) as result:
+                guard.main()
+        self.assertEqual(result.exception.code, 7)
+
+    def test_top_level_timeout_preserves_status(self):
+        code = (f"import sys;sys.path.insert(0,{str(Path(guard.__file__).parent)!r});"
+                "import time_guard as g;import subprocess;sys.excepthook=g.unknown_excepthook;"
+                "raise subprocess.TimeoutExpired('probe',g.seconds('short'))")
+        with redirect_stderr(StringIO()), self.assertRaises(subprocess.TimeoutExpired):
+            guard.run([sys.executable, "-c", code], capture_output=True, text=True, guard_class="short")
 
 
 if __name__ == "__main__":

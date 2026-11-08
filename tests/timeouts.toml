@@ -11,14 +11,19 @@ command = "rustc --edition=2021 tests/circuits/verify_certificate.rs --extern be
 wall_seconds = 0.108
 date = "2026-11-07"
 source = "docs/quality.md; former BRIDGE_HANG_GUARD_S citation"
+[[classes.short.measurements]]
+command = "python3 -B -I scripts/quality_metrics.py"
+wall_seconds = 2.026959
+date = "2026-11-08"
+source = "bennett-arith-job-sweep/.tmp/sweep-time-arith/quality-measurement.json: shared-host verification receipt; CPU 1.987001 s"
 
 [classes.moderate]
 seconds = 3000
 [[classes.moderate.measurements]]
 command = "python3 -B -I tests/test_default_cache.py"
 wall_seconds = 255.13
-date = "2026-11-07"
-source = "docs/quality.md, Default and exhaustive checks"
+date = "2026-11-08"
+source = "docs/quality.md, Default and exhaustive checks (recorded by d062ed3)"
 [[classes.moderate.measurements]]
 command = "scripts/test"
 wall_seconds = 120.59
@@ -50,8 +55,14 @@ source = "bennett-arith-job-quality/.tmp/quality-arith/full-publication-receipts
 
 [classes.eternal]
 seconds = 360000
+provisional = "Current scripts/gate total awaits its first full-gate receipt; the historical total below predates expanded workloads. See docs/quality.md."
 [[classes.eternal.measurements]]
 command = "python3 -B -I tests/circuits/test_objects.py"
 wall_seconds = 3158.68
 date = "2026-11-07"
 source = "bennett-arith-job-quality/.tmp/quality-arith/measure-full-publications.time (52:38.68); full-publication-receipts.json: 129 COMPLETE receipts, 221 accepted claims"
+[[classes.eternal.measurements]]
+command = "scripts/gate (historical workload; current total provisional)"
+wall_seconds = 703.1
+date = "2026-11-02"
+source = "bennett-arith/.tmp/gate/records/18858d3eb3fbb6fe1fbd912e08ed1a5549a54a2f.json: arith gate exit 0, finished 2026-11-02T09:15:57Z"

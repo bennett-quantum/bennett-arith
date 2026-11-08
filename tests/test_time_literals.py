@@ -3,7 +3,8 @@ import sys
 from pathlib import Path
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from time_literals import bare_times
+from time_literals import bare_times, inventory
+import subprocess
 
 class TimeLiterals(unittest.TestCase):
     def test_literal_forms(self):
@@ -25,5 +26,10 @@ class TimeLiterals(unittest.TestCase):
         self.assertEqual(bare_times("tests/probe.py", "run(timeout=seconds('short'))\nassert steps < 100"), [])
         self.assertEqual(bare_times("tests/timeouts.toml", "timeout_s = 10"), [])
         self.assertEqual(bare_times("tests/test_time_literals.py", "time.sleep(1)"), [])
+
+    def test_repository_has_no_bare_time_literals(self):
+        root = Path(__file__).resolve().parents[1]
+        paths = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=root).decode().split("\0")
+        self.assertEqual(inventory(root, sorted(set(paths) - {""})), [])
 
 if __name__ == "__main__": unittest.main()

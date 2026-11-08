@@ -20,6 +20,7 @@ def seconds(guard_class):
     assert math.isfinite(factor) and factor > 0, "invalid machine/config factor"
     assert row["measurements"], f"uncited hang guard: {guard_class}"
     cap = row["seconds"] * factor
+    assert math.isfinite(cap) and cap > 0, f"invalid hang guard: {guard_class}"
     assert cap >= TABLE["measurement_margin"] * max(m["wall_seconds"] for m in row["measurements"])
     return cap
 
@@ -41,7 +42,12 @@ def record(argv, guard_class, began, process, state):
     row = {"event": "command_receipt", "argv": list(map(str, argv)), "class": guard_class,
            "guard_seconds": cap, "wall_seconds": wall, "cpu_seconds": process.cpu_seconds,
            "state": state, "exit": process.returncode, "machine": TABLE["machine"]}
-    print(json.dumps(row, sort_keys=True), file=sys.stderr, flush=True)
+    line = json.dumps(row, sort_keys=True)
+    print(line, file=sys.stderr, flush=True)
+    path = Path(os.environ.get("TMPDIR", str(Path(__file__).resolve().parents[1] / ".tmp/tests"))) / "command-receipts.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as receipt:
+        receipt.write(line + "\n")
     if wall < cap * 0.1 or wall > cap * 0.5:
         print(f"hang guard class warning: {guard_class}: {wall / cap:.1%} used by {argv}", file=sys.stderr)
 
@@ -122,6 +128,14 @@ def command_main(command, *args):
         raise SystemExit(124)
 
 
+def unknown_excepthook(kind, error, traceback):
+    """Script entry points without a unittest/main wrapper retain UNKNOWN."""
+    if isinstance(error, subprocess.TimeoutExpired):
+        print(f"UNKNOWN/TIMEOUT: {error.cmd}", file=sys.stderr, flush=True)
+        raise SystemExit(124)
+    sys.__excepthook__(kind, error, traceback)
+
+
 def main():
     guard_class, *argv = sys.argv[1:]
     if argv == ["--seconds"]:
@@ -129,10 +143,12 @@ def main():
         return
     if not argv:
         raise SystemExit("usage: time_guard.py CLASS COMMAND [ARG ...] | CLASS --seconds")
+    gate_check = argv[0] == "--gate-check"
+    argv = argv[int(gate_check):]
     try:
         result = run(argv, guard_class=guard_class)
     except subprocess.TimeoutExpired:
-        raise SystemExit(124)
+        raise SystemExit(0 if gate_check else 124)
     raise SystemExit(result.returncode)
 
 

@@ -14,7 +14,8 @@ import sys
 sys.dont_write_bytecode=True
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from time_guard import run as guarded_run
+from time_guard import run as guarded_run, unknown_excepthook
+sys.excepthook = unknown_excepthook
 
 def module(name):
     s=importlib.util.spec_from_file_location(name,ROOT/f'softfloat/{name}.py')
