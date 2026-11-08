@@ -627,6 +627,13 @@ Focused validation (all exited zero, class guards from the table):
   19.669887 s including both builds. The differential script and logs are under
   `.tmp/sweep-time-arith/`. No exhaustive numerical suite was run.
 
+Committed-head validation at `1fd8ef2` again passed all 45 default tests:
+147.938 s test body, 193.930981 s wall, 193.310028 CPU seconds
+(`.tmp/sweep-time-arith/default-head.log`). Both measurements are retained;
+no wall-time performance threshold is asserted. Final lint fixtures additionally
+reject fractional shell durations and quoted JSON/YAML clock fields; their
+three missing cases first failed in `config-lint-red.log` and then passed.
+
 <!-- quality-baseline -->
 ```json
 {"files":{

@@ -6,8 +6,8 @@ import re
 TIME_NAME = re.compile(r"(?:timeout|deadline|hang_guard|wall_s|sleep|alarm)", re.I)
 ALLOW = {"tests/timeouts.toml", "tests/test_time_literals.py"}
 TEXT_TIME = re.compile(
-    r"\b(?:timeout|sleep)\s+(?:--[\w-]+(?:=\S+)?\s+)*[0-9]+(?:\.[0-9]+)?[smhd]?\b"
-    r"|(?:timeout_s|deadline|hang_guard|wall_seconds)\s*[:=]\s*[0-9]"
+    r"\b(?:timeout|sleep)\s+(?:--[\w-]+(?:=\S+)?\s+)*(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)[smhd]?\b"
+    r"|(?:timeout(?:_s|_ms)?|deadline|hang_guard|wall_seconds)[\"']?\s*[:=]\s*[0-9]"
     r"|(?:sleep|alarm|timeout|from_secs|from_millis)\s*\(\s*[0-9]"
     r"|(?:timeout|deadline)\s*=\s*[0-9]", re.I)
 
