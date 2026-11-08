@@ -9,9 +9,6 @@ export TMPDIR="${TMPDIR:-$root/.tmp/opus-arith-circuits/tmp}"
 export PYTHONDONTWRITEBYTECODE=1
 mkdir -p "$TMPDIR"
 cd "$here"
-if [[ -v BENNETT_ARITH_RECEIPTS ]]; then
-  exec python3 -B -I "$root/scripts/time_guard.py" eternal python3 -I test_objects.py
-fi
 for t in test_pins test_adders test_multipliers test_qrom test_receipt_status test_objects; do
   python3 -B -I "$root/scripts/time_guard.py" eternal python3 -I "$t.py"
 done

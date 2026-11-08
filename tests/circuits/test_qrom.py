@@ -11,7 +11,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import RefInterp, counts, depths, parse, simulate, word  # noqa: E402
 from time_guard import run as guarded_run  # noqa: E402
 from test_adders import verify  # noqa: E402
-from adders.circuits import write_object  # noqa: E402
 from qrom import constructions as Q  # noqa: E402
 
 REF = RefInterp()
@@ -152,7 +151,7 @@ class Differential(unittest.TestCase):
             objects.append((Q.select_swap(tuple(data), n, W, k), data, n, W, 16))
         for obj, data, n, W, budget in objects:
             path = DIR / f"{obj.root}.bisa"
-            write_object(obj, path)
+            path.write_text(obj.text())
             runs = []
             for _ in range(budget):
                 runs.append(([rng.getrandbits(W)], [rng.getrandbits(n)] if n else []))
@@ -165,7 +164,7 @@ class Differential(unittest.TestCase):
         data = table(3, 2, seed=4)
         obj = Q.select_swap_dirty(tuple(data), 3, 2, 1)
         path = DIR / f"{obj.root}.bisa"
-        write_object(obj, path)
+        path.write_text(obj.text())
         for idx in range(8):
             got = REF.action(path, obj.root, [1], [idx])
             self.assertEqual(got[0], [1 ^ data[idx]], idx)

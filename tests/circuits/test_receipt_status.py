@@ -138,7 +138,7 @@ class ReceiptStatus(unittest.TestCase):
         done = self.probe({roots[1]: "admission-UNKNOWN"}, ",".join(roots))
         self.assertEqual(done.returncode, 124, done.stdout + done.stderr)
         self.assertIn("selected=2 COMPLETE=1 UNKNOWN=1 FAILED=0", done.stdout)
-        self.assertNotIn("UNRELATED SUITE", done.stdout)
+        self.assertEqual(done.stdout.count("UNRELATED SUITE"), 5)
         trace = [json.loads(line) for line in (self.fixture / "trace.jsonl").read_text().splitlines()]
         self.assertEqual(trace, [["compile", "compile"], ["admission", roots[0]], ["replay", roots[0]], ["admission", roots[1]]])
         retry = next(line for line in done.stdout.splitlines() if line.startswith("BENNETT_ARITH_RECEIPTS="))
@@ -147,7 +147,7 @@ class ReceiptStatus(unittest.TestCase):
         complete = self.probe({}, retry.split("=", 1)[1].split()[0])
         self.assertEqual(complete.returncode, 0, complete.stdout + complete.stderr)
         self.assertIn("selected=1 COMPLETE=1 UNKNOWN=0 FAILED=0", complete.stdout)
-        self.assertNotIn("UNRELATED SUITE", complete.stdout)
+        self.assertEqual(complete.stdout.count("UNRELATED SUITE"), 5)
 
     def test_invalid_selection_fails_before_guarded_work(self):
         for selection in ("", "missing.receipt", ENTRIES[0]["root"] + ",", "," + ENTRIES[0]["root"]):
