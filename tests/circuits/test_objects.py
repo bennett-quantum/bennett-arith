@@ -1,8 +1,6 @@
 """Published objects and certificates: reproducible, accepted, every claim independently replayed."""
 import hashlib
-from collections import Counter
 from contextlib import redirect_stdout
-from enum import Enum
 from io import StringIO
 import json
 import os
@@ -11,7 +9,6 @@ import sys
 import time
 import unittest
 from unittest.mock import ANY, patch
-from typing import NamedTuple
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import (RefInterp,
                      counts, parse, simulate, word)  # noqa: E402
 from time_guard import run as guarded_run, seconds  # noqa: E402
+from publication_receipts import Receipt, ReceiptState, report_receipts, select_publications  # noqa: E402
 from adders.circuits import interpreter_view  # noqa: E402
 
 REF = RefInterp()
@@ -30,31 +28,7 @@ REPLAY_GATE_LIMIT = 200     # objects are checked out of band with a release bui
 MANIFEST = json.loads((ROOT / "adders/objects/manifest.json").read_text())
 
 
-class ReceiptState(Enum):
-    COMPLETE = "COMPLETE"
-    UNKNOWN = "UNKNOWN"
-    FAILED = "FAILED"
-
-
-class Receipt(NamedTuple):
-    state: ReceiptState
-    detail: str
-    claims: int
-    wall_seconds: float
-
-
 RAW_RECEIPTS = {}
-
-
-def report_receipts():
-    states = Counter(receipt.state for receipt in RAW_RECEIPTS.values())
-    print(f"Raw receipts: selected={len(RAW_RECEIPTS)} COMPLETE={states[ReceiptState.COMPLETE]} "
-          f"UNKNOWN={states[ReceiptState.UNKNOWN]} FAILED={states[ReceiptState.FAILED]}", flush=True)
-    print(f"Accepted claims (Proof/Evidence only): {sum(receipt.claims for receipt in RAW_RECEIPTS.values())}; "
-          "UNKNOWN receipts contribute no proofs or evidence", flush=True)
-    for publication, receipt in RAW_RECEIPTS.items():
-        if receipt.state is ReceiptState.UNKNOWN:
-            print(f"UNKNOWN receipt: {publication}: {receipt.detail}", flush=True)
 
 
 def certificate(text):
@@ -170,11 +144,12 @@ class Published(unittest.TestCase):
 
     def test_raw_publications_admitted(self):
         """Admit raw bytes and replay every claim/table with the pinned reader."""
+        RAW_RECEIPTS.clear()
+        entries = select_publications(MANIFEST["entries"], os.environ.get("BENNETT_ARITH_RECEIPTS"))
         deps = Path(REF.binary).parent / "deps"
         libraries = list(deps.glob("libbennett_isa_ref-*.rlib"))
         self.assertEqual(len(libraries), 1, f"expected one pinned ISA reader library in {deps}")
         verifier = Path(os.environ["TMPDIR"]) / "verify-certificate"
-        RAW_RECEIPTS.clear()
         try:
             guarded_run(["rustc", "--edition=2021", str(Path(__file__).with_name("verify_certificate.rs")),
                         "--extern", f"bennett_isa_ref={libraries[0]}", "-L", f"dependency={deps}",
@@ -182,13 +157,13 @@ class Published(unittest.TestCase):
         except subprocess.TimeoutExpired as error:
             message = f"UNKNOWN: certificate bridge compilation hang guard {error.timeout:.2f}s expired"
             print(message, flush=True)
-            RAW_RECEIPTS.update((entry["file"], Receipt(ReceiptState.UNKNOWN, message, 0, 0.0))
-                                for entry in MANIFEST["entries"])
+            RAW_RECEIPTS.update((entry["root"], Receipt(ReceiptState.UNKNOWN, message, 0, 0.0))
+                                for entry in entries)
             raise
-        for entry in MANIFEST["entries"]:
-            RAW_RECEIPTS[entry["file"]] = Receipt(ReceiptState.FAILED, "validation did not complete", 0, 0.0)
+        for entry in entries:
+            RAW_RECEIPTS[entry["root"]] = Receipt(ReceiptState.FAILED, "validation did not complete", 0, 0.0)
             with self.subTest(publication=entry["file"]):
-                RAW_RECEIPTS[entry["file"]] = self._verify_publication(verifier, entry)
+                RAW_RECEIPTS[entry["root"]] = self._verify_publication(verifier, entry)
         if any(receipt.state is ReceiptState.UNKNOWN for receipt in RAW_RECEIPTS.values()):
             raise subprocess.TimeoutExpired("publication receipts incomplete", seconds("long"))
 
@@ -320,7 +295,8 @@ class Published(unittest.TestCase):
 if __name__ == "__main__":
     from time_guard import test_main
     try:
-        program = test_main(exit=False)
+        program = test_main(exit=False, defaultTest="Published.test_raw_publications_admitted"
+                            if "BENNETT_ARITH_RECEIPTS" in os.environ else None)
     finally:
-        report_receipts()
-    raise SystemExit(not program.result.wasSuccessful())
+        receipt_status = report_receipts(RAW_RECEIPTS)
+    raise SystemExit(1 if not program.result.wasSuccessful() else receipt_status)
