@@ -50,15 +50,22 @@ class TimeGuards(unittest.TestCase):
         self.assertNotIn('"state": "FAILED"', stream.getvalue())
 
     def test_unittest_timeout_aborts_before_verdict(self):
-        result = guard.UnknownResult(StringIO(), True, 1)
+        result = guard.GuardedTestRunner(stream=StringIO())._makeResult()
         error = subprocess.TimeoutExpired("probe", guard.seconds("short"))
         with self.assertRaises(subprocess.TimeoutExpired):
             result.addError(self, (type(error), error, None))
-        self.assertEqual(result.errors, [])
         nested = subprocess.CalledProcessError(124, "nested probe")
         with self.assertRaises(subprocess.TimeoutExpired):
             result.addError(self, (type(nested), nested, None))
+        with self.assertRaises(subprocess.TimeoutExpired):
+            result.addSubTest(self, self, (type(error), error, None))
         self.assertEqual(result.errors, [])
+        result.failures.append((self, "earlier mismatch"))
+        with self.assertRaises((SystemExit, subprocess.TimeoutExpired)) as prior:
+            result.addError(self, (type(error), error, None))
+        self.assertIsInstance(prior.exception, SystemExit)
+        self.assertEqual(prior.exception.code, 1)
+        self.assertIn("earlier mismatch", result.stream.getvalue())
 
     def test_gate_mode_reports_unknown_without_failing_own_checks(self):
         error = subprocess.TimeoutExpired("probe", guard.seconds("short"))

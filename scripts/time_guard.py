@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """One class table, process-tree hang guards, and per-command wall/CPU receipts."""
 import json
+from contextlib import suppress
 import math
 import os
 from pathlib import Path
@@ -61,10 +62,8 @@ def kill_tree(pid):
         return
     for child in descendants:
         kill_tree(int(child))
-    try:
+    with suppress(ProcessLookupError):
         os.kill(pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
 
 
 def run(argv, *, guard_class="moderate", check=False, capture_output=False, input=None, **kwargs):
@@ -100,11 +99,20 @@ def output(argv, **kwargs):
 class UnknownResult(unittest.TextTestResult):
     def addError(self, test, err):
         error = err[1]
-        if isinstance(error, subprocess.TimeoutExpired):
-            raise error
         if isinstance(error, subprocess.CalledProcessError) and error.returncode == 124:
-            raise subprocess.TimeoutExpired(error.cmd, None)
-        super().addError(test, err)
+            error = subprocess.TimeoutExpired(error.cmd, None)
+        if not isinstance(error, subprocess.TimeoutExpired):
+            return super().addError(test, err)
+        if not self.wasSuccessful():
+            self.printErrors()
+            print(f"UNKNOWN/TIMEOUT: {error.cmd}; earlier failures retained", file=self.stream)
+            raise SystemExit(1)
+        raise error
+
+    def addSubTest(self, test, subtest, err):
+        if err and not issubclass(err[0], test.failureException):
+            return self.addError(subtest, err)
+        super().addSubTest(test, subtest, err)
 
 
 class GuardedTestRunner(unittest.TextTestRunner):

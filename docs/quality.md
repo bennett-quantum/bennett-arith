@@ -634,6 +634,13 @@ no wall-time performance threshold is asserted. Final lint fixtures additionally
 reject fractional shell durations and quoted JSON/YAML clock fields; their
 three missing cases first failed in `config-lint-red.log` and then passed.
 
+The guard regression also covers a timeout after an already-recorded correctness
+failure, and timeouts inside unittest subtests. UNKNOWN never erases the earlier
+failure: its diagnostic and nonzero status remain. These error paths first failed
+in `prior-failure-red.log` and `subtest-timeout-red.log`; all six runner tests then
+passed. The four new files' initial metric entries reflect the completed code;
+all baseline entries from before this job remain byte-for-byte equivalent values.
+
 <!-- quality-baseline -->
 ```json
 {"files":{
@@ -645,7 +652,7 @@ three missing cases first failed in `config-lint-red.log` and then passed.
 "scripts/pinned_sibling.py":{"cognitive_mass":6,"functions":2,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "scripts/provenance.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "scripts/quality_metrics.py":{"cognitive_mass":75,"functions":6,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
-"scripts/time_guard.py":{"cognitive_mass":25,"functions":11,"max_lines":24,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/time_guard.py":{"cognitive_mass":27,"functions":12,"max_lines":24,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "scripts/time_literals.py":{"cognitive_mass":87,"functions":2,"max_lines":35,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "softfloat/constants.py":{"cognitive_mass":7,"functions":1,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "softfloat/core.c":{"cognitive_mass":424,"functions":23,"max_lines":128,"over_100":1,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
@@ -689,8 +696,8 @@ three missing cases first failed in `config-lint-red.log` and then passed.
 "tests/test_ppc_exp.py":{"cognitive_mass":28,"functions":2,"max_lines":51,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
 "tests/test_quality.py":{"cognitive_mass":2,"functions":6,"max_lines":6,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":2},
 "tests/test_review_numeric.py":{"cognitive_mass":151,"functions":2,"max_lines":78,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
-"tests/test_time_guard.py":{"cognitive_mass":9,"functions":6,"max_lines":14,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
-"tests/test_time_literals.py":{"cognitive_mass":1,"functions":3,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_time_guard.py":{"cognitive_mass":9,"functions":6,"max_lines":17,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_time_literals.py":{"cognitive_mass":1,"functions":3,"max_lines":4,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans.py":{"cognitive_mass":36,"functions":9,"max_lines":21,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans_boundaries.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans_extra.py":{"cognitive_mass":7,"functions":2,"max_lines":9,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
