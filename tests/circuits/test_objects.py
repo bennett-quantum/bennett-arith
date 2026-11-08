@@ -302,6 +302,7 @@ class Published(unittest.TestCase):
 
     def test_interpreter_replays_table_rows(self):
         """Diagnostic compatibility replay; raw admission is independently mandatory."""
+        DIR.mkdir(parents=True, exist_ok=True)
         m = MANIFEST
         replayed = 0
         for e in m["entries"]:

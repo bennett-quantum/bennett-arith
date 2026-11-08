@@ -160,6 +160,7 @@ class Differential(unittest.TestCase):
 
     def test_dirty_form(self):
         """Borrowed wires are returned; the interpreter's own frame decision is reported as it stands."""
+        DIR.mkdir(parents=True, exist_ok=True)
         data = table(3, 2, seed=4)
         obj = Q.select_swap_dirty(tuple(data), 3, 2, 1)
         path = DIR / f"{obj.root}.bisa"
