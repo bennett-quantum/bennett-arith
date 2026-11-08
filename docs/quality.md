@@ -685,6 +685,85 @@ in `prior-failure-red.log` and `subtest-timeout-red.log`; all six runner tests t
 passed. The four new files' initial metric entries reflect the completed code;
 all baseline entries from before this job remain byte-for-byte equivalent values.
 
+## Machine-derived harness parallelism
+
+The single policy source is `tests/timeouts.toml`, beside the hang-guard classes.
+`scripts/machine_profile.py` uses the CPU affinity count (the processors available
+for `nproc`) and Linux `MemAvailable`, subtracts the configured reserve, and caps
+workers by both CPU and per-worker memory. Overrides can lower a width; they
+cannot exceed the cap. Dispatch fails loudly if memory cannot fit one worker.
+The receipt row reserves 1536 MiB per worker against the measured approximately
+1.1 GB Karatsuba admission peak, plus a shared 2048 MiB reserve. Nested subprocess
+pools divide their CPU and memory budgets, so suite and major pools cannot each
+multiply the full host width. Each command has its own persistent scratch directory
+under `TMPDIR/commands/`; concurrent certificate bridge builds do not share a path.
+
+At the laptop fixture (12 CPUs, 24 GiB available on the 30 GB host), the widths are:
+
+| Harness | Previous width | Profile width |
+| --- | ---: | ---: |
+| Cargo pinned-reader build | 4 | 4 |
+| Interpreter action cases | 4 | 4 |
+| Gate/circuits/default suites | 1 | 1 |
+| LLVM majors and publication rebuilds | 1 | 1 |
+| Raw publication receipts | 1 | 4 |
+
+The receipt increase followed `e1d01d5`: its real w1/w2/w3 identity regression
+failed against serial code because a requested pool still ran on the caller.
+The same test passes with pooled admission/replay, equal stdout and receipt bytes
+under a fixed reporting clock. Separate tests compare real interpreter cases and
+serial/pooled UNKNOWN and FAILED reports, including reversed receipt selectors
+and the final UNKNOWN retry list. Results and unittest subtest failures are
+consumed in manifest order. The selector and reporting implementation in
+`publication_receipts.py` is unchanged. Timing telemetry remains observational.
+
+The pinned gate tool builds siblings before creating the candidate checkout.
+`gate.toml` therefore names the Git blob identities of the profile table and
+helper; its small bootstrap reads those exact objects from arith's object database.
+It needs no live source files. When changing either input, update its
+`BENNETT_GATE_PROFILE_TABLE` or `BENNETT_GATE_PROFILE_HELPER` value using
+`git hash-object -w <path>`; the default regression rejects stale identities.
+An isolated object-only repository fixture exercises the actual bootstrap.
+
+Verification on 2026-11-08, 12-core/30 GB, implementation `ed1f608`:
+
+- `python3 -B -I scripts/time_guard.py moderate scripts/test`: **56 tests PASS**,
+  **73.974061 s wall, 94.143827 s CPU** (`.tmp/arith-parallel/default-head.log`).
+  The earlier cited whole-run baseline is 120.59 s on 2026-11-08; the laptop suite
+  and build widths stay at one, so these shared-host observations do not establish
+  a parallel speedup. The suite now includes 11 machine-profile regressions.
+- The same moderate wrapper around `python3 -B -I tests/test_default_cache.py`:
+  **2 tests PASS**, **57.044469 s wall, 56.830827 s CPU** (`cache-head.log`);
+  historical before measurement 255.13 s, with the same serial laptop width.
+- Moderate-wrapped `tests/circuits/test_receipt_parallel.py`: **3 tests PASS**;
+  moderate-wrapped `tests/circuits/test_receipt_status.py`: **7 tests PASS**.
+  `tests/test_machine_profile.py` additionally checks actual pooled default-case
+  and dual-major subprocess dispatch, stable output order, memory limits and
+  child resource budgets. Cargo compilation and the complete gate were not run.
+- Short-wrapped `scripts/quality_metrics.py`: **66 files PASS**; all metric rows
+  present before this change retain their values. Five new files have initial
+  entries below. The bare-time inventory remains empty.
+
+Full `python3 -B -I tests/circuits/test_objects.py` comparison:
+
+| Measurement | Width | Wall seconds | CPU seconds | Machine/date |
+| --- | ---: | ---: | ---: | --- |
+| Before, 129 COMPLETE receipts / 221 accepted claims | 1 | 3158.68 | 3172.00 | 12-core/30 GB, 2026-11-07 |
+| After | profile | pending exclusive heavy slot | pending | 12-core/30 GB |
+
+The before receipt is
+`bennett-arith-job-quality/.tmp/quality-arith/measure-full-publications.time`
+(user 3165.75 s plus system 6.25 s). The one required after run has not started:
+`bennett-heavy-push-arith16b-093111.scope` occupied the heavy slot during validation.
+Run it only with no `bennett-heavy` scope, inside
+`bennett-heavy-arith-par-$(date -u +%H%M%S)`, using the eternal class. Record its
+outer command receipt's wall and CPU here; do not substitute a selected subset
+for that measurement. No full gate or `gate_run` was run by this job.
+
+The suites under `softfloat/` also contain serial major loops. Those hashed
+publication inputs and their regenerated `dist/` manifests require a separate
+owned path set; follow-up **bennett-arith-81m** records the exact locations.
+
 <!-- quality-baseline -->
 ```json
 {"files":{
