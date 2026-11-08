@@ -13,13 +13,16 @@ import sys
 
 sys.dont_write_bytecode=True
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run, unknown_excepthook
+sys.excepthook = unknown_excepthook
 
 def module(name):
     s=importlib.util.spec_from_file_location(name,ROOT/f'softfloat/{name}.py')
     m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
 
 def run(args):
-    subprocess.run([str(x) for x in args],check=True,timeout=300)
+    guarded_run([str(x) for x in args],check=True,guard_class="moderate")
 
 if __name__=='__main__':
     if len(sys.argv)!=3:raise SystemExit(__doc__)

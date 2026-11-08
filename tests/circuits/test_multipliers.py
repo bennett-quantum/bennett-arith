@@ -199,4 +199,5 @@ class Differential(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    from time_guard import test_main
+    test_main()

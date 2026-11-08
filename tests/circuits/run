@@ -10,6 +10,6 @@ export PYTHONDONTWRITEBYTECODE=1
 mkdir -p "$TMPDIR"
 cd "$here"
 for t in test_pins test_adders test_multipliers test_qrom test_objects; do
-  python3 -I "$t.py"
+  python3 -B -I "$root/scripts/time_guard.py" eternal python3 -I "$t.py"
 done
 echo 'circuits: checks finished; raw receipt summary distinguishes COMPLETE, UNKNOWN and FAILED'

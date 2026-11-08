@@ -4,16 +4,20 @@ from pathlib import Path
 import subprocess
 import sys
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run
 
 def run(source=ROOT):
     work=Path(os.environ["TMPDIR"])/"trans-phases"
     work.mkdir(parents=True,exist_ok=True)
     exe=work/"phases"
-    subprocess.run(["/usr/lib/llvm-18/bin/clang","-std=c2x","-O0",
+    guarded_run(["/usr/lib/llvm-18/bin/clang","-std=c2x","-O0",
                     "-DBENNETT_LLVM_MAJOR=18",f'-DBENNETT_CORE="{source}/softfloat/core.c"',
                     "-I",str(ROOT/".tmp/llvm18"),str(ROOT/"tests/trans_phases.c"),
-                    "-o",str(exe)],check=True,timeout=60)
-    subprocess.run([str(exe)],check=True,timeout=10)
+                    "-o",str(exe)],check=True,guard_class="moderate")
+    guarded_run([str(exe)],check=True,guard_class="short")
     print("domain/core/pack/exactness-table invariants passed")
 
-if __name__=="__main__":run(Path(sys.argv[1]).resolve() if len(sys.argv)>1 else ROOT)
+if __name__=="__main__":
+    from time_guard import command_main
+    command_main(run, Path(sys.argv[1]).resolve() if len(sys.argv)>1 else ROOT)

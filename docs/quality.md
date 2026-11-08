@@ -574,6 +574,73 @@ tracked/nonignored files for pycache, pyc, logs, locks, backups and progress fil
 
 Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 
+## Central hang-guard classes
+
+`tests/timeouts.toml` is the only clock-budget table. All test/script clocks,
+including the offline instantiation CLI, select `short`, `moderate`, `long` or
+`eternal` through `scripts/time_guard.py`. A single machine/config factor scales
+every class; the runner rejects a class below ten times its cited measurement.
+The R40 publication and bridge citations remain in the table. Publication bytes,
+bitcode and correctness assertions are unchanged; the two softfloat source hashes
+and their manifest checksums are refreshed as derived provenance metadata.
+
+Each guarded command emits a JSON `command_receipt` with argv, class, wall and
+CPU seconds, exit code and state, and appends the same row to
+`$TMPDIR/command-receipts.jsonl` so captured child output cannot hide a receipt. CPU accounting uses wait4 for the specific
+child, including concurrent reference-interpreter calls. Usage below 10% or
+above 50% of the class produces a warning, never a performance assertion.
+Timeouts terminate descendants and report `UNKNOWN/TIMEOUT`; they establish no
+proof or evidence. Standalone commands/suites retain exit 124. Explicit
+`--gate-check` mode also retains exit 124 on UNKNOWN after emitting that receipt,
+so the push gate cannot accept incomplete checks; real command failures still propagate.
+Publication receipts retain COMPLETE/UNKNOWN/FAILED and UNKNOWN claims count zero.
+
+The one provisional row is `eternal`: the current exhaustive `scripts/gate`
+workload has no completed total. The table cites the historical 703.1 s gate
+(2026-11-02), the 3158.68 s full publication run (2026-11-07), and the existing
+per-entry receipts. **bennett-arith-b0z** requires the first future full gate to
+supply the current envelope and per-command measurements. No full gate or full
+publication test is rerun for this sweep.
+
+Red-first commit `6ac74b8` rejected the original inventory; the completed
+inventory is `.tmp/sweep-time-arith/inventory.md` (37 constants/fixtures).
+The lint covers scripts, tests including softfloat tests, the instantiation CLI,
+and all configuration formats; only the table and lint fixtures are exempt.
+The existing quality baseline values are preserved. Four new source files get
+initial entries; no existing file's allowance is raised.
+
+Focused validation (all exited zero, class guards from the table):
+
+- `python3 -B -I scripts/time_guard.py moderate scripts/test`: 45 tests,
+  79.545 s body, 101.759527 s wall and 101.386932 CPU seconds.
+- `python3 -B -I scripts/time_guard.py short python3 -B -I tests/test_time_guard.py`:
+  six tests; UNKNOWN propagation, gate exit 124 versus real failures, CPU
+  accounting, class margin/factor and persistent receipt output.
+- `python3 -B -I scripts/time_guard.py short python3 -B -I tests/test_time_literals.py`:
+  three tests, including the full scoped repository scan.
+- `python3 -B -I scripts/time_guard.py moderate python3 -B -I tests/test_default_cache.py DefaultPreparation.test_support_sources_and_missing_outputs_are_refreshed`:
+  one focused cache fixture passed in 51.573675 s wall.
+- `python3 -B -I scripts/time_guard.py moderate python3 -B -I tests/test_compare_closure.py`:
+  both LLVM majors passed all 15 closure checks, 6.191647 s wall.
+- The small `softfloat/instantiate.py` LLVM18 f16/i8 request emitted bitcode and
+  manifest byte-identical to the base implementation (both exports checked),
+  19.669887 s including both builds. The differential script and logs are under
+  `.tmp/sweep-time-arith/`. No exhaustive numerical suite was run.
+
+Committed-head validation at `1fd8ef2` again passed all 45 default tests:
+147.938 s test body, 193.930981 s wall, 193.310028 CPU seconds
+(`.tmp/sweep-time-arith/default-head.log`). Both measurements are retained;
+no wall-time performance threshold is asserted. Final lint fixtures additionally
+reject fractional shell durations and quoted JSON/YAML clock fields; their
+three missing cases first failed in `config-lint-red.log` and then passed.
+
+The guard regression also covers a timeout after an already-recorded correctness
+failure, and timeouts inside unittest subtests. UNKNOWN never erases the earlier
+failure: its diagnostic and nonzero status remain. These error paths first failed
+in `prior-failure-red.log` and `subtest-timeout-red.log`; all six runner tests then
+passed. The four new files' initial metric entries reflect the completed code;
+all baseline entries from before this job remain byte-for-byte equivalent values.
+
 <!-- quality-baseline -->
 ```json
 {"files":{
@@ -585,6 +652,8 @@ Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 "scripts/pinned_sibling.py":{"cognitive_mass":6,"functions":2,"max_lines":15,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "scripts/provenance.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "scripts/quality_metrics.py":{"cognitive_mass":75,"functions":6,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/time_guard.py":{"cognitive_mass":27,"functions":12,"max_lines":24,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"scripts/time_literals.py":{"cognitive_mass":87,"functions":2,"max_lines":35,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "softfloat/constants.py":{"cognitive_mass":7,"functions":1,"max_lines":19,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "softfloat/core.c":{"cognitive_mass":424,"functions":23,"max_lines":128,"over_100":1,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
 "softfloat/generate.py":{"cognitive_mass":260,"functions":5,"max_lines":163,"over_100":1,"over_200":0,"over_25":4,"over_300":0,"over_50":1,"trivial_wrappers":0},
@@ -627,6 +696,8 @@ Litter: 0. Product process identifiers: 0. No functions exceed 300 lines.
 "tests/test_ppc_exp.py":{"cognitive_mass":28,"functions":2,"max_lines":51,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
 "tests/test_quality.py":{"cognitive_mass":2,"functions":6,"max_lines":6,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":2},
 "tests/test_review_numeric.py":{"cognitive_mass":151,"functions":2,"max_lines":78,"over_100":0,"over_200":0,"over_25":1,"over_300":0,"over_50":1,"trivial_wrappers":0},
+"tests/test_time_guard.py":{"cognitive_mass":9,"functions":6,"max_lines":17,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
+"tests/test_time_literals.py":{"cognitive_mass":1,"functions":3,"max_lines":4,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans.py":{"cognitive_mass":36,"functions":9,"max_lines":21,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans_boundaries.py":{"cognitive_mass":0,"functions":0,"max_lines":0,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},
 "tests/test_trans_extra.py":{"cognitive_mass":7,"functions":2,"max_lines":9,"over_100":0,"over_200":0,"over_25":0,"over_300":0,"over_50":0,"trivial_wrappers":0},

@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from harness import RefInterp, counts, depths, parse, simulate, word  # noqa: E402
+from time_guard import run as guarded_run  # noqa: E402
 from test_adders import verify  # noqa: E402
 from adders.circuits import write_object  # noqa: E402
 from qrom import constructions as Q  # noqa: E402
@@ -34,10 +35,10 @@ class Qrom(unittest.TestCase):
     def test_cli_single_word_table(self):
         for family, n, extra in (("qrom", 0, []), ("qrom.select_swap", 0, ["0"]),
                                  ("qrom.select_swap_dirty", 1, ["0"])):
-            result = subprocess.run([sys.executable, "-B", "-I",
+            result = guarded_run([sys.executable, "-B", "-I",
                                      str(Path(__file__).resolve().parents[2] / "adders/generate.py"),
                                      "one", family, "1", str(n), "1", *extra],
-                                    capture_output=True, text=True, timeout=20)
+                                    capture_output=True, text=True, guard_class="short")
             self.assertEqual(result.returncode, 0, result.stderr)
             fn = next(iter(parse(result.stdout)[0].values()))
             values = {name: [0] * width for name, width in fn.mut + fn.ins + fn.borrowed()}
@@ -171,4 +172,5 @@ class Differential(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    from time_guard import test_main
+    test_main()

@@ -10,6 +10,9 @@ import subprocess
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run, unknown_excepthook
+sys.excepthook = unknown_excepthook
 WORK=Path(os.environ['TMPDIR'])/'limit-test'
 WORK.mkdir(parents=True,exist_ok=True)
 for major in (18,23):
@@ -21,7 +24,7 @@ for major in (18,23):
     path=WORK/f'request-{major}.json';path.write_text(json.dumps(request))
     out=WORK/f'llvm{major}'
     if '--reuse' not in sys.argv:
-        subprocess.run([sys.executable,'-I',str(ROOT/'softfloat/instantiate.py'),str(path),str(out)],check=True,timeout=300)
+        guarded_run([sys.executable,'-I',str(ROOT/'softfloat/instantiate.py'),str(path),str(out)],check=True,guard_class="eternal")
     manifest=json.loads((out/'manifest.json').read_text())
     expected=[dict(symbol='__bennett_sf_powi_f128_i8388608',function_type='i128 (i128, i8388608)'),
               dict(symbol='__bennett_sf_powi_f128_i8388608_rm',function_type='i128 (i128, i8388608, i32)')]
@@ -38,11 +41,11 @@ for major in (18,23):
     # defaults when it reads an older layout spelling, even for a new module.
     ref=WORK/f'target-{major}.ll';refbc=ref.with_suffix('.bc')
     ref.write_text(f'target datalayout = "{layout}"\ntarget triple = "aarch64-unknown-linux-gnu"\n')
-    subprocess.run([str(llvm/'llvm-as'),str(ref),'-o',str(refbc)],check=True,timeout=60)
+    guarded_run([str(llvm/'llvm-as'),str(ref),'-o',str(refbc)],check=True,guard_class="moderate")
     reference=subprocess.check_output([str(llvm/'llvm-dis'),str(refbc),'-o','-'],text=True)
     target=lambda s:[line for line in s.splitlines() if line.startswith('target ')]
     assert target(ir)==target(reference)
-    subprocess.run([str(llvm/'opt'),'-passes=verify','-disable-output',str(bc)],check=True,timeout=60)
+    guarded_run([str(llvm/'opt'),'-passes=verify','-disable-output',str(bc)],check=True,guard_class="moderate")
     print(f'LLVM {major}: inclusive i8388608 exponent and aarch64 request fields verified',flush=True)
 
 # The main numerical test generated equivalent requests in differently named
@@ -52,7 +55,7 @@ if '--reproduce' in sys.argv:
     for major in (18,23):
         work=Path(os.environ['TMPDIR'])/'instances-test'
         request=work/f'request-{major}.json';first=work/f'llvm{major}';second=work/f'llvm{major}-repeat'
-        subprocess.run([sys.executable,'-I',str(ROOT/'softfloat/instantiate.py'),str(request),str(second)],check=True,timeout=300)
+        guarded_run([sys.executable,'-I',str(ROOT/'softfloat/instantiate.py'),str(request),str(second)],check=True,guard_class="eternal")
         for name in ('bennett-arith.bc','manifest.json'):
             assert (first/name).read_bytes()==(second/name).read_bytes(),(major,name)
         print(f'LLVM {major}: bitcode and JCS manifest reproduced byte for byte',flush=True)

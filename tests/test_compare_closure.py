@@ -8,8 +8,11 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run, output as guarded_output, command_main
 FORMATS=('f64','f16','bf16','f32','f128')
 
 def run(major,root=ROOT):
@@ -21,10 +24,10 @@ def run(major,root=ROOT):
             op,tag=('cmp','') if stem=='cmp' else (stem[:-3],'_rm')
             symbol=f'__bennett_sf_{op}_{fmt}{tag}'
             out=work/f'{major}-{stem}-{fmt}.bc'
-            subprocess.run([str(llvm/'opt'),'-passes=internalize,globaldce',
+            guarded_run([str(llvm/'opt'),'-passes=internalize,globaldce',
                 '-internalize-public-api-list='+symbol,
-                str(root/f'dist/llvm{major}/bennett-arith.bc'),'-o',str(out)],check=True,timeout=60)
-            ir=subprocess.check_output([str(llvm/'llvm-dis'),str(out),'-o','-'],text=True,timeout=60)
+                str(root/f'dist/llvm{major}/bennett-arith.bc'),'-o',str(out)],check=True,guard_class="moderate")
+            ir=guarded_output([str(llvm/'llvm-dis'),str(out),'-o','-'],text=True,guard_class="moderate")
             definitions=set(re.findall(r'^define [^@\n]+@([^ (]+)',ir,re.M))
             assert definitions=={symbol},(major,symbol,'retained private arithmetic closure',len(definitions)-1,sorted(definitions-{symbol}))
             assert not re.search(r'\b(call|alloca|fadd|fsub|fmul|fdiv|fcmp)\b',ir),(major,symbol,'unexpected helper, scratch storage or FP instruction')
@@ -40,4 +43,4 @@ if __name__=='__main__':
     parser.add_argument('majors',type=int,nargs='*',default=[18,23])
     parser.add_argument('--root',type=Path,default=ROOT)
     args=parser.parse_args()
-    for major in args.majors:run(major,args.root)
+    for major in args.majors:command_main(run,major,args.root)

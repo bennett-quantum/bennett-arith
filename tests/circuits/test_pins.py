@@ -1,5 +1,6 @@
 """Sibling resolution uses gate.toml even when the live sibling is unusable."""
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -9,6 +10,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+from time_guard import run as guarded_run
 SIBLING = "bennett-isa-spec"
 PIN = "1" * 40
 OTHER = "2" * 40
@@ -34,13 +37,13 @@ class Pins(unittest.TestCase):
         (self.repo / "tests/circuits").mkdir(parents=True)
         shutil.copyfile(ROOT / "tests/circuits/harness.py", self.repo / "tests/circuits/harness.py")
         shutil.copytree(ROOT / "scripts", self.repo / "scripts")
+        shutil.copyfile(ROOT / "tests/timeouts.toml", self.repo / "tests/timeouts.toml")
         (self.repo / "gate.toml").write_text(
             f'repo = "bennett-arith"\n[siblings."{SIBLING}"]\nsha = "{PIN}"\n'
         )
         self.cache = self.repo / f".tmp/gate/cache/{SIBLING}@{PIN[:12]}/{SIBLING}"
         self.layout = workspace / "layout"
-        self.env = {k: v for k, v in os.environ.items()
-                    if not k.startswith(("BENNETT_", "GIT_"))}
+        self.env = {k: v for k, v in os.environ.items() if not k.startswith(("BENNETT_", "GIT_"))}
         self.env["PYTHONDONTWRITEBYTECODE"] = "1"
 
     def pinned(self, path, sha=PIN, binary=True):
@@ -55,8 +58,10 @@ class Pins(unittest.TestCase):
             f"import sys; sys.path.insert(0, {str(self.repo / 'tests/circuits')!r}); "
             "from harness import ref_binary; print(ref_binary())"
         )
-        return subprocess.run([sys.executable, "-I", "-B", "-c", code],
-                              env=self.env | env, capture_output=True, text=True, timeout=20)
+        done = guarded_run([sys.executable, "-I", "-B", "-c", code],
+                              env=self.env | env, capture_output=True, text=True, guard_class="short")
+        done.stderr = re.sub(r'(?m)^(?:\{"argv":|hang guard class warning:).*\n?', '', done.stderr)
+        return done
 
     def assert_binary(self, done, expected):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
@@ -145,4 +150,5 @@ class Pins(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    from time_guard import test_main
+    test_main()

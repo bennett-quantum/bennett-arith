@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from time_literals import inventory
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE_DIRS={"adders","multipliers","qrom","softfloat","scripts","tests"}
@@ -66,7 +68,8 @@ def measure():
         files[name]={"functions":len(rows),"max_lines":max((r[0] for r in rows),default=0),
                      **{f"over_{n}":sum(r[0]>n for r in rows) for n in BOUNDS},
                      "cognitive_mass":sum(r[1] for r in rows),"trivial_wrappers":sum(r[2] for r in rows)}
-    return {"files":files,"litter":litter,"process_identifiers":identifiers}
+    return {"files":files,"litter":litter,"process_identifiers":identifiers,
+            "bare_time_literals":inventory(ROOT, sorted(set(paths)-{""}))}
 
 def regressions(current,baseline):
     failures=[]
@@ -87,7 +90,7 @@ def main():
     if START not in doc or END not in doc:raise SystemExit("missing quality baseline in docs/quality.md")
     block=doc.split(START,1)[1].split(END,1)[0].strip()
     baseline=json.loads(block.removeprefix("```json").removesuffix("```").strip())
-    failures=regressions(current,baseline)
+    failures=regressions(current,baseline)+current["bare_time_literals"]
     if failures:raise SystemExit("\n".join(failures))
     print(f"quality ratchet: {len(current['files'])} source files, no baseline regression")
 

@@ -1,0 +1,68 @@
+# Hang guards only: never a performance target or accepted correctness result.
+# Class seconds cover at least ten times the cited measured wall seconds.
+machine = "12-core/30 GB"
+machine_config_factor = 1.0
+measurement_margin = 10.0
+
+[classes.short]
+seconds = 60
+[[classes.short.measurements]]
+command = "rustc --edition=2021 tests/circuits/verify_certificate.rs --extern bennett_isa_ref=<pinned rlib> -L dependency=<pinned deps> -o <verifier>"
+wall_seconds = 0.108
+date = "2026-11-07"
+source = "docs/quality.md; former BRIDGE_HANG_GUARD_S citation"
+[[classes.short.measurements]]
+command = "python3 -B -I scripts/quality_metrics.py"
+wall_seconds = 2.026959
+date = "2026-11-08"
+source = "bennett-arith-job-sweep/.tmp/sweep-time-arith/quality-measurement.json: shared-host verification receipt; CPU 1.987001 s"
+
+[classes.moderate]
+seconds = 3000
+[[classes.moderate.measurements]]
+command = "python3 -B -I tests/test_default_cache.py"
+wall_seconds = 255.13
+date = "2026-11-08"
+source = "docs/quality.md, Default and exhaustive checks (recorded by d062ed3)"
+[[classes.moderate.measurements]]
+command = "scripts/test"
+wall_seconds = 120.59
+date = "2026-11-08"
+source = "bennett-arith-job-quality/.tmp/quality-arith/paired-efficient-default.time"
+
+[classes.long]
+seconds = 9000
+[[classes.long.measurements]]
+command = "verify-certificate adders/objects/arith.bij.addmod.w8.mfb.bisa 4"
+wall_seconds = 868.48
+date = "2026-11-07"
+source = "bennett-arith-job-quality/.tmp/quality-arith/measure-addmod-replay.time"
+[[classes.long.measurements]]
+command = "bennett-isa-ref check multipliers/objects/arith.muladd.karatsuba.w32.r64.bisa"
+wall_seconds = 465.91
+date = "2026-11-07"
+source = "bennett-arith-job-quality/.tmp/quality-arith/measure-muladd-admission.time"
+[[classes.long.measurements]]
+command = "bennett-isa-ref check multipliers/objects/arith.mul.karatsuba.w32.r64.bisa"
+wall_seconds = 473.02
+date = "2026-11-07"
+source = "bennett-arith-job-quality/.tmp/quality-arith/measure-mul-admission.time"
+[[classes.long.measurements]]
+command = "ordinary publication admission and certificate replay (slowest complete entry)"
+wall_seconds = 504.60
+date = "2026-11-07"
+source = "bennett-arith-job-quality/.tmp/quality-arith/full-publication-receipts.json; phase envelopes bound muladd replay 452.52 s and mul replay 391.15 s"
+
+[classes.eternal]
+seconds = 360000
+provisional = "Current scripts/gate total awaits its first full-gate receipt; the historical total below predates expanded workloads. See docs/quality.md."
+[[classes.eternal.measurements]]
+command = "python3 -B -I tests/circuits/test_objects.py"
+wall_seconds = 3158.68
+date = "2026-11-07"
+source = "bennett-arith-job-quality/.tmp/quality-arith/measure-full-publications.time (52:38.68); full-publication-receipts.json: 129 COMPLETE receipts, 221 accepted claims"
+[[classes.eternal.measurements]]
+command = "scripts/gate (historical workload; current total provisional)"
+wall_seconds = 703.1
+date = "2026-11-02"
+source = "bennett-arith/.tmp/gate/records/18858d3eb3fbb6fe1fbd912e08ed1a5549a54a2f.json: arith gate exit 0, finished 2026-11-02T09:15:57Z"

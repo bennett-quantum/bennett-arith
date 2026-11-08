@@ -2,23 +2,22 @@
 schema = 1
 repo = "bennett-arith"
 tool_sha = "01c0314c9aaa4a37313ab530da2134efafe9cbd5"
-timeout_s = 28800
 
 [[check]]
 name = "quality baseline ratchet"
-argv = ["python3", "-I", "scripts/quality_metrics.py"]
+argv = ["python3", "-B", "-I", "scripts/time_guard.py", "short", "--gate-check", "python3", "-I", "scripts/quality_metrics.py"]
 
 [[check]]
 name = "bounded default tests"
-argv = ["scripts/test"]
+argv = ["python3", "-B", "-I", "scripts/time_guard.py", "moderate", "--gate-check", "scripts/test"]
 
 [[check]]
 name = "arith gate"
-argv = ["scripts/gate"]
+argv = ["python3", "-B", "-I", "scripts/time_guard.py", "eternal", "--gate-check", "scripts/gate"]
 
 [[check]]
 name = "circuits"
-argv = ["tests/circuits/run"]
+argv = ["python3", "-B", "-I", "scripts/time_guard.py", "eternal", "--gate-check", "tests/circuits/run"]
 
 [siblings."bennett-isa-spec"]
 sha = "62a0cf0ef9f1f1c1db12c84ed24846b6b9695cdc"
