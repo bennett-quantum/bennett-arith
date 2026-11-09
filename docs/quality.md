@@ -858,7 +858,7 @@ owned path set; follow-up **bennett-arith-81m** records the exact locations.
 "scripts/publication_pool.py":{"functions":2,"max_lines":14,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":10,"trivial_wrappers":0},
 "scripts/suite_runner.py":{"functions":5,"max_lines":11,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":9,"trivial_wrappers":0},
 "tests/circuits/test_receipt_parallel.py":{"functions":4,"max_lines":30,"over_25":1,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":14,"trivial_wrappers":0},
-"tests/test_machine_profile.py":{"functions":13,"max_lines":19,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":9,"trivial_wrappers":0}
+"tests/test_machine_profile.py":{"functions":14,"max_lines":25,"over_25":0,"over_50":0,"over_100":0,"over_200":0,"over_300":0,"cognitive_mass":16,"trivial_wrappers":0}
 },"litter":[],"process_identifiers":[]}
 ```
 <!-- /quality-baseline -->

@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT),str(ROOT/"tests/circuits")]
@@ -83,7 +84,9 @@ class Numeric(unittest.TestCase):
     def test_contract(self):
         # The script validates both publications, signatures and provenance.
         import runpy
-        runpy.run_path(str(ROOT/"tests/test_contract.py"),run_name="__main__")
+        script=str(ROOT/"tests/test_contract.py")
+        with patch.object(sys,"argv",[script]):
+            runpy.run_path(script,run_name="__main__")
 
 def suite():
     out=unittest.TestSuite()

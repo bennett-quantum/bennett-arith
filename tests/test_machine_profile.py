@@ -1,4 +1,4 @@
-"""Laptop compatibility, memory caps, nesting and deterministic dispatch."""
+"""Machine compatibility, memory caps, nesting and deterministic dispatch."""
 from io import BytesIO, TextIOWrapper
 import os
 from pathlib import Path
@@ -22,6 +22,16 @@ class MachineProfile(unittest.TestCase):
         env = patch.dict(os.environ, clean, clear=True)
         env.start()
         self.addCleanup(env.stop)
+
+    def test_current_machine_has_measured_class_citations(self):
+        from time_guard import TABLE
+        for name, row in TABLE["classes"].items():
+            with self.subTest(guard_class=name):
+                current = [m for m in row["measurements"] if m.get("machine") == TABLE["machine"]]
+                self.assertTrue(current, "missing current-machine measurement")
+                for measurement in current:
+                    self.assertGreater(measurement["cpu_seconds"], 0)
+                    self.assertEqual(measurement["state"], "COMPLETE")
 
     def test_laptop_widths(self):
         expected = dict(cargo=4, cases=4, receipts=4, suites=1, majors=1, builds=1)
@@ -115,7 +125,9 @@ class MachineProfile(unittest.TestCase):
         from time_guard import run
         script = str(ROOT / "tests/test_contract.py")
         code = ("import sys,runpy; sys.path.insert(0,sys.argv[1]); import machine_profile as p; "
-                "p.PROFILE['pools']['majors']['cpus_per_worker']=6; "
+                "row=p.PROFILE['pools']['majors']; "
+                "p.resources=lambda:(2*row['cpus_per_worker'],p.PROFILE['reserve_mib']+2*row['mib_per_worker']); "
+                "assert p.workers('majors')==2; "
                 "sys.argv=[sys.argv[2]]; runpy.run_path(sys.argv[0],run_name='__main__')")
         serial = run([sys.executable, "-B", "-I", script], capture_output=True, guard_class="short")
         pooled = run([sys.executable, "-B", "-I", "-c", code, str(ROOT / "scripts"), script],
@@ -123,23 +135,36 @@ class MachineProfile(unittest.TestCase):
         self.assertEqual(serial.returncode, 0, serial.stderr)
         self.assertEqual(pooled.returncode, 0, pooled.stderr)
         self.assertEqual(serial.stdout, pooled.stdout)
+        selected = run([sys.executable, "-B", "-I", str(ROOT / "tests/test_default.py"), "Numeric.test_contract"],
+                       capture_output=True, guard_class="short")
+        self.assertEqual(selected.returncode, 0, selected.stderr)
+        self.assertEqual(selected.stdout, serial.stdout)
 
     def test_default_pool_runs_selected_cases_in_order(self):
         from time_guard import run
         first = "test_quality.Quality.test_python_decisions_and_forwarder"
         second = "test_quality.Quality.test_nested_branch_and_wrapper_are_detected"
         code = ("import sys,runpy,types; sys.path.insert(0,sys.argv[1]); import machine_profile as p; "
-                "p.PROFILE['pools']['suites']['cpus_per_worker']=6; "
+                "row=p.PROFILE['pools']['suites']; "
+                "p.resources=lambda:(2*row['cpus_per_worker'],p.PROFILE['reserve_mib']+2*row['mib_per_worker']); "
+                "assert p.workers('suites')==2; "
                 "cases=[types.SimpleNamespace(id=lambda n=n:n) for n in sys.argv[3:]]; "
                 "sys.modules['test_default']=types.SimpleNamespace(suite=lambda:cases); "
                 "sys.argv=[sys.argv[2]]; runpy.run_path(sys.argv[0],run_name='__main__')")
-        done = run([sys.executable, "-B", "-I", "-c", code, str(ROOT / "scripts"),
-                    str(ROOT / "tests/test_default.py"), first, second],
-                   capture_output=True, text=True, guard_class="short")
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-        self.assertEqual(done.stderr.count("Ran 1 test"), 2)
-        reports = [line.split(" ", 1)[0] for line in done.stderr.splitlines() if line.startswith("test_")]
-        self.assertEqual(reports, [first.rsplit(".", 1)[1], second.rsplit(".", 1)[1]])
+        # The dispatch fixture needs two workers even when its parent has only
+        # one worker's budget. Both real child tests still receive divided limits.
+        row = profile.PROFILE["pools"]["suites"]
+        nested = dict(BENNETT_POOL_CPUS=str(row["cpus_per_worker"]),
+                      BENNETT_POOL_MEMORY_MIB=str(profile.PROFILE["reserve_mib"] + row["mib_per_worker"]))
+        for limits in ({}, nested):
+            with self.subTest(limits=limits):
+                done = run([sys.executable, "-B", "-I", "-c", code, str(ROOT / "scripts"),
+                            str(ROOT / "tests/test_default.py"), first, second],
+                           env=dict(os.environ, **limits), capture_output=True, text=True, guard_class="short")
+                self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertEqual(done.stderr.count("Ran 1 test"), 2)
+                reports = [line.split(" ", 1)[0] for line in done.stderr.splitlines() if line.startswith("test_")]
+                self.assertEqual(reports, [first.rsplit(".", 1)[1], second.rsplit(".", 1)[1]])
 
 
 if __name__ == "__main__":
