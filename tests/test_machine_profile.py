@@ -23,6 +23,16 @@ class MachineProfile(unittest.TestCase):
         env.start()
         self.addCleanup(env.stop)
 
+    def test_current_machine_has_measured_class_citations(self):
+        from time_guard import TABLE
+        for name, row in TABLE["classes"].items():
+            with self.subTest(guard_class=name):
+                current = [m for m in row["measurements"] if m.get("machine") == TABLE["machine"]]
+                self.assertTrue(current, "missing current-machine measurement")
+                for measurement in current:
+                    self.assertGreater(measurement["cpu_seconds"], 0)
+                    self.assertEqual(measurement["state"], "COMPLETE")
+
     def test_laptop_widths(self):
         expected = dict(cargo=4, cases=4, receipts=4, suites=1, majors=1, builds=1)
         actual = {role: profile.workers(role, cpus=12, memory_mib=24576) for role in expected}
