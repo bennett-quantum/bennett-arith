@@ -125,6 +125,10 @@ class MachineProfile(unittest.TestCase):
         self.assertEqual(serial.returncode, 0, serial.stderr)
         self.assertEqual(pooled.returncode, 0, pooled.stderr)
         self.assertEqual(serial.stdout, pooled.stdout)
+        selected = run([sys.executable, "-B", "-I", str(ROOT / "tests/test_default.py"), "Numeric.test_contract"],
+                       capture_output=True, guard_class="short")
+        self.assertEqual(selected.returncode, 0, selected.stderr)
+        self.assertEqual(selected.stdout, serial.stdout)
 
     def test_default_pool_runs_selected_cases_in_order(self):
         from time_guard import run
