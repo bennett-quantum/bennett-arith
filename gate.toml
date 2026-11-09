@@ -31,7 +31,7 @@ cwd = "reference-interpreter"
 # Cache cwd: <arith>/.tmp/gate/cache/<pin>/<sibling>/reference-interpreter.
 argv = ["python3", "-B", "-I", "-c", "import os,pathlib,subprocess; root=pathlib.Path.cwd().parents[5]; path=str(root/'scripts/machine_profile.py'); code=subprocess.check_output(['git','-C',str(root),'cat-file','blob',os.environ['BENNETT_GATE_PROFILE_HELPER']]); exec(compile(code,path,'exec'),dict(__name__='__main__',__file__=path))", "exec", "cargo", "cargo", "build", "--offline"]
 outputs = ["reference-interpreter/target/debug/bennett-isa-ref"]
-env = { BENNETT_GATE_PROFILE_TABLE = "4549bd14c2d22cef057d3d21729e8ad323b9f52a", BENNETT_GATE_PROFILE_HELPER = "4d51dc036c4b3f5108d7d8278bdafdcd72fd8378" }
+env = { BENNETT_GATE_PROFILE_TABLE = "17d78b53b57890210913015eada9006a510563b4", BENNETT_GATE_PROFILE_HELPER = "4d51dc036c4b3f5108d7d8278bdafdcd72fd8378" }
 
 [siblings."bennett-dialect-spec"]
 sha = "95a4b8d06933018a07fef3516296a25fd582fcde"

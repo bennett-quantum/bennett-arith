@@ -1,71 +1,163 @@
 # Hang guards only: never a performance target or accepted correctness result.
 # Class seconds cover at least ten times the cited measured wall seconds.
-machine = "12-core/30 GB"
+machine = "Spiral (64 threads/62 GiB)"
 machine_config_factor = 1.0
 measurement_margin = 10.0
 
 [classes.short]
 seconds = 60
 [[classes.short.measurements]]
+machine = "12-core/30 GB"
 command = "rustc --edition=2021 tests/circuits/verify_certificate.rs --extern bennett_isa_ref=<pinned rlib> -L dependency=<pinned deps> -o <verifier>"
 wall_seconds = 0.108
 date = "2026-11-07"
 source = "docs/quality.md; former BRIDGE_HANG_GUARD_S citation"
 [[classes.short.measurements]]
+machine = "12-core/30 GB"
 command = "python3 -B -I scripts/quality_metrics.py"
 wall_seconds = 2.026959
 date = "2026-11-08"
 source = "bennett-arith-job-sweep/.tmp/sweep-time-arith/quality-measurement.json: shared-host verification receipt; CPU 1.987001 s"
 
+[[classes.short.measurements]]
+command = "rustc --edition=2021 tests/circuits/verify_certificate.rs --extern bennett_isa_ref=<pinned rlib> -L dependency=<pinned deps> -o <verifier>"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 0.5159717999995337
+cpu_seconds = 2.076817
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/publications.log; receipt workers=21; ISA pin 62a0cf0ef9f1; pre-update receipt machine label"
+[[classes.short.measurements]]
+command = "python3 -B -I scripts/quality_metrics.py"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 0.8677710310003022
+cpu_seconds = 0.84073
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/quality-final.log; pre-update receipt machine label"
+
 [classes.moderate]
 seconds = 3000
 [[classes.moderate.measurements]]
+machine = "12-core/30 GB"
 command = "python3 -B -I tests/test_default_cache.py"
 wall_seconds = 255.13
 date = "2026-11-08"
 source = "docs/quality.md, Default and exhaustive checks (recorded by d062ed3)"
 [[classes.moderate.measurements]]
+machine = "12-core/30 GB"
 command = "scripts/test"
 wall_seconds = 120.59
 date = "2026-11-08"
 source = "bennett-arith-job-quality/.tmp/quality-arith/paired-efficient-default.time"
 
+[[classes.moderate.measurements]]
+command = "scripts/test"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 67.22408175800047
+cpu_seconds = 284.510757
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/default-green.log; pre-update receipt machine label"
+[[classes.moderate.measurements]]
+command = "python3 -B -I tests/test_default_cache.py"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 101.70004301899917
+cpu_seconds = 101.899413
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/default-cache.log; pre-update receipt machine label"
+
 [classes.long]
-seconds = 9000
+seconds = 23701
 [[classes.long.measurements]]
+machine = "12-core/30 GB"
 command = "verify-certificate adders/objects/arith.bij.addmod.w8.mfb.bisa 4"
 wall_seconds = 868.48
 date = "2026-11-07"
 source = "bennett-arith-job-quality/.tmp/quality-arith/measure-addmod-replay.time"
 [[classes.long.measurements]]
+machine = "12-core/30 GB"
 command = "bennett-isa-ref check multipliers/objects/arith.muladd.karatsuba.w32.r64.bisa"
 wall_seconds = 465.91
 date = "2026-11-07"
 source = "bennett-arith-job-quality/.tmp/quality-arith/measure-muladd-admission.time"
 [[classes.long.measurements]]
+machine = "12-core/30 GB"
 command = "bennett-isa-ref check multipliers/objects/arith.mul.karatsuba.w32.r64.bisa"
 wall_seconds = 473.02
 date = "2026-11-07"
 source = "bennett-arith-job-quality/.tmp/quality-arith/measure-mul-admission.time"
 [[classes.long.measurements]]
+machine = "12-core/30 GB"
 command = "ordinary publication admission and certificate replay (slowest complete entry)"
 wall_seconds = 504.60
 date = "2026-11-07"
 source = "bennett-arith-job-quality/.tmp/quality-arith/full-publication-receipts.json; phase envelopes bound muladd replay 452.52 s and mul replay 391.15 s"
 
+[[classes.long.measurements]]
+command = "verify-certificate adders/objects/arith.bij.addmod.w8.mfb.bisa 4 (receipt pool width 4)"
+machine = "12-core/30 GB"
+wall_seconds = 1260.934664
+date = "2026-11-08"
+source = "docs/quality.md, pooled publication measurement: historical 1730.77 s full run; long-class ten-times margin correction"
+[[classes.long.measurements]]
+command = "verify-certificate adders/objects/arith.bij.addmod.w8.mfb.bisa 4"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 1925.2209405860003
+cpu_seconds = 1925.1177850000001
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/publications.log; receipt workers=21; ISA pin 62a0cf0ef9f1; pre-update receipt machine label"
+[[classes.long.measurements]]
+command = "bennett-isa-ref check multipliers/objects/arith.muladd.karatsuba.w32.r64.bisa"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 1195.7182414090003
+cpu_seconds = 1195.563056
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/publications.log; receipt workers=21; ISA pin 62a0cf0ef9f1; pre-update receipt machine label"
+[[classes.long.measurements]]
+command = "bennett-isa-ref check multipliers/objects/arith.mul.karatsuba.w32.r64.bisa"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 1087.0233461810003
+cpu_seconds = 1086.808811
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/publications.log; receipt workers=21; ISA pin 62a0cf0ef9f1; pre-update receipt machine label"
+[[classes.long.measurements]]
+command = "ordinary publication admission and certificate replay (slowest complete entry)"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 2370.05
+cpu_seconds = 2369.760399
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/publications.log; receipt workers=21; ISA pin 62a0cf0ef9f1; pre-update receipt machine label; multipliers/objects/arith.muladd.karatsuba.w32.r64.bisa; printed combined wall (0.01 s precision), summed admission/replay child CPU"
+
 [classes.eternal]
 seconds = 360000
 provisional = "Current scripts/gate total awaits its first full-gate receipt; the historical total below predates expanded workloads. See docs/quality.md."
 [[classes.eternal.measurements]]
+machine = "12-core/30 GB"
 command = "python3 -B -I tests/circuits/test_objects.py"
 wall_seconds = 3158.68
 date = "2026-11-07"
 source = "bennett-arith-job-quality/.tmp/quality-arith/measure-full-publications.time (52:38.68); full-publication-receipts.json: 129 COMPLETE receipts, 221 accepted claims"
 [[classes.eternal.measurements]]
+machine = "12-core/30 GB"
 command = "scripts/gate (historical workload; current total provisional)"
 wall_seconds = 703.1
 date = "2026-11-02"
 source = "bennett-arith/.tmp/gate/records/18858d3eb3fbb6fe1fbd912e08ed1a5549a54a2f.json: arith gate exit 0, finished 2026-11-02T09:15:57Z"
+
+[[classes.eternal.measurements]]
+command = "python3 -B -I tests/circuits/test_objects.py"
+machine = "Spiral (64 threads/62 GiB)"
+wall_seconds = 2410.4053910380007
+cpu_seconds = 8151.485637
+state = "COMPLETE"
+date = "2026-11-09"
+source = ".tmp/arith-spiral/publications.log; receipt workers=21; ISA pin 62a0cf0ef9f1; pre-update receipt machine label; 7 tests PASS, 129 COMPLETE receipts, 221 accepted claims"
 
 # One policy source for all harness/build widths. nproc uses sched_getaffinity;
 # memory uses /proc/meminfo MemAvailable, not installed RAM. Overrides only lower
