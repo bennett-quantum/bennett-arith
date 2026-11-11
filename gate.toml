@@ -1,7 +1,11 @@
 # Push-gate pins (bennett/tools/gate_README.md). Siblings resolve only to these commits.
 schema = 1
 repo = "bennett-arith"
-tool_sha = "3779522887ace6426f8ba13fb0d55b625b781941"
+tool_sha = "822aaeffab369114e1a719a7b887a0192b22d386"
+
+# Paths no check reads; changing only these reuses a PASS receipt (bennett/tools/gate_README.md).
+[receipt]
+non_product = [".beads/", "worklog/"]
 
 [[check]]
 name = "quality baseline ratchet"
@@ -17,6 +21,7 @@ argv = ["python3", "-B", "-I", "scripts/time_guard.py", "eternal", "--gate-check
 
 [[check]]
 name = "circuits"
+tier = "post-merge"  # long tail: main-health runs --tier full after landing
 argv = ["python3", "-B", "-I", "scripts/time_guard.py", "eternal", "--gate-check", "tests/circuits/run"]
 
 [siblings."bennett-isa-spec"]
