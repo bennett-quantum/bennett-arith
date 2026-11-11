@@ -5,7 +5,7 @@ tool_sha = "822aaeffab369114e1a719a7b887a0192b22d386"
 
 # Paths no check reads; changing only these reuses a PASS receipt (bennett/tools/gate_README.md).
 [receipt]
-non_product = [".beads/", "worklog/"]
+non_product = [".beads/", "worklog/", "CLAUDE.md", "AGENTS.md"]
 
 [[check]]
 name = "quality baseline ratchet"
