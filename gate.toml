@@ -17,6 +17,7 @@ argv = ["python3", "-B", "-I", "scripts/time_guard.py", "moderate", "--gate-chec
 
 [[check]]
 name = "arith gate"
+tier = "post-merge"  # heavy: runs on main-health's cadence, not per push
 argv = ["python3", "-B", "-I", "scripts/time_guard.py", "eternal", "--gate-check", "scripts/gate"]
 
 [[check]]
